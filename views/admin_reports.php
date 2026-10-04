@@ -3,6 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="/css/mobile-dashboard.css">
+  <script defer src="/js/mobile-dashboard.js"></script>
   <meta name="csrf-token" content="<?php echo e(csrf_token()); ?>">
   <title>Admin | Reports</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">

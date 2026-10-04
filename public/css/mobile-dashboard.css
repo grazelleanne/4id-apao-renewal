@@ -1,0 +1,291 @@
+/* Shared phone layout for the authenticated admin and staff dashboards. */
+.mobile-menu-button,
+.mobile-sidebar-overlay {
+  display: none;
+}
+
+.mobile-table-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (max-width: 768px) {
+  html,
+  body {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  body.mobile-dashboard {
+    font-size: 14px;
+  }
+
+  body.mobile-dashboard > .flex.min-h-screen {
+    display: block;
+    width: 100%;
+  }
+
+  body.mobile-dashboard #sidebar,
+  body.mobile-dashboard #sidebar.sidebar-collapsed {
+    position: fixed !important;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 1200;
+    width: min(280px, 86vw) !important;
+    height: 100dvh !important;
+    transform: translateX(-105%);
+    transition: transform .24s ease !important;
+    box-shadow: 12px 0 32px rgba(0, 0, 0, .34);
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+  }
+
+  body.mobile-dashboard #sidebar.mobile-open {
+    transform: translateX(0);
+  }
+
+  body.mobile-dashboard #sidebar .sb-logo-text,
+  body.mobile-dashboard #sidebar.sidebar-collapsed .sb-logo-text,
+  body.mobile-dashboard #sidebar .nav-label,
+  body.mobile-dashboard #sidebar.sidebar-collapsed .nav-label {
+    width: auto !important;
+    opacity: 1 !important;
+  }
+
+  body.mobile-dashboard #sidebar .sb-top,
+  body.mobile-dashboard #sidebar.sidebar-collapsed .sb-top {
+    justify-content: space-between !important;
+  }
+
+  body.mobile-dashboard #sidebar .sb-logo,
+  body.mobile-dashboard #sidebar.sidebar-collapsed .sb-logo {
+    flex: 1 !important;
+  }
+
+  body.mobile-dashboard #sidebar .sb-toggle,
+  body.mobile-dashboard #sidebar.sidebar-collapsed .sb-toggle {
+    position: static !important;
+    transform: none !important;
+  }
+
+  body.mobile-dashboard #sidebar .nav-item,
+  body.mobile-dashboard #sidebar.sidebar-collapsed .nav-item {
+    justify-content: flex-start !important;
+    padding: 11px 10px !important;
+    gap: 10px !important;
+    min-height: 44px;
+  }
+
+  .mobile-menu-button {
+    position: fixed;
+    top: max(12px, env(safe-area-inset-top));
+    left: 12px;
+    z-index: 1100;
+    display: inline-flex;
+    width: 42px;
+    height: 42px;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #3a4252;
+    border-radius: 10px;
+    background: #181c21;
+    color: #e5eaf2;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, .25);
+    cursor: pointer;
+  }
+
+  body.light-mode .mobile-menu-button {
+    background: #fff;
+    color: #1e293b;
+    border-color: #cbd5e1;
+  }
+
+  .mobile-sidebar-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1150;
+    background: rgba(2, 6, 23, .64);
+    backdrop-filter: blur(2px);
+  }
+
+  .mobile-sidebar-overlay.open {
+    display: block;
+  }
+
+  body.mobile-nav-open {
+    overflow: hidden;
+  }
+
+  body.mobile-dashboard #sidebar + main {
+    width: 100%;
+    min-width: 0;
+    padding: 70px 14px 24px !important;
+    overflow-x: hidden !important;
+  }
+
+  body.mobile-dashboard #sidebar + main > header {
+    width: 100%;
+    min-width: 0;
+    margin-bottom: 18px !important;
+  }
+
+  body.mobile-dashboard #sidebar + main > header:not(.staff-topbar) {
+    padding-left: 46px;
+  }
+
+  body.mobile-dashboard .staff-topbar {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    width: auto !important;
+  }
+
+  body.mobile-dashboard h1 {
+    font-size: 1.45rem !important;
+    line-height: 1.2 !important;
+  }
+
+  body.mobile-dashboard h2 {
+    font-size: 1.15rem;
+  }
+
+  body.mobile-dashboard .grid.grid-cols-2,
+  body.mobile-dashboard .grid.grid-cols-3,
+  body.mobile-dashboard .grid.grid-cols-4,
+  body.mobile-dashboard .grid.grid-cols-5,
+  body.mobile-dashboard .grid.grid-cols-6 {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  body.mobile-dashboard .gap-6 {
+    gap: 14px !important;
+  }
+
+  body.mobile-dashboard .p-6,
+  body.mobile-dashboard .p-7,
+  body.mobile-dashboard .p-8 {
+    padding: 16px !important;
+  }
+
+  body.mobile-dashboard input,
+  body.mobile-dashboard select,
+  body.mobile-dashboard textarea {
+    max-width: 100%;
+    font-size: 16px !important; /* Prevent automatic zoom on iOS. */
+  }
+
+  body.mobile-dashboard button,
+  body.mobile-dashboard a {
+    touch-action: manipulation;
+  }
+
+  body.mobile-dashboard .modal-overlay,
+  body.mobile-dashboard .modal-bg {
+    padding: 12px !important;
+    overflow-y: auto;
+  }
+
+  body.mobile-dashboard .modal-box,
+  body.mobile-dashboard .modal-box-lg,
+  body.mobile-dashboard .modal-overlay > div,
+  body.mobile-dashboard .modal-bg > div {
+    width: 100% !important;
+    max-width: 100% !important;
+    max-height: 92dvh;
+    overflow-y: auto;
+  }
+
+  body.mobile-dashboard #notifDropdown,
+  body.mobile-dashboard #adminNotifDropdown {
+    position: fixed !important;
+    top: 64px !important;
+    right: 12px !important;
+    left: 12px !important;
+    width: auto !important;
+    max-height: calc(100dvh - 80px);
+  }
+
+  body.mobile-dashboard .mobile-table-scroll {
+    margin-inline: -4px;
+    padding-bottom: 4px;
+  }
+
+  body.mobile-dashboard .mobile-table-scroll > table {
+    min-width: 680px;
+  }
+
+  body.mobile-dashboard .mobile-table-scroll > table.cl-table {
+    min-width: 620px;
+  }
+
+  body.mobile-dashboard #page-registration [style*="grid-template-columns:repeat(3"],
+  body.mobile-dashboard #page-registration [style*="grid-template-columns: repeat(3"],
+  body.mobile-dashboard #page-renewal [style*="grid-template-columns:repeat(3"],
+  body.mobile-dashboard #page-renewal [style*="grid-template-columns: repeat(3"] {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  body.mobile-dashboard .reg-step-line {
+    min-width: 10px !important;
+  }
+
+  body.mobile-dashboard .par-doc-grid,
+  body.mobile-dashboard .par-doc-field-grid,
+  body.mobile-dashboard .par-process-grid,
+  body.mobile-dashboard .par-package-head,
+  body.mobile-dashboard .par-cost-row,
+  body.mobile-dashboard .par-equipment-list,
+  body.mobile-dashboard #page-par [style*="grid-template-columns:1fr 1fr"],
+  body.mobile-dashboard #page-par [style*="grid-template-columns:1fr 1fr 1fr"] {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  body.mobile-dashboard .par-summary-panel {
+    position: static !important;
+    width: 100% !important;
+    max-width: none !important;
+  }
+
+  body.mobile-dashboard .par-preview-card {
+    position: static !important;
+  }
+
+  body.mobile-dashboard .par-preview-scale-outer {
+    overflow-x: auto !important;
+  }
+
+  body.mobile-dashboard .condition-summary {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  body.mobile-dashboard .condition-help {
+    max-width: none;
+    text-align: left;
+  }
+
+  body.mobile-dashboard .stat-card {
+    min-height: 112px;
+  }
+}
+
+@media (max-width: 420px) {
+  body.mobile-dashboard #sidebar + main {
+    padding-inline: 10px !important;
+  }
+
+  body.mobile-dashboard .par-hub-card-body,
+  body.mobile-dashboard .par-mgmt-header,
+  body.mobile-dashboard .par-mgmt-filterbar {
+    padding-inline: 14px !important;
+  }
+
+  body.mobile-dashboard .par-preview-actions,
+  body.mobile-dashboard .flex.justify-end,
+  body.mobile-dashboard .flex.justify-between {
+    flex-wrap: wrap;
+  }
+}
