@@ -32,6 +32,13 @@ if (str_contains($inspectionView, "return p.icsStatus === 'under';")
     || !str_contains($inspectionView, "p.inspectionStatus || 'pending'")) {
     throw new RuntimeException('Pending inspection filter regression detected.');
 }
+$router = file_get_contents(dirname(__DIR__) . '/public/index.php');
+if (!is_string($router)
+    || !str_contains($router, "'/admin/inspection/save'")
+    || !str_contains($router, "'/admin/inspection/notify-staff'")
+    || !str_contains($router, '/detail$#')) {
+    throw new RuntimeException('Admin inspection workflow routes are missing.');
+}
 $staff = render_view('staff_dashboard', [
     'user' => (object) array_merge((array) $viewUser, ['role' => 'staff']),
     'initialDashboardData' => ['personnel' => []], 'initialActiveTab' => 'registration',

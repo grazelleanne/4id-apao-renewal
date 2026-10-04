@@ -994,10 +994,18 @@ body.light-mode .btn-save-under{background:#ede9fe;color:#6d28d9;border-color:#c
 
     async function openInspect(itemNumber) {
       currentItemNumber = itemNumber;
-
-      const res  = await fetch(`/admin/inspection/${itemNumber}/detail`);
-      const data = await res.json();
-      if (!data.success) return;
+      let data;
+      try {
+        const res = await fetch(`/admin/inspection/${itemNumber}/detail`, {headers:{'Accept':'application/json'}});
+        data = await res.json();
+        if (!res.ok || !data.success) {
+          throw new Error(data.message || 'Unable to open the inspection checklist.');
+        }
+      } catch (error) {
+        console.error('Failed to open inspection:', error);
+        window.alert(error.message || 'Unable to open the inspection checklist.');
+        return;
+      }
       const p=data.personnel, ins=data.inspection, ics=data.ics||{};
       const activeParts = Array.isArray(data.checklistParts) ? data.checklistParts : PARTS;
 
@@ -1024,7 +1032,7 @@ body.light-mode .btn-save-under{background:#ede9fe;color:#6d28d9;border-color:#c
       document.getElementById('checklistLeft').innerHTML  = buildRows(activeParts.slice(0,splitAt),0);
       document.getElementById('checklistRight').innerHTML = buildRows(activeParts.slice(splitAt),splitAt);
       document.getElementById('cl_remarks').value = ins?.remarks||'';
-      currentInspectionStatus = ins?.status || 'under';
+      currentInspectionStatus = ['under', 'approved'].includes(ins?.status) ? ins.status : 'under';
 
       // Immediately show the derived physical condition and disable
       // "Mark For Renewal" whenever the checklist contains a defect.
@@ -1093,7 +1101,7 @@ body.light-mode .btn-save-under{background:#ede9fe;color:#6d28d9;border-color:#c
         notedBySig:sigData.not.img,
       };
       document.querySelectorAll('#checklistLeft input:checked, #checklistRight input:checked').forEach(c => { body[c.name] = c.value; });
-      const res  = await fetch('/admin/inspection/save',{method:'POST',headers:{'Content-Type':'application/json','X-CSRF-TOKEN':CSRF},body:JSON.stringify(body)});
+      const res  = await fetch('/admin/inspection/save',{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json','X-CSRF-TOKEN':CSRF},body:JSON.stringify(body)});
       const data = await res.json();
       if (data.success) {
         const savedCondition = data.rpcspRemark || condition || 'Serviceable';

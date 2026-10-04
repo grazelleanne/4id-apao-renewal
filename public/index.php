@@ -90,6 +90,23 @@ try {
         require_user(['super_admin','admin']);
         inspection_data();
     }
+    if (preg_match('#^/admin/inspection/(\d+)/detail$#', $path, $matches) && $method === 'GET') {
+        require_user(['super_admin','admin']);
+        inspection_detail((int) $matches[1]);
+    }
+    if ($path === '/admin/inspection/save' && $method === 'POST') {
+        require_post();
+        $user = require_user(['super_admin','admin']);
+        inspection_save($user);
+    }
+    if ($path === '/admin/inspection/notify-staff' && $method === 'POST') {
+        require_post();
+        $user = require_user(['super_admin','admin']);
+        inspection_notify_staff($user);
+    }
+    if (preg_match('#^/admin/inspection/(\d+)/print$#', $path, $matches) && $method === 'GET') {
+        inspection_pdf((int) $matches[1]);
+    }
     $adminViews = [
         '/admin/dashboard' => 'admin_dashboard', '/admin/personnel' => 'admin_personnel',
         '/admin/inspection' => 'admin_inspection', '/admin/reports' => 'admin_reports',
@@ -632,6 +649,244 @@ function inspection_data(): never
     }
     unset($row);
     json_response(['success' => true, 'data' => $rows, 'pending' => $pending, 'under' => $under, 'approved' => $approved]);
+}
+
+function inspection_parts(): array
+{
+    return [
+        'barrel', 'slide', 'recoil_spring_assembly', 'firing_pin', 'firing_pin_safety',
+        'extractor', 'rear_sight', 'front_sight', 'frame', 'magazine', 'magazine_catch',
+        'magazine_catch_spring', 'trigger', 'trigger_spring', 'trigger_bar', 'slide_stop_lever',
+        'trigger_pin', 'trigger_mechanism_housing', 'trigger_housing_pin', 'locking_block',
+        'locking_block_pin', 'slide_lock', 'slide_lock_spring', 'connector', 'guide_rod',
+    ];
+}
+
+function inspection_find_personnel(int $itemNumber): ?array
+{
+    foreach (personnel_rows() as $personnel) {
+        if ($personnel['itemNumber'] === $itemNumber) {
+            return $personnel;
+        }
+    }
+    return null;
+}
+
+function inspection_detail(int $itemNumber): never
+{
+    $personnel = inspection_find_personnel($itemNumber);
+    if (!$personnel) {
+        json_response(['success' => false, 'message' => 'Personnel record not found.'], 404);
+    }
+    $statement = db()->prepare('SELECT * FROM inspections WHERE item_number=:item ORDER BY id DESC LIMIT 1');
+    $statement->execute(['item' => $itemNumber]);
+    $inspection = $statement->fetch() ?: ['status' => 'pending', 'remarks' => ''];
+    $camelFields = [
+        'inspectedByName' => 'inspected_by_name', 'inspectedByRank' => 'inspected_by_rank',
+        'inspectedByPosition' => 'inspected_by_position', 'inspectedBySig' => 'inspected_by_sig',
+        'witnessedByName' => 'witnessed_by_name', 'witnessedByRank' => 'witnessed_by_rank',
+        'witnessedByPosition' => 'witnessed_by_position', 'witnessedBySig' => 'witnessed_by_sig',
+        'approvedByName' => 'approved_by_name', 'approvedByRank' => 'approved_by_rank',
+        'approvedByPosition' => 'approved_by_position', 'approvedBySig' => 'approved_by_sig',
+        'notedByName' => 'noted_by_name', 'notedByRank' => 'noted_by_rank',
+        'notedByPosition' => 'noted_by_position', 'notedBySig' => 'noted_by_sig',
+    ];
+    foreach ($camelFields as $camel => $column) {
+        $inspection[$camel] = $inspection[$column] ?? null;
+    }
+    $ics = db()->query('SELECT * FROM ics_settings ORDER BY id DESC LIMIT 1')->fetch() ?: [];
+    json_response([
+        'success' => true,
+        'personnel' => $personnel,
+        'inspection' => $inspection,
+        'ics' => $ics,
+        'checklistParts' => inspection_parts(),
+    ]);
+}
+
+function inspection_signature(array $input, string $key): ?string
+{
+    $value = $input[$key] ?? null;
+    if ($value === null || $value === '') {
+        return null;
+    }
+    if (!is_string($value) || strlen($value) > 3_000_000) {
+        throw new InvalidArgumentException('A signature image is too large or invalid.');
+    }
+    if (str_starts_with($value, 'data:image/')) {
+        if (!preg_match('#^data:image/(?:png|jpe?g|webp);base64,([A-Za-z0-9+/=]+)$#', $value, $matches)) {
+            throw new InvalidArgumentException('A signature image is invalid.');
+        }
+        $decoded = base64_decode($matches[1], true);
+        if ($decoded === false || strlen($decoded) > 2_000_000) {
+            throw new InvalidArgumentException('A signature image must be under 2 MB.');
+        }
+        return $value;
+    }
+    if (!str_starts_with($value, '/')) {
+        throw new InvalidArgumentException('A signature image path is invalid.');
+    }
+    return substr($value, 0, 1000);
+}
+
+function inspection_save(array $user): never
+{
+    $input = request_data();
+    $itemNumber = filter_var($input['itemNumber'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+    if ($itemNumber === false) {
+        json_response(['success' => false, 'error' => 'Invalid personnel item number.'], 422);
+    }
+    $status = is_string($input['status'] ?? null) ? strtolower(trim($input['status'])) : '';
+    if (!in_array($status, ['under', 'approved'], true)) {
+        json_response(['success' => false, 'error' => 'Invalid inspection status.'], 422);
+    }
+    $personnel = inspection_find_personnel($itemNumber);
+    if (!$personnel) {
+        json_response(['success' => false, 'error' => 'Personnel record not found.'], 404);
+    }
+
+    $allowedResults = ['serviceable', 'repair', 'replace', 'unserviceable', 'na', 'missing', 'damaged'];
+    $partValues = [];
+    foreach (inspection_parts() as $part) {
+        $value = is_string($input[$part] ?? null) ? strtolower(trim($input[$part])) : 'serviceable';
+        if (!in_array($value, $allowedResults, true)) {
+            json_response(['success' => false, 'error' => 'Invalid checklist value.'], 422);
+        }
+        $partValues[$part] = $value;
+    }
+    $results = array_values($partValues);
+    $condition = 'Serviceable';
+    if (in_array('unserviceable', $results, true)) {
+        $condition = 'Unserviceable';
+    } elseif (in_array('replace', $results, true)) {
+        $condition = 'For Replacement';
+    } elseif (array_intersect(['repair', 'missing', 'damaged'], $results)) {
+        $condition = 'For Repair';
+    }
+    if ($status === 'approved' && $condition !== 'Serviceable') {
+        json_response([
+            'success' => false,
+            'error' => 'This firearm cannot be marked for renewal while its condition is ' . $condition . '.',
+            'rpcspRemark' => $condition,
+        ], 422);
+    }
+
+    try {
+        $signatures = [
+            'inspected_by_sig' => inspection_signature($input, 'inspectedBySig'),
+            'witnessed_by_sig' => inspection_signature($input, 'witnessedBySig'),
+            'approved_by_sig' => inspection_signature($input, 'approvedBySig'),
+            'noted_by_sig' => inspection_signature($input, 'notedBySig'),
+        ];
+    } catch (InvalidArgumentException $error) {
+        json_response(['success' => false, 'error' => $error->getMessage()], 422);
+    }
+
+    $textFields = [
+        'inspected_by_name' => 'inspectedByName', 'inspected_by_rank' => 'inspectedByRank',
+        'inspected_by_position' => 'inspectedByPosition',
+        'witnessed_by_name' => 'witnessedByName', 'witnessed_by_rank' => 'witnessedByRank',
+        'witnessed_by_position' => 'witnessedByPosition',
+        'approved_by_name' => 'approvedByName', 'approved_by_rank' => 'approvedByRank',
+        'approved_by_position' => 'approvedByPosition',
+        'noted_by_name' => 'notedByName', 'noted_by_rank' => 'notedByRank',
+        'noted_by_position' => 'notedByPosition',
+    ];
+    $values = $partValues;
+    foreach ($textFields as $column => $key) {
+        $values[$column] = personnel_text($input, $key) ?: null;
+    }
+    $values = array_merge($values, $signatures, [
+        'status' => $status,
+        'remarks' => personnel_text($input, 'remarks', 5000) ?: null,
+        'user_id' => $user['id'],
+        'item' => $itemNumber,
+    ]);
+
+    $pdo = db();
+    $pdo->beginTransaction();
+    try {
+        $find = $pdo->prepare('SELECT id FROM inspections WHERE item_number=:item ORDER BY id DESC LIMIT 1 FOR UPDATE');
+        $find->execute(['item' => $itemNumber]);
+        $inspectionId = $find->fetchColumn();
+        if (!$inspectionId) {
+            $create = $pdo->prepare(
+                'INSERT INTO inspections (personnel_id,item_number,afp_serial_number,pistol_type,date_registered,status,created_at,updated_at)
+                 VALUES (:personnel_id,:item,:serial,:pistol_type,CURDATE(),\'pending\',NOW(),NOW())'
+            );
+            $create->execute([
+                'personnel_id' => $personnel['id'], 'item' => $itemNumber,
+                'serial' => $personnel['afpSerialNumber'], 'pistol_type' => $personnel['pistolType'],
+            ]);
+            $inspectionId = (int) $pdo->lastInsertId();
+        }
+        $assignments = [];
+        foreach (array_merge(inspection_parts(), array_keys($textFields), array_keys($signatures)) as $column) {
+            $assignments[] = '`' . $column . '`=:' . $column;
+        }
+        $assignments[] = '`status`=:status';
+        $assignments[] = '`remarks`=:remarks';
+        $assignments[] = '`inspected_by_user_id`=:user_id';
+        $updateValues = $values;
+        unset($updateValues['item']);
+        $updateValues['id'] = $inspectionId;
+        $update = $pdo->prepare(
+            'UPDATE inspections SET ' . implode(',', $assignments) . ',inspected_at=NOW(),updated_at=NOW() WHERE id=:id'
+        );
+        $update->execute($updateValues);
+
+        $personnelUpdate = $pdo->prepare(
+            'UPDATE personnel SET ics_status=:ics_status,date_approved=' . ($status === 'approved' ? 'CURDATE()' : 'NULL') . ',updated_at=NOW()
+             WHERE item_number=:item'
+        );
+        $personnelUpdate->execute([
+            'ics_status' => $status === 'approved' ? 'ready' : 'under', 'item' => $itemNumber,
+        ]);
+        audit($user, $status === 'approved' ? 'inspection_approved' : 'inspection_saved', (string) $itemNumber);
+        $pdo->commit();
+    } catch (Throwable $error) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        throw $error;
+    }
+
+    json_response([
+        'success' => true,
+        'status' => $status,
+        'rpcspRemark' => $condition,
+        'message' => $status === 'approved' ? 'Inspection marked for renewal.' : 'Inspection saved.',
+    ]);
+}
+
+function inspection_notify_staff(array $user): never
+{
+    $input = request_data();
+    $itemNumber = filter_var($input['itemNumber'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+    $message = personnel_text($input, 'message', 2000);
+    if ($itemNumber === false || $message === '') {
+        json_response(['success' => false, 'error' => 'Personnel and notification message are required.'], 422);
+    }
+    $personnel = inspection_find_personnel($itemNumber);
+    if (!$personnel) {
+        json_response(['success' => false, 'error' => 'Personnel record not found.'], 404);
+    }
+    $statusQuery = db()->prepare('SELECT status FROM inspections WHERE item_number=:item ORDER BY id DESC LIMIT 1');
+    $statusQuery->execute(['item' => $itemNumber]);
+    if ($statusQuery->fetchColumn() !== 'approved') {
+        json_response(['success' => false, 'error' => 'Complete and approve the inspection before notifying staff.'], 409);
+    }
+    $name = trim($personnel['firstName'] . ' ' . $personnel['middleName'] . ' ' . $personnel['lastName']);
+    $statement = db()->prepare(
+        'INSERT INTO notifications
+         (type,title,message,personnel_name,personnel_id,read_by_admin,read_by_staff,created_at,updated_at)
+         VALUES (\'renewal_ready\',\'Personnel ready for renewal\',:message,:name,:id,1,0,NOW(),NOW())'
+    );
+    $statement->execute([
+        'message' => $message, 'name' => $name, 'id' => $personnel['id'],
+    ]);
+    audit($user, 'staff_notified_for_renewal', (string) $itemNumber);
+    json_response(['success' => true, 'message' => 'Staff notification sent.']);
 }
 
 function notifications_data(array $user): never
