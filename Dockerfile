@@ -12,6 +12,9 @@ WORKDIR /var/www/html
 COPY . .
 
 RUN mkdir -p storage/limits \
-    && chown -R www-data:www-data storage
+    && chown -R www-data:www-data storage \
+    && secret_group="$(getent group 1000 | cut -d: -f1)" \
+    && if [ -z "$secret_group" ]; then groupadd --gid 1000 rendersecrets; secret_group=rendersecrets; fi \
+    && usermod --append --groups "$secret_group" www-data
 
 CMD ["sh", "-c", "sed -ri \"s!Listen 80!Listen ${PORT:-10000}!\" /etc/apache2/ports.conf && sed -ri \"s!<VirtualHost \\*:80>!<VirtualHost *:${PORT:-10000}>!\" /etc/apache2/sites-available/000-default.conf && apache2-foreground"]

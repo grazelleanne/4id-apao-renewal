@@ -62,10 +62,24 @@ function db(): PDO
         || !preg_match('/^[A-Za-z0-9_]+$/', $name)) {
         throw new RuntimeException('Invalid MySQL configuration.');
     }
-    $pdo = new PDO("mysql:host={$host};port={$port};dbname={$name};charset=utf8mb4", env_value('DB_USERNAME'), env_value('DB_PASSWORD'), [
+    $options = [
         PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
         PDO::ATTR_EMULATE_PREPARES => false,
-    ]);
+    ];
+    $sslCa = env_value('DB_SSL_CA');
+    if ($sslCa !== '') {
+        if (!is_file($sslCa) || !is_readable($sslCa)) {
+            throw new RuntimeException('The configured MySQL CA certificate is not readable.');
+        }
+        $options[PDO::MYSQL_ATTR_SSL_CA] = $sslCa;
+        $options[PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT] = true;
+    }
+    $pdo = new PDO(
+        "mysql:host={$host};port={$port};dbname={$name};charset=utf8mb4",
+        env_value('DB_USERNAME'),
+        env_value('DB_PASSWORD'),
+        $options,
+    );
     return $pdo;
 }
 function h(mixed $value): string
