@@ -27,6 +27,11 @@ foreach (['login', 'forgot_password', 'admin_dashboard', 'admin_personnel', 'adm
         throw new RuntimeException("View rendering failed: {$view}");
     }
 }
+$inspectionView = render_view('admin_inspection', ['user' => $viewUser]);
+if (str_contains($inspectionView, "return p.icsStatus === 'under';")
+    || !str_contains($inspectionView, "p.inspectionStatus || 'pending'")) {
+    throw new RuntimeException('Pending inspection filter regression detected.');
+}
 $staff = render_view('staff_dashboard', [
     'user' => (object) array_merge((array) $viewUser, ['role' => 'staff']),
     'initialDashboardData' => ['personnel' => []], 'initialActiveTab' => 'registration',

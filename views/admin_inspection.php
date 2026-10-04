@@ -741,18 +741,29 @@ body.light-mode .btn-save-under{background:#ede9fe;color:#6d28d9;border-color:#c
     }
 
     async function loadData() {
-      const res  = await fetch('/admin/inspection-data');
-      const data = await res.json();
-      if (!data.success) return;
-      allPersonnel = data.data;
-      populateFilterOptions();
-      document.getElementById('statPending').textContent  = data.pending;
-      document.getElementById('statUnder').textContent    = data.under;
-      document.getElementById('statApproved').textContent = data.approved;
-      document.getElementById('countPending').textContent  = data.pending;
-      document.getElementById('countUnder').textContent    = data.under;
-      document.getElementById('countRenewal').textContent  = data.approved;
-      renderTable();
+      try {
+        const res = await fetch('/admin/inspection-data', {headers:{'Accept':'application/json'}});
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+          throw new Error(data.message || 'Unable to load inspection records.');
+        }
+        allPersonnel = Array.isArray(data.data) ? data.data : [];
+        populateFilterOptions();
+        document.getElementById('statPending').textContent  = data.pending;
+        document.getElementById('statUnder').textContent    = data.under;
+        document.getElementById('statApproved').textContent = data.approved;
+        document.getElementById('countPending').textContent  = data.pending;
+        document.getElementById('countUnder').textContent    = data.under;
+        document.getElementById('countRenewal').textContent  = data.approved;
+        renderTable();
+      } catch (error) {
+        console.error('Failed to load inspection records:', error);
+        ['statPending','statUnder','statApproved','countPending','countUnder','countRenewal']
+          .forEach(id => { document.getElementById(id).textContent = '0'; });
+        document.getElementById('inspTable').innerHTML =
+          `<tr><td colspan="6" class="text-center py-10 text-red-400">${escapeHtml(error.message || 'Unable to load inspection records.')}</td></tr>`;
+        document.getElementById('pagInfo').textContent = 'Showing 0 entries';
+      }
     }
 
     function populateFilterOptions() {
@@ -807,12 +818,8 @@ body.light-mode .btn-save-under{background:#ede9fe;color:#6d28d9;border-color:#c
 
       const validStatuses = tabStatuses();
       let rows = allPersonnel.filter(p => {
-        const s = p.inspectionStatus || '';
-        if (!validStatuses.includes(s)) return false;
-        if (s === '' || s === 'pending' || s == null) {
-          return p.icsStatus === 'under';
-        }
-        return true;
+        const status = p.inspectionStatus || 'pending';
+        return validStatuses.includes(status);
       });
 
       if (rankFilter) {

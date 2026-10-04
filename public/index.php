@@ -321,6 +321,7 @@ function personnel_rows(bool $archived = false): array
 {
     $statement = db()->prepare(
         'SELECT p.*, i.status AS inspection_status, i.remarks AS inspection_remarks,
+                i.date_registered AS inspection_date_registered,
                 i.updated_at AS inspection_updated_at
          FROM personnel p
          LEFT JOIN inspections i ON i.id = (
@@ -348,6 +349,7 @@ function personnel_rows(bool $archived = false): array
             'icsStatus' => $p['ics_status'] ?? 'inspection', 'dateApproved' => $p['date_approved'],
             'photo' => $p['photo'], 'signature' => $p['signature'],
             'inspectionStatus' => $p['inspection_status'] ?? null,
+            'inspectionDateRegistered' => $p['inspection_date_registered'] ?? null,
             'inspectionResult' => $p['inspection_remarks'] ?? '',
             'inspectionRemarks' => $p['inspection_remarks'] ?? '',
             'inspectionUpdatedAt' => $p['inspection_updated_at'] ?? null,
@@ -614,12 +616,15 @@ function inspection_data(): never
     $under = 0;
     $approved = 0;
     foreach ($rows as &$row) {
-        $row['dateRegistered'] = $row['dateApproved'] ?? null;
-        $status = $row['inspectionStatus'];
+        $row['dateRegistered'] = $row['inspectionDateRegistered'] ?? null;
+        $status = strtolower(trim((string) ($row['inspectionStatus'] ?? '')));
+        $icsStatus = strtolower(trim((string) ($row['icsStatus'] ?? '')));
         if ($status === 'approved') {
             $approved++;
-        } elseif ($status === 'under' || $row['icsStatus'] === 'under') {
+            $row['inspectionStatus'] = 'approved';
+        } elseif ($status === 'under' || $icsStatus === 'under') {
             $under++;
+            $row['inspectionStatus'] = 'under';
         } else {
             $pending++;
             $row['inspectionStatus'] = 'pending';
