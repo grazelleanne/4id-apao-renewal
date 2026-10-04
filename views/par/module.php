@@ -1092,10 +1092,11 @@
     return list.map(function (p) {
       var ov = getOverride(p.itemNumber);
 
-      // Issuance contains only renewed personnel whose ICS is ready and whose
-      // replacement PAR has not been processed. Existing PARs stay in Management.
+      // A personnel record becomes eligible for its first PAR as soon as the
+      // administrator approves the firearm inspection. Existing PARs stay in Management.
       var hasExistingPar = !!(ov.parNumber || p.parNumber);
-      var awaitingRenewalPar = p.approvedStatus === 'renewed' && p.icsStatus === 'ready' && ov.parStatus !== 'issued';
+      var inspectionApproved = p.inspectionStatus === 'approved' || p.icsStatus === 'ready';
+      var awaitingRenewalPar = inspectionApproved && !hasExistingPar && ov.parStatus !== 'issued';
       var derivedStatus = awaitingRenewalPar ? 'ready' : (hasExistingPar ? 'issued' : 'ineligible');
       var seededNumber = ov.parNumber || p.parNumber || null;
       var seededDate = ov.dateIssued || p.dateIssued || null;

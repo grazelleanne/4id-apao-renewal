@@ -5,6 +5,14 @@ require dirname(__DIR__) . '/src/PdfReport.php';
 if (!password_is_strong('StrongExample!123') || password_is_strong('weak')) {
     throw new RuntimeException('Password validation failed.');
 }
+$statusToday = new DateTimeImmutable('2026-10-04');
+if (renewal_status_for_personnel(['date_of_validity' => '2026-10-03'], $statusToday) !== 'expired'
+    || renewal_status_for_personnel(['date_of_validity' => '2026-11-01'], $statusToday) !== 'within'
+    || renewal_status_for_personnel(['date_of_validity' => '2027-10-04'], $statusToday) !== 'renewed'
+    || renewal_status_for_personnel(['inspection_status' => 'approved'], $statusToday) !== 'renewed'
+    || renewal_status_for_personnel(['approved_status' => 'pending'], $statusToday) !== 'pending') {
+    throw new RuntimeException('Personnel renewal status calculation failed.');
+}
 $method = new ReflectionMethod(PdfReport::class, 'build');
 $pdf = $method->invoke(null, ['Test', 'Hello (PHP)']);
 if (!str_starts_with($pdf, "%PDF-1.4\n") || !str_ends_with($pdf, '%%EOF')

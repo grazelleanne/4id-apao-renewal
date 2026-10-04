@@ -345,6 +345,7 @@ function personnel_rows(bool $archived = false): array
     );
     $statement->execute();
     return array_map(static function (array $p): array {
+        $renewalStatus = renewal_status_for_personnel($p);
         return [
             'id' => (int) $p['id'], 'itemNumber' => (int) $p['item_number'],
             'dateOfValidity' => $p['date_of_validity'], 'lastName' => $p['last_name'] ?? '',
@@ -358,7 +359,7 @@ function personnel_rows(bool $archived = false): array
             'pistolSerialNumber' => $p['pistol_serial_number'] ?? '',
             'pistolType' => $p['pistol_type'] ?? '', 'parNumber' => $p['par_number'] ?? '',
             'qtyAmmo' => (int) ($p['qty_ammo'] ?? 0), 'unit' => $p['unit'] ?? '',
-            'approvedStatus' => $p['approved_status'] ?? 'pending', 'status' => $p['status'] ?? 'active',
+            'approvedStatus' => $renewalStatus, 'status' => $p['status'] ?? 'active',
             'icsStatus' => $p['ics_status'] ?? 'inspection', 'dateApproved' => $p['date_approved'],
             'photo' => $p['photo'], 'signature' => $p['signature'],
             'inspectionStatus' => $p['inspection_status'] ?? null,
@@ -832,7 +833,8 @@ function inspection_save(array $user): never
         $update->execute($updateValues);
 
         $personnelUpdate = $pdo->prepare(
-            'UPDATE personnel SET ics_status=:ics_status,date_approved=' . ($status === 'approved' ? 'CURDATE()' : 'NULL') . ',updated_at=NOW()
+            'UPDATE personnel SET ics_status=:ics_status,date_approved=' . ($status === 'approved' ? 'CURDATE()' : 'NULL')
+            . ($status === 'approved' ? ',approved_status=\'renewed\'' : '') . ',updated_at=NOW()
              WHERE item_number=:item'
         );
         $personnelUpdate->execute([

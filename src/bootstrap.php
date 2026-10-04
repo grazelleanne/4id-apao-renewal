@@ -233,6 +233,30 @@ function password_is_strong(string $password): bool
         && preg_match('/[A-Z]/', $password) && preg_match('/[a-z]/', $password)
         && preg_match('/[0-9]/', $password) && preg_match('/[^A-Za-z0-9]/', $password);
 }
+function renewal_status_for_personnel(array $personnel, ?DateTimeImmutable $today = null): string
+{
+    $today ??= new DateTimeImmutable('today');
+    $validity = $personnel['date_of_validity'] ?? null;
+    if (is_string($validity) && trim($validity) !== '') {
+        $date = DateTimeImmutable::createFromFormat('!Y-m-d', substr($validity, 0, 10));
+        if ($date instanceof DateTimeImmutable) {
+            if ($date < $today) {
+                return 'expired';
+            }
+            if ($date <= $today->modify('+60 days')) {
+                return 'within';
+            }
+            return 'renewed';
+        }
+    }
+    $inspectionStatus = strtolower(trim((string) ($personnel['inspection_status'] ?? '')));
+    $icsStatus = strtolower(trim((string) ($personnel['ics_status'] ?? '')));
+    if ($inspectionStatus === 'approved' || $icsStatus === 'ready') {
+        return 'renewed';
+    }
+    $stored = strtolower(trim((string) ($personnel['approved_status'] ?? 'pending')));
+    return in_array($stored, ['renewed', 'within', 'expired', 'new', 'pending'], true) ? $stored : 'pending';
+}
 function audit(array $user, string $action, string $subject): void
 {
     $query = db()->prepare('INSERT INTO audit_logs (user_id,user_name,user_role,action,subject,description,ip_address) VALUES (:id,:name,:role,:action,:subject,:description,:ip)');
