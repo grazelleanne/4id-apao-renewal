@@ -1,0 +1,75 @@
+# APAO Renewal System — Vanilla PHP
+
+This standalone PHP project does not require Laravel or Composer. It includes
+the original system UI (login, staff dashboard/PAR workspace, and all admin
+screens), an empty MySQL database schema, secure login, personnel CSV import,
+and personnel, inspection, and PAR PDF downloads. It does not include the
+existing system's personnel data or credentials.
+
+## Requirements
+
+- PHP 8.2+ with `pdo_mysql`
+- MySQL 8+
+- Configure your web server document root as `public/`
+
+## Setup
+
+1. Import `database/schema.sql` into MySQL as an administrator. It creates the
+   empty `apao_vanilla` database.
+2. Create a least-privilege MySQL account for that database.
+3. Copy `.env.example` to `.env`, then set the database credentials.
+4. Make `storage/` writable by PHP and keep it outside the public web root.
+5. Create the first administrator in an interactive terminal:
+
+   ```powershell
+   php bin/create-admin.php admin@example.com "System Administrator"
+   ```
+
+   Use a unique password with at least 12 characters, upper- and lowercase
+   letters, a number, and a symbol.
+6. Run locally from this folder:
+
+   ```powershell
+   php -S 127.0.0.1:8080 -t public public/router.php
+   ```
+
+Use HTTPS in production. Set up your mail transport before relying on password
+reset email.
+
+## Importing personnel
+
+For a personnel-only CSV, use `php bin/import-personnel.php file.csv`. The CSV
+must have `item_number`, `first_name`, and `last_name` columns. Other accepted
+columns are listed in the importer. The import is transactional and rolls back
+on invalid rows or duplicate identifiers. Keep source data and backups
+protected.
+
+To migrate related records, carefully export and review selected tables from
+the existing database, then import data in foreign-key order. Exclude session,
+cache, queue, and outstanding password-reset data. Back up and verify data
+before migration. The included schema is an empty import target, not an
+automatic migration or a complete Laravel feature port.
+
+## Included safeguards
+
+Prepared PDO statements, CSRF tokens, HTTP-only/SameSite session cookies,
+session ID rotation and inactivity expiry, server-side active-account and role
+checks, one-use login CAPTCHA, throttling, hashed OTPs, password complexity,
+audit events, output escaping, security headers, and private/no-store responses.
+
+## Checks
+
+```powershell
+php tests/smoke.php
+```
+
+## UI templates
+
+All templates are framework-free PHP files under `views/`. The application
+does not use Laravel, Blade, Composer, or a template compilation step.
+
+The full interface is present and its read-only dashboards use the vanilla
+database. Some advanced write workflows still need their Laravel controller
+logic ported: personnel editing/archive actions, inspection processing, PAR
+issuance/replacement, password-reset email, notifications updates, scheduled
+jobs, and the original branded/signature PDF generation.
