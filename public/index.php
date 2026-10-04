@@ -53,6 +53,16 @@ try {
         require_user(['super_admin','admin','staff']);
         personnel_data();
     }
+    if ($path === '/staff/personnel/availability' && $method === 'POST') {
+        require_post();
+        require_user(['staff','super_admin','admin']);
+        personnel_availability();
+    }
+    if ($path === '/staff/personnel' && $method === 'POST') {
+        require_post();
+        $user = require_user(['staff','super_admin','admin']);
+        personnel_store($user);
+    }
     if ($path === '/admin/archive-data' && $method === 'GET') {
         require_user(['super_admin','admin']);
         archive_data();
@@ -122,6 +132,9 @@ try {
     page_error('Page not found.', 404);
 } catch (Throwable $error) {
     error_log('[APAO PHP] ' . $error->getMessage());
+    if (request_expects_json()) {
+        json_response(['success' => false, 'message' => 'The request could not be completed. Please try again.'], 500);
+    }
     page_error('The request could not be completed. Check the server log or contact the administrator.', 500);
 }
 
@@ -346,6 +359,196 @@ function personnel_rows(bool $archived = false): array
 function personnel_data(): never
 {
     json_response(['success' => true, 'personnel' => personnel_rows(), 'data' => personnel_rows()]);
+}
+
+function personnel_duplicate_errors(array $input): array
+{
+    $checks = [
+        'afpSerialNumber' => ['column' => 'afp_serial_number', 'message' => 'This AFP serial number is already registered.'],
+        'email' => ['column' => 'email', 'message' => 'This email address is already registered.'],
+        'contactNumber' => ['column' => 'contact_number', 'message' => 'This contact number is already registered.'],
+        'pistolSerialNumber' => ['column' => 'pistol_serial_number', 'message' => 'This pistol serial number is already registered.'],
+    ];
+    $errors = [];
+    foreach ($checks as $field => $check) {
+        $value = is_string($input[$field] ?? null) ? trim($input[$field]) : '';
+        if ($value === '') {
+            continue;
+        }
+        $comparison = $field === 'email' ? 'LOWER(`email`)=LOWER(:value)' : '`' . $check['column'] . '`=:value';
+        $statement = db()->prepare('SELECT 1 FROM personnel WHERE ' . $comparison . ' LIMIT 1');
+        $statement->execute(['value' => $value]);
+        if ($statement->fetchColumn()) {
+            $errors[$field] = [$check['message']];
+        }
+    }
+    return $errors;
+}
+
+function personnel_availability(): never
+{
+    $input = request_data();
+    $errors = personnel_duplicate_errors($input);
+    json_response([
+        'success' => $errors === [],
+        'available' => $errors === [],
+        'errors' => $errors,
+    ], $errors === [] ? 200 : 409);
+}
+
+function personnel_text(array $input, string $key, int $maximum = 255): string
+{
+    $value = is_string($input[$key] ?? null) ? trim($input[$key]) : '';
+    return function_exists('mb_substr') ? mb_substr($value, 0, $maximum) : substr($value, 0, $maximum);
+}
+
+function personnel_image(array $input, string $key): ?string
+{
+    $value = $input[$key] ?? null;
+    if ($value === null || $value === '') {
+        return null;
+    }
+    if (!is_string($value) || strlen($value) > 3_000_000
+        || !preg_match('#^data:image/(?:png|jpe?g|webp);base64,([A-Za-z0-9+/=]+)$#', $value, $matches)) {
+        throw new InvalidArgumentException('Invalid image upload. Use a PNG, JPEG, or WebP image under 2 MB.');
+    }
+    $decoded = base64_decode($matches[1], true);
+    if ($decoded === false || strlen($decoded) > 2_000_000) {
+        throw new InvalidArgumentException('Invalid image upload. Use an image under 2 MB.');
+    }
+    return $value;
+}
+
+function personnel_store(array $user): never
+{
+    $input = request_data();
+    $required = [
+        'lastName' => 'Last name', 'firstName' => 'First name', 'rank' => 'Rank',
+        'afpSerialNumber' => 'AFP serial number', 'unit' => 'Unit / organization',
+        'dateOfBirth' => 'Date of birth', 'email' => 'Email address',
+        'pistolNomenclature' => 'Pistol nomenclature', 'pistolType' => 'Pistol type',
+        'pistolSerialNumber' => 'Pistol serial number', 'issuedBy' => 'Issued by',
+    ];
+    $errors = [];
+    foreach ($required as $field => $label) {
+        if (personnel_text($input, $field) === '') {
+            $errors[$field] = [$label . ' is required.'];
+        }
+    }
+    $email = strtolower(personnel_text($input, 'email'));
+    if ($email !== '' && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        $errors['email'] = ['Enter a valid email address.'];
+    }
+    $contact = personnel_text($input, 'contactNumber', 20);
+    if ($contact !== '' && !preg_match('/^[0-9+() .-]{7,20}$/', $contact)) {
+        $errors['contactNumber'] = ['Enter a valid contact number.'];
+    }
+    $birthDate = personnel_text($input, 'dateOfBirth', 10);
+    $parsedDate = DateTimeImmutable::createFromFormat('!Y-m-d', $birthDate);
+    if (!$parsedDate || $parsedDate->format('Y-m-d') !== $birthDate || $parsedDate > new DateTimeImmutable('today')) {
+        $errors['dateOfBirth'] = ['Enter a valid date of birth that is not in the future.'];
+    }
+    $ammo = filter_var($input['qtyAmmo'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 0]]);
+    if ($ammo === false) {
+        $errors['qtyAmmo'] = ['Quantity of ammunition must be a whole number of 0 or more.'];
+    }
+    $errors = array_merge($errors, personnel_duplicate_errors($input));
+    if ($errors !== []) {
+        json_response(['success' => false, 'message' => 'Please correct the highlighted fields.', 'errors' => $errors], 422);
+    }
+
+    try {
+        $photo = personnel_image($input, 'photo');
+        $signature = personnel_image($input, 'signature');
+    } catch (InvalidArgumentException $error) {
+        json_response(['success' => false, 'message' => $error->getMessage()], 422);
+    }
+
+    $pdo = db();
+    $lockAcquired = (int) $pdo->query("SELECT GET_LOCK('apao_personnel_item_number', 5)")->fetchColumn() === 1;
+    if (!$lockAcquired) {
+        json_response(['success' => false, 'message' => 'Registration is busy. Please try again.'], 503);
+    }
+    try {
+        $pdo->beginTransaction();
+        $itemNumber = (int) $pdo->query('SELECT COALESCE(MAX(item_number), 0) + 1 FROM personnel')->fetchColumn();
+        $insert = $pdo->prepare(
+            'INSERT INTO personnel
+             (item_number,date_of_validity,last_name,first_name,middle_name,`rank`,afp_serial_number,afos_mos,branch,email,
+              contact_number,issued_by,date_of_birth,citizenship,civil_status,pistol_nomenclature,pistol_serial_number,
+              pistol_type,qty_ammo,unit,approved_status,status,ics_status,is_archived,photo,signature,created_at,updated_at)
+             VALUES
+             (:item,NULL,:last_name,:first_name,:middle_name,:rank,:afp_serial,:afos_mos,:branch,:email,
+              :contact,:issued_by,:birth_date,:citizenship,:civil_status,:pistol_name,:pistol_serial,
+              :pistol_type,:ammo,:unit,\'pending\',\'active\',\'inspection\',0,:photo,:signature,NOW(),NOW())'
+        );
+        $insert->execute([
+            'item' => $itemNumber,
+            'last_name' => personnel_text($input, 'lastName'),
+            'first_name' => personnel_text($input, 'firstName'),
+            'middle_name' => personnel_text($input, 'middleName') ?: null,
+            'rank' => personnel_text($input, 'rank'),
+            'afp_serial' => personnel_text($input, 'afpSerialNumber'),
+            'afos_mos' => personnel_text($input, 'afosMos') ?: null,
+            'branch' => personnel_text($input, 'branch') ?: null,
+            'email' => $email,
+            'contact' => $contact ?: null,
+            'issued_by' => personnel_text($input, 'issuedBy'),
+            'birth_date' => $birthDate,
+            'citizenship' => personnel_text($input, 'citizenship', 100) ?: 'Filipino',
+            'civil_status' => personnel_text($input, 'civilStatus', 30) ?: null,
+            'pistol_name' => personnel_text($input, 'pistolNomenclature'),
+            'pistol_serial' => personnel_text($input, 'pistolSerialNumber'),
+            'pistol_type' => personnel_text($input, 'pistolType'),
+            'ammo' => $ammo,
+            'unit' => personnel_text($input, 'unit'),
+            'photo' => $photo,
+            'signature' => $signature,
+        ]);
+        $personnelId = (int) $pdo->lastInsertId();
+        $inspection = $pdo->prepare(
+            'INSERT INTO inspections
+             (personnel_id,item_number,afp_serial_number,pistol_type,date_registered,status,remarks,created_at,updated_at)
+             VALUES (:personnel_id,:item,:afp_serial,:pistol_type,CURDATE(),\'pending\',:remarks,NOW(),NOW())'
+        );
+        $inspection->execute([
+            'personnel_id' => $personnelId, 'item' => $itemNumber,
+            'afp_serial' => personnel_text($input, 'afpSerialNumber'),
+            'pistol_type' => personnel_text($input, 'pistolType'),
+            'remarks' => personnel_text($input, 'remarks', 5000) ?: null,
+        ]);
+        $name = trim(personnel_text($input, 'firstName') . ' ' . personnel_text($input, 'middleName') . ' ' . personnel_text($input, 'lastName'));
+        $notification = $pdo->prepare(
+            'INSERT INTO notifications
+             (type,title,message,personnel_name,personnel_id,read_by_admin,read_by_staff,created_at,updated_at)
+             VALUES (\'personnel_added\',\'New personnel registration\',:message,:name,:id,0,1,NOW(),NOW())'
+        );
+        $notification->execute([
+            'message' => $name . ' was submitted for inspection.', 'name' => $name, 'id' => $personnelId,
+        ]);
+        audit($user, 'personnel_registered', (string) $itemNumber);
+        $pdo->commit();
+    } catch (Throwable $error) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        if ($error instanceof PDOException && (string) $error->getCode() === '23000') {
+            json_response([
+                'success' => false,
+                'message' => 'One of these personnel details is already registered.',
+                'errors' => personnel_duplicate_errors($input),
+            ], 409);
+        }
+        throw $error;
+    } finally {
+        $pdo->query("SELECT RELEASE_LOCK('apao_personnel_item_number')");
+    }
+
+    json_response([
+        'success' => true,
+        'message' => 'Personnel registration submitted for inspection.',
+        'data' => ['id' => $personnelId, 'itemNumber' => $itemNumber],
+    ], 201);
 }
 
 function dashboard_data(): never

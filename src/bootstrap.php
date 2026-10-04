@@ -114,14 +114,25 @@ function request_data(): array
     }
     return $data;
 }
+function request_expects_json(): bool
+{
+    return str_contains(strtolower((string) ($_SERVER['HTTP_ACCEPT'] ?? '')), 'application/json')
+        || str_contains(strtolower((string) ($_SERVER['CONTENT_TYPE'] ?? '')), 'application/json');
+}
 function require_post(): void
 {
     if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST') {
+        if (request_expects_json()) {
+            json_response(['success' => false, 'message' => 'Method not allowed.'], 405);
+        }
         page_error('Method not allowed', 405);
     }
     $input = request_data();
     $token = $input['_token'] ?? $input['_csrf'] ?? ($_SERVER['HTTP_X_CSRF_TOKEN'] ?? '');
     if (!is_string($token) || !hash_equals(csrf_token(), $token)) {
+        if (request_expects_json()) {
+            json_response(['success' => false, 'message' => 'Session expired. Refresh and retry.'], 419);
+        }
         page_error('Session expired. Refresh and retry.', 419);
     }
 }
@@ -140,12 +151,18 @@ function require_user(array $roles = []): array
 {
     $user = current_user();
     if (!$user) {
+        if (request_expects_json()) {
+            json_response(['success' => false, 'message' => 'Please sign in again.'], 401);
+        }
         redirect('/login');
     }
     $lifetime = max(900, (int) env_value('APP_SESSION_LIFETIME', '7200'));
     if (time() - (int) ($_SESSION['_last_activity'] ?? 0) > $lifetime) {
         $_SESSION = [];
         session_regenerate_id(true);
+        if (request_expects_json()) {
+            json_response(['success' => false, 'message' => 'Your session expired. Please sign in again.'], 401);
+        }
         redirect('/login');
     }
     $query = db()->prepare('SELECT id,name,email,role,is_active,session_version FROM users WHERE id=:id');
@@ -154,6 +171,9 @@ function require_user(array $roles = []): array
     if (!$fresh || !(int) $fresh['is_active'] || (int) $fresh['session_version'] !== (int) ($user['session_version'] ?? 0)) {
         $_SESSION = [];
         session_regenerate_id(true);
+        if (request_expects_json()) {
+            json_response(['success' => false, 'message' => 'Your session is no longer valid. Please sign in again.'], 401);
+        }
         redirect('/login');
     }
     $_SESSION['user'] = $user = [
@@ -162,6 +182,9 @@ function require_user(array $roles = []): array
     ];
     $_SESSION['_last_activity'] = time();
     if ($roles && !in_array($user['role'], $roles, true)) {
+        if (request_expects_json()) {
+            json_response(['success' => false, 'message' => 'Access denied.'], 403);
+        }
         page_error('Access denied.', 403);
     }
     return $user;
