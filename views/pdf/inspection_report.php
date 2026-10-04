@@ -1,4 +1,104 @@
+<?php
+declare(strict_types=1);
 
+$p = isset($p) && is_array($p) ? $p : [];
+$inspection = isset($inspection) && is_array($inspection) ? $inspection : [];
+$escape = static fn (mixed $value): string => htmlspecialchars(
+    (string) $value,
+    ENT_QUOTES | ENT_SUBSTITUTE,
+    'UTF-8'
+);
+$formatDate = static function (mixed $value, string $fallback = ''): string {
+    if (!is_string($value) || trim($value) === '') {
+        return $fallback;
+    }
+    try {
+        return (new DateTimeImmutable($value))->format('d F Y');
+    } catch (Throwable) {
+        return $fallback;
+    }
+};
+$imageData = static function (string $path): string {
+    if (!is_file($path) || !is_readable($path)) {
+        return '';
+    }
+    $extension = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+    $mime = match ($extension) {
+        'jpg', 'jpeg' => 'image/jpeg',
+        'gif' => 'image/gif',
+        'webp' => 'image/webp',
+        default => 'image/png',
+    };
+    $contents = file_get_contents($path);
+    return $contents === false ? '' : 'data:' . $mime . ';base64,' . base64_encode($contents);
+};
+$publicImage = static fn (string $name): string => APP_ROOT . '/public/images/' . basename($name);
+$signatureSource = static function (mixed $stored, string $defaultFile) use ($imageData, $publicImage): string {
+    if (is_string($stored)
+        && preg_match('#^data:image/(?:png|jpe?g|gif|webp);base64,[A-Za-z0-9+/=]+$#', $stored)) {
+        return $stored;
+    }
+    if (is_string($stored) && str_starts_with($stored, '/images/')) {
+        $storedImage = $imageData($publicImage(basename($stored)));
+        if ($storedImage !== '') {
+            return $storedImage;
+        }
+    }
+    return $imageData($publicImage($defaultFile));
+};
+
+$partLabels = [
+    'barrel' => 'Barrel', 'slide' => 'Slide', 'recoil_spring_assembly' => 'Recoil Spring Assembly',
+    'firing_pin' => 'Firing Pin / Striker', 'firing_pin_safety' => 'Firing Pin Safety',
+    'extractor' => 'Extractor', 'rear_sight' => 'Rear Sight', 'front_sight' => 'Front Sight',
+    'frame' => 'Frame', 'magazine' => 'Magazine', 'magazine_catch' => 'Magazine Catch',
+    'magazine_catch_spring' => 'Magazine Catch Spring', 'trigger' => 'Trigger',
+    'trigger_spring' => 'Trigger Spring', 'trigger_bar' => 'Trigger Bar',
+    'slide_stop_lever' => 'Slide Stop Lever', 'trigger_pin' => 'Trigger Pin',
+    'trigger_mechanism_housing' => 'Trigger Housing / Mechanism Housing',
+    'trigger_housing_pin' => 'Trigger Housing Pin', 'locking_block' => 'Locking Block',
+    'locking_block_pin' => 'Locking Block Pin', 'slide_lock' => 'Slide Lock',
+    'slide_lock_spring' => 'Slide Lock Spring', 'connector' => 'Connector', 'guide_rod' => 'Guide Rod',
+];
+$allParts = [];
+foreach ($partLabels as $key => $label) {
+    $allParts[] = [$key, $label];
+}
+$leftParts = array_slice($allParts, 0, 13);
+$rightParts = array_slice($allParts, 13);
+
+$defaultSignatories = [
+    'inspected' => ['name' => 'Rennan F. Maglasang Jr', 'rank' => 'Cpl (OS) PA', 'position' => 'Armaments NCO'],
+    'witnessed' => ['name' => 'Marcelito H. Anino', 'rank' => 'MAJ (QMS) PA', 'position' => '901BDE, 9ID, PA'],
+    'approved' => ['name' => 'Wenlie B. Enriola', 'rank' => 'CPT (OS) PA', 'position' => 'CO, Maintenance Coy'],
+    'noted' => ['name' => 'Darrell P. Mariano', 'rank' => 'LTC OS (GSC) PA', 'position' => 'CO, 10FSSU, SPTCOM, PA'],
+];
+$signatureImages = [
+    'inspected' => $signatureSource($inspection['inspected_by_sig'] ?? null, 'maglasang.png'),
+    'witnessed' => $signatureSource($inspection['witnessed_by_sig'] ?? null, 'anino.png'),
+    'approved' => $signatureSource($inspection['approved_by_sig'] ?? null, 'enriola.png'),
+    'noted' => $signatureSource($inspection['noted_by_sig'] ?? null, 'mariano.png'),
+];
+$fullName = trim(
+    ($p['last_name'] ?? '') . ', ' . ($p['first_name'] ?? '') . ' '
+    . (!empty($p['middle_name']) ? strtoupper(substr((string) $p['middle_name'], 0, 1)) . '.' : '')
+);
+$status = strtolower(trim((string) ($inspection['status'] ?? 'pending')));
+$partResults = array_map(static fn (string $key): string => (string) ($inspection[$key] ?? 'serviceable'), array_keys($partLabels));
+$hasUnserviceable = in_array('unserviceable', $partResults, true);
+$hasRepair = (bool) array_intersect(['repair', 'replace', 'missing', 'damaged'], $partResults);
+$isServiceable = $status === 'approved' && !$hasUnserviceable && !$hasRepair;
+$isNeedsRepair = !$hasUnserviceable && $hasRepair;
+$isUnserviceable = $hasUnserviceable;
+$dateToday = $formatDate($inspection['inspected_at'] ?? null, date('d F Y'));
+$dateApproved = $formatDate($inspection['inspected_at'] ?? null, '-');
+$nextRenewal = $formatDate(
+    $inspection['next_renewal_date'] ?? $p['date_of_validity'] ?? null,
+    '-'
+);
+$logo1Data = $imageData($publicImage('logo1.png'));
+$logo2Data = $imageData($publicImage('logo2.png'));
+?>
 <!DOCTYPE html>
 <html>
 <head>
@@ -150,23 +250,26 @@
       padding-top:4px; margin-top:4px;
     }
 
+    .print-actions { position:fixed; top:12px; right:12px; z-index:10; }
+    .print-actions button {
+      border:0; border-radius:6px; padding:9px 14px; cursor:pointer;
+      background:#166534; color:#fff; font-size:12px; font-weight:700;
+    }
+
     @page { margin:0; size: A4 portrait; }
+    @media print { .print-actions { display:none; } }
   </style>
 </head>
 <body>
 
+  <div class="print-actions"><button type="button" onclick="window.print()">Print / Save as PDF</button></div>
+
   
-  <?php
-    $logo1Path = public_path('images/logo1.png');
-    $logo2Path = public_path('images/logo2.png');
-    $logo1Data = file_exists($logo1Path) ? base64_encode(file_get_contents($logo1Path)) : '';
-    $logo2Data = file_exists($logo2Path) ? base64_encode(file_get_contents($logo2Path)) : '';
-  ?>
   <table class="header-table">
     <tr>
       <td style="width:60px; text-align:left; vertical-align:middle;">
         <?php if($logo1Data): ?>
-          <img class="header-logo" src="data:image/png;base64,<?php echo e($logo1Data); ?>" alt="4ID Logo">
+          <img class="header-logo" src="<?= $escape($logo1Data) ?>" alt="4ID Logo">
         <?php endif; ?>
       </td>
       <td class="header-center">
@@ -178,7 +281,7 @@
       </td>
       <td style="width:60px; text-align:right; vertical-align:middle;">
         <?php if($logo2Data): ?>
-          <img class="header-logo" src="data:image/png;base64,<?php echo e($logo2Data); ?>" alt="FPAO Logo">
+          <img class="header-logo" src="<?= $escape($logo2Data) ?>" alt="FPAO Logo">
         <?php endif; ?>
       </td>
     </tr>
@@ -194,90 +297,69 @@
     <tr>
       <td class="info-lbl">NOMENCLATURE</td>
       <td class="info-colon">:</td>
-      <td class="info-val"><?php echo e($p->pistol_nomenclature ?? ''); ?></td>
+      <td class="info-val"><?= $escape($p['pistol_nomenclature'] ?? '') ?></td>
       <td class="info-spacer"></td>
       <td class="info-lbl">MAKE / MODEL</td>
       <td class="info-colon">:</td>
-      <td class="info-val"><?php echo e($p->pistol_nomenclature ?? ''); ?></td>
+      <td class="info-val"><?= $escape($p['pistol_type'] ?? $p['pistol_nomenclature'] ?? '') ?></td>
     </tr>
     <tr>
       <td class="info-lbl">UNIT</td>
       <td class="info-colon">:</td>
-      <td class="info-val"><?php echo e($p->unit ?? ''); ?></td>
+      <td class="info-val"><?= $escape($p['unit'] ?? '') ?></td>
       <td class="info-spacer"></td>
       <td class="info-lbl">PISTOL SERIAL NUMBER</td>
       <td class="info-colon">:</td>
-      <td class="info-val"><?php echo e($p->pistol_serial_number ?? ''); ?></td>
+      <td class="info-val"><?= $escape($p['pistol_serial_number'] ?? '') ?></td>
     </tr>
     <tr>
       <td class="info-lbl">SERIAL NUMBER (AFP)</td>
       <td class="info-colon">:</td>
-      <td class="info-val"><?php echo e($p->afp_serial_number ?? ''); ?></td>
+      <td class="info-val"><?= $escape($p['afp_serial_number'] ?? '') ?></td>
       <td class="info-spacer"></td>
       <td class="info-lbl">DATE INSPECTED</td>
       <td class="info-colon">:</td>
-      <td class="info-val"><?php echo e($dateToday); ?></td>
+      <td class="info-val"><?= $escape($dateToday) ?></td>
     </tr>
   </table>
 
   
   <div class="section-header">PERSONNEL INFORMATION</div>
 
-  <?php
-    $fullName = trim(
-      ($p->last_name  ?? '') . ', ' .
-      ($p->first_name ?? '') . ' ' .
-      (isset($p->middle_name) && $p->middle_name
-        ? strtoupper(substr($p->middle_name, 0, 1)) . '.'
-        : '')
-    );
-  ?>
-
   <table class="personnel-table">
     <tr>
       <td class="p-lbl">NAME</td>
       <td class="p-colon">:</td>
-      <td class="p-val"><?php echo e($fullName); ?></td>
+      <td class="p-val"><?= $escape($fullName) ?></td>
       <td class="p-spacer"></td>
       <td class="p-lbl">ORGANIZATION / UNIT</td>
       <td class="p-colon">:</td>
-      <td class="p-val"><?php echo e($p->unit ?? ''); ?></td>
+      <td class="p-val"><?= $escape($p['unit'] ?? '') ?></td>
     </tr>
     <tr>
       <td class="p-lbl">RANK</td>
       <td class="p-colon">:</td>
-      <td class="p-val"><?php echo e($p->rank ?? ''); ?></td>
+      <td class="p-val"><?= $escape($p['rank'] ?? '') ?></td>
       <td class="p-spacer"></td>
       <td class="p-lbl">EMAIL</td>
       <td class="p-colon">:</td>
-      <td class="p-val"><?php echo e($p->email ?? ''); ?></td>
+      <td class="p-val"><?= $escape($p['email'] ?? '') ?></td>
     </tr>
     <tr>
       <td class="p-lbl">DATE OF BIRTH</td>
       <td class="p-colon">:</td>
       <td class="p-val">
-        <?php echo e($p->date_of_birth
-          ? \Carbon\Carbon::parse($p->date_of_birth)->format('F d, Y')
-          : ''); ?>
+        <?= $escape($formatDate($p['date_of_birth'] ?? null)) ?>
 
       </td>
       <td class="p-spacer"></td>
       <td class="p-lbl">AFP SERIAL #</td>
       <td class="p-colon">:</td>
-      <td class="p-val"><?php echo e($p->afp_serial_number ?? ''); ?></td>
+      <td class="p-val"><?= $escape($p['afp_serial_number'] ?? '') ?></td>
     </tr>
   </table>
 
   
-  <?php
-    $allParts = collect(\App\Models\Inspection::parts())
-      ->map(fn ($label, $key) => [$key, $label])
-      ->values()
-      ->all();
-    $leftParts  = array_slice($allParts, 0, 13);
-    $rightParts = array_slice($allParts, 13);
-  ?>
-
   <table class="checklist-wrap">
     <tr>
       
@@ -293,11 +375,11 @@
             </tr>
           </thead>
           <tbody>
-            <?php $__currentLoopData = $leftParts; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $i => [$key, $label]): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-              <?php $val = $inspection ? ($inspection->$key ?? 'serviceable') : 'serviceable'; ?>
+            <?php foreach ($leftParts as $i => [$key, $label]): ?>
+              <?php $val = $inspection[$key] ?? 'serviceable'; ?>
               <tr>
-                <td class="td-num"><?php echo e($i + 1); ?>.</td>
-                <td class="td-item"><?php echo e($label); ?></td>
+                <td class="td-num"><?= $escape($i + 1) ?>.</td>
+                <td class="td-item"><?= $escape($label) ?></td>
                 <td class="td-mark">
                   <?php if($val === 'serviceable'): ?>
                     <span class="mark-ok">V</span>
@@ -327,7 +409,7 @@
                   <?php endif; ?>
                 </td>
               </tr>
-            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+            <?php endforeach; ?>
           </tbody>
         </table>
       </td>
@@ -345,11 +427,11 @@
             </tr>
           </thead>
           <tbody>
-            <?php $__currentLoopData = $rightParts; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $i => [$key, $label]): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-              <?php $val = $inspection ? ($inspection->$key ?? 'serviceable') : 'serviceable'; ?>
+            <?php foreach ($rightParts as $i => [$key, $label]): ?>
+              <?php $val = $inspection[$key] ?? 'serviceable'; ?>
               <tr>
-                <td class="td-num"><?php echo e($i + 16); ?>.</td>
-                <td class="td-item"><?php echo e($label); ?></td>
+                <td class="td-num"><?= $escape($i + 14) ?>.</td>
+                <td class="td-item"><?= $escape($label) ?></td>
                 <td class="td-mark">
                   <?php if($val === 'serviceable'): ?>
                     <span class="mark-ok">V</span>
@@ -379,7 +461,7 @@
                   <?php endif; ?>
                 </td>
               </tr>
-            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+            <?php endforeach; ?>
           </tbody>
         </table>
       </td>
@@ -391,133 +473,63 @@
     <tr>
       <td class="remarks-lbl">REMARKS :</td>
       <td class="remarks-val">
-        <?php echo e($inspection->remarks ?? 'Firearm is Serviceable.'); ?>
+        <?= $escape($inspection['remarks'] ?? 'Firearm is Serviceable.') ?>
 
       </td>
     </tr>
   </table>
 
   
-  <?php
-    $defaultSignatories = [
-      'inspected' => ['name' => 'Rennan F. Maglasang Jr', 'rank' => 'Cpl (OS) PA', 'position' => 'Armaments NCO'],
-      'witnessed' => ['name' => 'Marcelito H. Anino', 'rank' => 'MAJ (QMS) PA', 'position' => '901BDE, 9ID, PA'],
-      'approved'  => ['name' => 'Wenlie B. Enriola', 'rank' => 'CPT (OS) PA', 'position' => 'CO, Maintenance Coy'],
-      'noted'     => ['name' => 'Darrell P. Mariano', 'rank' => 'LTC OS (GSC) PA', 'position' => 'CO, 10FSSU, SPTCOM, PA'],
-    ];
-    $signatureSrc = function ($storedValue, $fileName) {
-      if (is_string($storedValue) && str_starts_with($storedValue, 'data:image/')) {
-        return $storedValue;
-      }
-
-      $localPath = public_path('images/' . $fileName);
-      if (!file_exists($localPath)) {
-        return '';
-      }
-
-      $mime = match (strtolower(pathinfo($localPath, PATHINFO_EXTENSION))) {
-        'jpg', 'jpeg' => 'image/jpeg',
-        'gif'         => 'image/gif',
-        'webp'        => 'image/webp',
-        default       => 'image/png',
-      };
-      return 'data:' . $mime . ';base64,' . base64_encode(file_get_contents($localPath));
-    };
-    $signatureImages = [
-      'inspected' => $signatureSrc(data_get($inspection, 'inspected_by_sig'), 'maglasang.png'),
-      'witnessed' => $signatureSrc(data_get($inspection, 'witnessed_by_sig'), 'anino.png'),
-      'approved'  => $signatureSrc(data_get($inspection, 'approved_by_sig'), 'enriola.png'),
-      'noted'     => $signatureSrc(data_get($inspection, 'noted_by_sig'), 'mariano.png'),
-    ];
-  ?>
   <table class="sig-table">
     <tr>
       <td>
         <div class="sig-role">INSPECTED BY:</div>
         <?php if($signatureImages['inspected']): ?>
-          <img class="sig-img" src="<?php echo e($signatureImages['inspected']); ?>" alt="Maglasang signature">
+          <img class="sig-img" src="<?= $escape($signatureImages['inspected']) ?>" alt="Inspector signature">
         <?php else: ?>
           <div class="sig-space"></div>
         <?php endif; ?>
-        <div class="sig-name"><?php echo e(data_get($inspection, 'inspected_by_name') ?: $defaultSignatories['inspected']['name']); ?></div>
-        <div class="sig-sub"><?php echo e(data_get($inspection, 'inspected_by_rank') ?: $defaultSignatories['inspected']['rank']); ?></div>
-        <div class="sig-sub"><?php echo e(data_get($inspection, 'inspected_by_position') ?: $defaultSignatories['inspected']['position']); ?></div>
+        <div class="sig-name"><?= $escape(($inspection['inspected_by_name'] ?? '') ?: $defaultSignatories['inspected']['name']) ?></div>
+        <div class="sig-sub"><?= $escape(($inspection['inspected_by_rank'] ?? '') ?: $defaultSignatories['inspected']['rank']) ?></div>
+        <div class="sig-sub"><?= $escape(($inspection['inspected_by_position'] ?? '') ?: $defaultSignatories['inspected']['position']) ?></div>
       </td>
       <td>
         <div class="sig-role">WITNESSED BY:</div>
         <?php if($signatureImages['witnessed']): ?>
-          <img class="sig-img" src="<?php echo e($signatureImages['witnessed']); ?>" alt="Anino signature">
+          <img class="sig-img" src="<?= $escape($signatureImages['witnessed']) ?>" alt="Witness signature">
         <?php else: ?>
           <div class="sig-space"></div>
         <?php endif; ?>
-        <div class="sig-name"><?php echo e(data_get($inspection, 'witnessed_by_name') ?: $defaultSignatories['witnessed']['name']); ?></div>
-        <div class="sig-sub"><?php echo e(data_get($inspection, 'witnessed_by_rank') ?: $defaultSignatories['witnessed']['rank']); ?></div>
-        <div class="sig-sub"><?php echo e(data_get($inspection, 'witnessed_by_position') ?: $defaultSignatories['witnessed']['position']); ?></div>
+        <div class="sig-name"><?= $escape(($inspection['witnessed_by_name'] ?? '') ?: $defaultSignatories['witnessed']['name']) ?></div>
+        <div class="sig-sub"><?= $escape(($inspection['witnessed_by_rank'] ?? '') ?: $defaultSignatories['witnessed']['rank']) ?></div>
+        <div class="sig-sub"><?= $escape(($inspection['witnessed_by_position'] ?? '') ?: $defaultSignatories['witnessed']['position']) ?></div>
       </td>
       <td>
         <div class="sig-role">APPROVED BY:</div>
         <?php if($signatureImages['approved']): ?>
-          <img class="sig-img" src="<?php echo e($signatureImages['approved']); ?>" alt="Enriola signature">
+          <img class="sig-img" src="<?= $escape($signatureImages['approved']) ?>" alt="Approver signature">
         <?php else: ?>
           <div class="sig-space"></div>
         <?php endif; ?>
-        <div class="sig-name"><?php echo e(data_get($inspection, 'approved_by_name') ?: $defaultSignatories['approved']['name']); ?></div>
-        <div class="sig-sub"><?php echo e(data_get($inspection, 'approved_by_rank') ?: $defaultSignatories['approved']['rank']); ?></div>
-        <div class="sig-sub"><?php echo e(data_get($inspection, 'approved_by_position') ?: $defaultSignatories['approved']['position']); ?></div>
+        <div class="sig-name"><?= $escape(($inspection['approved_by_name'] ?? '') ?: $defaultSignatories['approved']['name']) ?></div>
+        <div class="sig-sub"><?= $escape(($inspection['approved_by_rank'] ?? '') ?: $defaultSignatories['approved']['rank']) ?></div>
+        <div class="sig-sub"><?= $escape(($inspection['approved_by_position'] ?? '') ?: $defaultSignatories['approved']['position']) ?></div>
       </td>
       <td>
         <div class="sig-role">NOTED BY:</div>
         <?php if($signatureImages['noted']): ?>
-          <img class="sig-img" src="<?php echo e($signatureImages['noted']); ?>" alt="Mariano signature">
+          <img class="sig-img" src="<?= $escape($signatureImages['noted']) ?>" alt="Noting officer signature">
         <?php else: ?>
           <div class="sig-space"></div>
         <?php endif; ?>
-        <div class="sig-name"><?php echo e(data_get($inspection, 'noted_by_name') ?: $defaultSignatories['noted']['name']); ?></div>
-        <div class="sig-sub"><?php echo e(data_get($inspection, 'noted_by_rank') ?: $defaultSignatories['noted']['rank']); ?></div>
-        <div class="sig-sub"><?php echo e(data_get($inspection, 'noted_by_position') ?: $defaultSignatories['noted']['position']); ?></div>
+        <div class="sig-name"><?= $escape(($inspection['noted_by_name'] ?? '') ?: $defaultSignatories['noted']['name']) ?></div>
+        <div class="sig-sub"><?= $escape(($inspection['noted_by_rank'] ?? '') ?: $defaultSignatories['noted']['rank']) ?></div>
+        <div class="sig-sub"><?= $escape(($inspection['noted_by_position'] ?? '') ?: $defaultSignatories['noted']['position']) ?></div>
       </td>
     </tr>
   </table>
 
   
-<?php
-    $status          = strtolower(trim($inspection->status ?? 'pending'));
-    $isServiceable   = $status === 'approved';
-    $isNeedsRepair   = $status === 'needs_repair';
-    $isUnserviceable = $status === 'unserviceable';
-
-    $approvedCarbon = !empty($inspection->inspected_at)
-        ? (function() use ($inspection) {
-            try {
-                return \Carbon\Carbon::parse($inspection->inspected_at);
-            } catch (\Exception $e) {
-                return \Carbon\Carbon::now();
-            }
-          })()
-        : \Carbon\Carbon::now();
-
-    $dateApproved = $approvedCarbon->format('d F Y');
-
-    // Always compute next renewal from approved date, no status gate
-    $nextRenewal = '-';
-    try {
-        if (!empty($inspection->next_renewal_date)) {
-            $nextRenewal = \Carbon\Carbon::parse($inspection->next_renewal_date)
-                ->format('d F Y');
-        } elseif (!empty($p->date_of_validity)) {
-            $nextRenewal = \Carbon\Carbon::parse($p->date_of_validity)
-                ->format('d F Y');
-        } else {
-            $nextRenewal = \App\Models\Personnel::renewalValidityDate(
-                $p->date_of_birth,
-                $approvedCarbon
-            )->format('d F Y');
-        }
-    } catch (\Exception $e) {
-        $nextRenewal = '-';
-    }
-?>
-
   <table class="final-table">
     <tr>
       <td style="width:42%;">
@@ -532,8 +544,8 @@
                 <span class="chk-box"></span>
               <?php endif; ?>
             </td>
-            <td style="font-weight:<?php echo e($isServiceable ? '700' : '400'); ?>;
-                       color:<?php echo e($isServiceable ? '#22a722' : '#000'); ?>;
+            <td style="font-weight:<?= $escape($isServiceable ? '700' : '400') ?>;
+                       color:<?= $escape($isServiceable ? '#22a722' : '#000') ?>;
                        font-size:8.5px;">
               SERVICEABLE
             </td>
@@ -573,7 +585,7 @@
             <td class="date-icon">[*]</td>
             <td>
               <span class="date-lbl">DATE APPROVED:</span>
-              <span class="date-val"><?php echo e($dateApproved); ?></span>
+              <span class="date-val"><?= $escape($dateApproved) ?></span>
             </td>
           </tr>
         </table>
@@ -582,7 +594,7 @@
             <td class="date-icon">[*]</td>
             <td>
               <span class="date-lbl">NEXT RENEWAL DATE:</span>
-              <span class="date-val"><?php echo e($nextRenewal); ?></span>
+              <span class="date-val"><?= $escape($nextRenewal) ?></span>
             </td>
           </tr>
         </table>
@@ -595,6 +607,8 @@
     NOTE: This document is digitally generated and valid without handwritten entries.<br>
     This serves as an official record of inspection.
   </div>
+
+  <script>window.addEventListener('load', function () { window.setTimeout(function () { window.print(); }, 250); });</script>
 
 </body>
 </html>

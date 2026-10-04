@@ -47,4 +47,19 @@ $staff = render_view('staff_dashboard', [
 if (!str_contains($staff, 'Staff Dashboard') || str_contains($staff, '{{')) {
     throw new RuntimeException('Staff dashboard rendering failed.');
 }
+$inspectionReport = render_view('pdf.inspection_report', [
+    'p' => [
+        'last_name' => 'Dela Cruz', 'first_name' => 'Juan', 'middle_name' => 'Santos',
+        'rank' => 'SGT', 'email' => 'juan@example.com', 'unit' => '4ID',
+        'date_of_birth' => '1990-01-01', 'afp_serial_number' => 'AFP-001',
+        'pistol_nomenclature' => 'Pistol 9mm', 'pistol_type' => 'Glock 17',
+        'pistol_serial_number' => 'P-001', 'date_of_validity' => null,
+    ],
+    'inspection' => ['status' => 'under', 'barrel' => 'serviceable'],
+]);
+if (!str_contains($inspectionReport, 'INSPECTION REPORT OF SERVICEABLE AND UNSERVICEABLE FIREARMS')
+    || str_contains($inspectionReport, 'Carbon\\Carbon')
+    || str_contains($inspectionReport, '$__env')) {
+    throw new RuntimeException('Plain PHP inspection report rendering failed.');
+}
 echo "Smoke checks passed.\n";

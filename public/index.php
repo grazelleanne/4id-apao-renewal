@@ -304,14 +304,10 @@ function inspection_pdf(int $itemNumber): never
     $iQuery->execute(['item' => $itemNumber]);
     $i = $iQuery->fetch() ?: [];
     audit($user, 'inspection_pdf_generated', (string) $itemNumber);
-    $fields = ['Item number' => $itemNumber, 'Name' => $p['first_name'] . ' ' . $p['last_name'],
-        'Firearm' => $p['pistol_nomenclature'], 'Serial' => $p['pistol_serial_number'],
-        'Inspection status' => $i['status'] ?? 'Not inspected', 'Remarks' => $i['remarks'] ?? '',
-        'Next renewal' => $i['next_renewal_date'] ?? ''];
-    foreach (['barrel','slide','frame','trigger','firing_pin','extractor','front_sight','rear_sight'] as $part) {
-        $fields[ucwords(str_replace('_', ' ', $part))] = $i[$part] ?? '';
-    }
-    PdfReport::download("inspection-{$itemNumber}.pdf", 'Firearm Inspection Report', $fields);
+    header('Content-Type: text/html; charset=utf-8');
+    header('Content-Disposition: inline; filename="inspection-' . $itemNumber . '.html"');
+    echo render_view('pdf.inspection_report', ['p' => $p, 'inspection' => $i]);
+    exit;
 }
 
 function par_pdf(int $id): never
