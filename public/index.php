@@ -207,7 +207,7 @@ function personnel_list(): never
         page_error('Invalid search.', 422);
     }
     $statement = db()->prepare(
-        'SELECT id,item_number,rank,first_name,middle_name,last_name,afp_serial_number,unit,approved_status,date_of_validity
+        'SELECT id,item_number,`rank`,first_name,middle_name,last_name,afp_serial_number,unit,approved_status,date_of_validity
          FROM personnel WHERE archived_at IS NULL AND (:empty = "" OR first_name LIKE :q1 OR middle_name LIKE :q2
          OR last_name LIKE :q3 OR afp_serial_number LIKE :q4 OR CAST(item_number AS CHAR) LIKE :q5)
          ORDER BY item_number LIMIT 500'
@@ -287,7 +287,7 @@ function inspection_pdf(int $itemNumber): never
 function par_pdf(int $id): never
 {
     $user = require_user(['super_admin','admin','staff']);
-    $query = db()->prepare('SELECT r.*,p.item_number,p.first_name,p.middle_name,p.last_name,p.rank,p.afp_serial_number FROM property_acknowledgement_receipts r JOIN personnel p ON p.id=r.personnel_id WHERE r.id=:id');
+    $query = db()->prepare('SELECT r.*,p.item_number,p.first_name,p.middle_name,p.last_name,p.`rank` AS `rank`,p.afp_serial_number FROM property_acknowledgement_receipts r JOIN personnel p ON p.id=r.personnel_id WHERE r.id=:id');
     $query->execute(['id' => $id]);
     $r = $query->fetch();
     if (!$r) {

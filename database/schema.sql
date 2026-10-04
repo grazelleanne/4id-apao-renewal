@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS users (
 CREATE TABLE IF NOT EXISTS personnel (
  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY, item_number INT NOT NULL UNIQUE,
  date_of_validity DATE NULL, last_name VARCHAR(255) NOT NULL, first_name VARCHAR(255) NOT NULL,
- middle_name VARCHAR(255) NULL, rank VARCHAR(255) NULL, afp_serial_number VARCHAR(255) NULL UNIQUE,
+ middle_name VARCHAR(255) NULL, `rank` VARCHAR(255) NULL, afp_serial_number VARCHAR(255) NULL UNIQUE,
  afos_mos VARCHAR(255) NULL, branch VARCHAR(255) NULL, email VARCHAR(255) NULL UNIQUE,
  contact_number VARCHAR(20) NULL UNIQUE, issued_by VARCHAR(255) NULL, date_of_birth DATE NULL,
  citizenship VARCHAR(100) NOT NULL DEFAULT 'Filipino', civil_status VARCHAR(30) NULL,
