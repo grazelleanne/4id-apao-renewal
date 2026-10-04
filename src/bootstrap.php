@@ -71,8 +71,14 @@ function db(): PDO
         if (!is_file($sslCa) || !is_readable($sslCa)) {
             throw new RuntimeException('The configured MySQL CA certificate is not readable.');
         }
-        $options[PDO::MYSQL_ATTR_SSL_CA] = $sslCa;
-        $options[PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT] = true;
+        $sslCaAttribute = PHP_VERSION_ID >= 80500
+            ? Pdo\Mysql::ATTR_SSL_CA
+            : PDO::MYSQL_ATTR_SSL_CA;
+        $verifyCertificateAttribute = PHP_VERSION_ID >= 80500
+            ? Pdo\Mysql::ATTR_SSL_VERIFY_SERVER_CERT
+            : PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT;
+        $options[$sslCaAttribute] = $sslCa;
+        $options[$verifyCertificateAttribute] = true;
     }
     $pdo = new PDO(
         "mysql:host={$host};port={$port};dbname={$name};charset=utf8mb4",
