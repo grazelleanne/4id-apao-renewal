@@ -173,7 +173,7 @@
 
   </style>
 </head>
-<body class="min-h-screen font-inter">
+<body class="light-mode min-h-screen font-inter">
 <div class="flex min-h-screen">
 
   <!-- SIDEBAR -->
@@ -628,9 +628,11 @@ document.addEventListener('DOMContentLoaded', function () {
     iconSun.style.display = t === 'light' ? 'none' : '';
     iconMoon.style.display = t === 'light' ? '' : 'none';
   }
-  applyTheme(localStorage.getItem('theme') || 'dark');
+  let currentTheme = localStorage.getItem('theme') || 'light';
+  applyTheme(currentTheme);
   document.getElementById('themeToggle').addEventListener('click', function () {
-    const next = localStorage.getItem('theme') === 'light' ? 'dark' : 'light';
+    const next = currentTheme === 'light' ? 'dark' : 'light';
+    currentTheme = next;
     localStorage.setItem('theme', next);
     applyTheme(next);
   });

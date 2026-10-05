@@ -64,6 +64,7 @@
             const data = await response.json();
 
             if (data.success) {
+                try { localStorage.setItem('theme', 'light'); } catch (_) {}
                 modal.classList.add('active');
 
                 let count = 3;

@@ -82,9 +82,7 @@ try {
     if (in_array($path, ['/admin/notifications/read','/staff/notifications/read'], true) && $method === 'POST') {
         require_post();
         $user = require_user(['super_admin','admin','staff']);
-        $field = $user['role'] === 'staff' ? 'read_by_staff' : 'read_by_admin';
-        db()->exec("UPDATE notifications SET {$field}=1,updated_at=NOW() WHERE {$field}=0");
-        json_response(['success' => true]);
+        notifications_mark_read($user);
     }
     if ($path === '/admin/inspection-data' && $method === 'GET') {
         require_user(['super_admin','admin']);
@@ -374,7 +372,13 @@ function personnel_rows(bool $archived = false): array
 
 function personnel_data(): never
 {
-    json_response(['success' => true, 'personnel' => personnel_rows(), 'data' => personnel_rows()]);
+    $rows = personnel_rows();
+    json_response([
+        'success' => true,
+        'personnel' => $rows,
+        'data' => $rows,
+        'metrics' => dashboard_metrics($rows),
+    ]);
 }
 
 function personnel_duplicate_errors(array $input): array
@@ -567,15 +571,21 @@ function personnel_store(array $user): never
     ], 201);
 }
 
-function dashboard_data(): never
+function dashboard_metrics(array $rows): array
 {
-    $rows = personnel_rows();
     $counts = ['totalNew' => 0, 'totalRenewed' => 0, 'withinRenewal' => 0, 'expired' => 0, 'pending' => 0];
     $map = ['new' => 'totalNew', 'renewed' => 'totalRenewed', 'within' => 'withinRenewal', 'expired' => 'expired', 'pending' => 'pending'];
     foreach ($rows as $row) {
         $key = $map[$row['approvedStatus']] ?? 'pending';
         $counts[$key]++;
     }
+    return $counts;
+}
+
+function dashboard_data(): never
+{
+    $rows = personnel_rows();
+    $counts = dashboard_metrics($rows);
     $activities = db()->query('SELECT user_name,user_role,action,subject,target,created_at FROM audit_logs ORDER BY id DESC LIMIT 8')->fetchAll();
     json_response([
         'success' => true,
@@ -895,10 +905,32 @@ function notifications_data(array $user): never
         'id' => (int) $row['id'], 'type' => $row['type'], 'title' => $row['title'],
         'message' => $row['message'], 'personnelName' => $row['personnel_name'],
         'personnelId' => $row['personnel_id'], 'read' => (bool) $row['is_read'],
-        'createdAt' => $row['created_at'],
+        'createdAt' => $row['created_at'] ? (new DateTimeImmutable($row['created_at']))->format(DateTimeInterface::ATOM) : null,
     ], $rows);
+    $unreadCount = (int) db()->query("SELECT COUNT(*) FROM notifications WHERE {$field}=0")->fetchColumn();
     json_response([
         'success' => true, 'notifications' => $notifications,
-        'unreadCount' => count(array_filter($notifications, static fn (array $row): bool => !$row['read'])),
+        'unreadCount' => $unreadCount,
     ]);
+}
+
+function notifications_mark_read(array $user): never
+{
+    $field = $user['role'] === 'staff' ? 'read_by_staff' : 'read_by_admin';
+    $input = request_data();
+    $notificationId = $input['id'] ?? null;
+
+    if ($notificationId !== null && $notificationId !== '') {
+        $notificationId = filter_var($notificationId, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+        if ($notificationId === false) {
+            json_response(['success' => false, 'message' => 'Invalid notification.'], 422);
+        }
+        $statement = db()->prepare("UPDATE notifications SET {$field}=1,updated_at=NOW() WHERE id=:id AND {$field}=0");
+        $statement->execute(['id' => $notificationId]);
+    } else {
+        db()->exec("UPDATE notifications SET {$field}=1,updated_at=NOW() WHERE {$field}=0");
+    }
+
+    $unreadCount = (int) db()->query("SELECT COUNT(*) FROM notifications WHERE {$field}=0")->fetchColumn();
+    json_response(['success' => true, 'unreadCount' => $unreadCount]);
 }

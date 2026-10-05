@@ -147,7 +147,7 @@
     
   </style>
 </head>
-<body class="min-h-screen font-inter main-bg bg-[#1a2025]">
+<body class="light-mode min-h-screen font-inter main-bg bg-[#1a2025]">
 <div class="flex min-h-screen">
 
   <!-- SIDEBAR -->
@@ -217,7 +217,7 @@
               <span class="notif-mark-read" id="adminMarkAllRead">Mark all read</span>
             </div>
             <div class="notif-list" id="adminNotifList"><div class="notif-empty">Loading...</div></div>
-            <div class="notif-footer" id="adminNotifFooter">Auto-refreshes every 30 seconds</div>
+            <div class="notif-footer" id="adminNotifFooter">Auto-refreshes every 15 seconds</div>
           </div>
         </div>
       </div>
@@ -380,9 +380,11 @@ document.addEventListener("DOMContentLoaded", function () {
     iconSun.style.display  = t === 'light' ? 'none' : '';
     iconMoon.style.display = t === 'light' ? '' : 'none';
   }
-  applyTheme(localStorage.getItem('theme') || 'dark');
+  let currentTheme = localStorage.getItem('theme') || 'light';
+  applyTheme(currentTheme);
   document.getElementById('themeToggle').addEventListener('click', function () {
-    const next = localStorage.getItem('theme') === 'light' ? 'dark' : 'light';
+    const next = currentTheme === 'light' ? 'dark' : 'light';
+    currentTheme = next;
     localStorage.setItem('theme', next);
     applyTheme(next);
   });
@@ -396,6 +398,15 @@ document.addEventListener("DOMContentLoaded", function () {
   const markAllRead = document.getElementById('adminMarkAllRead');
   const ADMIN_NOTIF_URL      = "<?php echo e(route('admin.notifications')); ?>";
   const ADMIN_NOTIF_READ_URL = "<?php echo e(route('admin.notifications.read')); ?>";
+  let notificationCache = [];
+  let notificationRequest = 0;
+  let notificationUnreadCount = 0;
+
+  function escapeNotificationText(value) {
+    return String(value ?? '').replace(/[&<>"']/g, character => ({
+      '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#039;'
+    })[character]);
+  }
 
   function timeAgo(dateStr) {
     const diff = Math.floor((new Date() - new Date(dateStr)) / 1000);
@@ -414,47 +425,78 @@ document.addEventListener("DOMContentLoaded", function () {
     };
     return icons[type] || `<svg class="w-4 h-4" style="color:#94a3b8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M12 2a10 10 0 100 20A10 10 0 0012 2z"/></svg>`;
   }
+  function renderNotifications(unreadCount) {
+    const count = Number(unreadCount) || 0;
+    notificationUnreadCount = count;
+    if (count > 0) { bell.classList.add('has-unread'); badge.style.display = 'flex'; badge.textContent = count > 99 ? '99+' : String(count); }
+    else { bell.classList.remove('has-unread'); badge.style.display = 'none'; badge.textContent = ''; }
+    notifFooter.textContent = count > 0 ? `${count} unread notification${count > 1 ? 's' : ''}` : 'All caught up!';
+    if (!notificationCache.length) { notifList.innerHTML = `<div class="notif-empty">No notifications yet.</div>`; return; }
+    notifList.innerHTML = notificationCache.map(n => `
+      <div class="notif-item ${!n.read ? 'unread' : ''}" data-notification-id="${Number(n.id)}" role="button" tabindex="0">
+        <div class="notif-icon">${getNotifIcon(n.type)}</div>
+        <div class="notif-content">
+          <div class="notif-title">${escapeNotificationText(n.title)}</div>
+          <div class="notif-message">${escapeNotificationText(n.message)}</div>
+          <div class="notif-time">${escapeNotificationText(timeAgo(n.createdAt))}</div>
+        </div>
+        ${!n.read ? `<div class="notif-dot"></div>` : ''}
+      </div>`).join('');
+  }
+
   async function loadNotifications() {
+    const request = ++notificationRequest;
     try {
-      const res  = await fetch(ADMIN_NOTIF_URL, { headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': CSRF } });
+      const res  = await fetch(ADMIN_NOTIF_URL, { credentials:'same-origin', cache:'no-store', headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': CSRF } });
+      if (!res.ok) throw new Error(`Notification request failed with status ${res.status}`);
       const json = await res.json();
-      if (!json.success) return;
-      const count = json.unreadCount || 0;
-      if (count > 0) { bell.classList.add('has-unread'); badge.style.display = 'flex'; badge.textContent = count > 99 ? '99+' : String(count); }
-      else { bell.classList.remove('has-unread'); badge.style.display = 'none'; }
-      notifFooter.textContent = count > 0 ? `${count} unread notification${count > 1 ? 's' : ''}` : 'All caught up!';
-      if (!json.notifications || !json.notifications.length) { notifList.innerHTML = `<div class="notif-empty">No notifications yet.</div>`; return; }
-      notifList.innerHTML = json.notifications.map(n => `
-        <div class="notif-item ${!n.read ? 'unread' : ''}">
-          <div class="notif-icon">${getNotifIcon(n.type)}</div>
-          <div class="notif-content">
-            <div class="notif-title">${n.title}</div>
-            <div class="notif-message">${n.message}</div>
-            <div class="notif-time">${timeAgo(n.createdAt)}</div>
-          </div>
-          ${!n.read ? `<div class="notif-dot"></div>` : ''}
-        </div>`).join('');
-    } catch (e) { notifList.innerHTML = `<div class="notif-empty" style="color:#fc8181;">Failed to load notifications.</div>`; }
+      if (!json.success || request !== notificationRequest) return;
+      notificationCache = Array.isArray(json.notifications) ? json.notifications : [];
+      renderNotifications(json.unreadCount);
+    } catch (e) {
+      if (request === notificationRequest && !notificationCache.length) notifList.innerHTML = `<div class="notif-empty" style="color:#fc8181;">Failed to load notifications.</div>`;
+    }
+  }
+  async function markNotificationsRead(id = null) {
+    const options = { method:'POST', credentials:'same-origin', headers:{ 'X-CSRF-TOKEN':CSRF, 'Accept':'application/json' } };
+    if (id !== null) {
+      options.headers['Content-Type'] = 'application/json';
+      options.body = JSON.stringify({ id });
+    }
+    const response = await fetch(ADMIN_NOTIF_READ_URL, options);
+    if (!response.ok) throw new Error(`Notification update failed with status ${response.status}`);
+    return response.json();
   }
   bell.addEventListener('click', function (e) {
     e.stopPropagation();
     const isOpen = dropdown.classList.contains('open');
     dropdown.classList.toggle('open');
-    if (!isOpen) {
-      bell.classList.remove('has-unread');
-      badge.style.display = 'none';
-      badge.textContent = '';
-      fetch(ADMIN_NOTIF_READ_URL, { method:'POST', headers:{ 'X-CSRF-TOKEN':CSRF, 'Accept':'application/json' } }).finally(loadNotifications);
-    }
+    if (!isOpen) loadNotifications();
   });
   document.addEventListener('click', function (e) {
     if (!document.getElementById('adminNotifWrapper').contains(e.target)) dropdown.classList.remove('open');
   });
-  markAllRead.addEventListener('click', async function () {
-    try { await fetch(ADMIN_NOTIF_READ_URL, { method: 'POST', headers: { 'X-CSRF-TOKEN': CSRF, 'Accept': 'application/json' } }); await loadNotifications(); dropdown.classList.remove('open'); } catch (e) {}
+  notifList.addEventListener('click', async function (event) {
+    const item = event.target.closest('[data-notification-id]');
+    if (!item || !item.classList.contains('unread')) return;
+    const id = Number(item.dataset.notificationId);
+    notificationCache = notificationCache.map(notification => notification.id === id ? { ...notification, read:true } : notification);
+    renderNotifications(Math.max(0, notificationUnreadCount - 1));
+    try { await markNotificationsRead(id); await loadNotifications(); } catch (error) { await loadNotifications(); }
+  });
+  notifList.addEventListener('keydown', function (event) {
+    if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); event.target.click(); }
+  });
+  markAllRead.addEventListener('click', async function (event) {
+    event.stopPropagation();
+    notificationCache = notificationCache.map(notification => ({ ...notification, read:true }));
+    renderNotifications(0);
+    try { await markNotificationsRead(); await loadNotifications(); } catch (error) { await loadNotifications(); }
   });
   loadNotifications();
-  setInterval(loadNotifications, 30000);
+  setInterval(loadNotifications, 15000);
+  window.addEventListener('focus', loadNotifications);
+  document.addEventListener('visibilitychange', function () { if (!document.hidden) loadNotifications(); });
   // ===== DATA =====
   const CHART_COLORS = ['#3ec6ff','#33b481','#ecc94b','#e53e3e','#64748b'];
   const CHART_LABELS = ['New','Renewed','Within Renewal','Expired','Pending'];

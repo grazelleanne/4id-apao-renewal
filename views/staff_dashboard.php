@@ -627,7 +627,7 @@
 
 </style>
   </head>
-  <body class="min-h-screen font-inter main-bg bg-[#1a2025]">
+  <body class="light-mode min-h-screen font-inter main-bg bg-[#1a2025]">
   <?php
     $staffInitialPersonnel = collect($initialDashboardData['personnel'] ?? []);
     $staffIcsCounts = $staffInitialPersonnel->countBy(fn ($person) => $person['icsStatus'] ?? 'inspection');
@@ -702,7 +702,7 @@
     <div id="notifDropdown">
       <div class="notif-header"><span>Notifications</span><span class="notif-mark-read" id="markAllRead">Mark all read</span></div>
       <div class="notif-list" id="notifList"><div class="notif-empty">Loading notifications...</div></div>
-      <div class="notif-footer" id="notifFooter">Auto-refreshes every 30 seconds</div>
+      <div class="notif-footer" id="notifFooter">Auto-refreshes every 15 seconds</div>
     </div>
   </div>
 
@@ -1816,9 +1816,11 @@
       iconSun.style.display  = t === 'light' ? 'none' : '';
       iconMoon.style.display = t === 'light' ? '' : 'none';
     }
-    applyTheme(localStorage.getItem('theme') || 'dark');
+    let currentTheme = localStorage.getItem('theme') || 'light';
+    applyTheme(currentTheme);
     document.getElementById('themeToggle').addEventListener('click', function () {
-      const next = localStorage.getItem('theme') === 'light' ? 'dark' : 'light';
+      const next = currentTheme === 'light' ? 'dark' : 'light';
+      currentTheme = next;
       localStorage.setItem('theme', next);
       applyTheme(next);
     });
@@ -1882,6 +1884,15 @@
     const notifFooter = document.getElementById("notifFooter");
     const NOTIF_URL_BELL = "<?php echo e(route('staff.notifications')); ?>";
     const NOTIF_READ_URL = "<?php echo e(route('staff.notifications.read')); ?>";
+    let notificationCache = [];
+    let notificationRequest = 0;
+    let notificationUnreadCount = 0;
+
+    function escapeNotificationText(value) {
+      return String(value ?? '').replace(/[&<>"']/g, character => ({
+        '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#039;'
+      })[character]);
+    }
 
     function getNotifIcon(type) {
       if (type === 'expired')        return `<svg class="w-4 h-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>`;
@@ -1896,52 +1907,84 @@
       if (diff < 86400) return `${Math.floor(diff/3600)}h ago`;
       return new Date(dateStr).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
     }
+    function renderNotifications(unreadCount) {
+      const count = Number(unreadCount) || 0;
+      notificationUnreadCount = count;
+      if (count > 0) { badge.style.display = 'flex'; badge.textContent = count > 99 ? '99+' : String(count); bell.classList.add('has-unread'); }
+      else           { badge.style.display = 'none'; badge.textContent = ''; bell.classList.remove('has-unread'); }
+      if (notifFooter) notifFooter.textContent = count > 0 ? `${count} unread notification${count > 1 ? 's' : ''}` : 'All caught up!';
+      if (!notificationCache.length) { notifList.innerHTML = `<div class="notif-empty">No notifications yet.</div>`; return; }
+      notifList.innerHTML = notificationCache.map(n => `
+        <div class="notif-item ${!n.read ? 'unread' : ''}" data-notification-id="${Number(n.id)}" role="button" tabindex="0">
+          <div class="notif-icon">${getNotifIcon(n.type)}</div>
+          <div class="notif-content">
+            <div class="notif-title ${escapeNotificationText(n.type)}">${escapeNotificationText(n.title)}</div>
+            <div class="notif-message">${escapeNotificationText(n.message)}</div>
+            <div class="notif-time">${escapeNotificationText(timeAgo(n.createdAt))}</div>
+          </div>
+          ${!n.read ? `<div class="notif-dot ${escapeNotificationText(n.type)}"></div>` : ''}
+        </div>`).join('');
+    }
+
     async function loadNotifications() {
+      const request = ++notificationRequest;
       try {
-        const res  = await fetch(NOTIF_URL_BELL, { headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': CSRF } });
+        const res  = await fetch(NOTIF_URL_BELL, { credentials:'same-origin', cache:'no-store', headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': CSRF } });
+        if (!res.ok) throw new Error(`Notification request failed with status ${res.status}`);
         const json = await res.json();
-        if (!json.success) return;
-        const count = json.unreadCount || 0;
-        if (count > 0) { badge.style.display = 'flex'; badge.textContent = count > 99 ? '99+' : String(count); bell.classList.add('has-unread'); }
-        else           { badge.style.display = 'none'; bell.classList.remove('has-unread'); }
-        if (notifFooter) notifFooter.textContent = count > 0 ? `${count} unread notification${count > 1 ? 's' : ''}` : 'All caught up!';
-        if (!json.notifications || !json.notifications.length) { notifList.innerHTML = `<div class="notif-empty">No notifications yet.</div>`; return; }
-        notifList.innerHTML = json.notifications.map(n => `
-          <div class="notif-item ${!n.read ? 'unread' : ''}">
-            <div class="notif-icon">${getNotifIcon(n.type)}</div>
-            <div class="notif-content">
-              <div class="notif-title ${n.type}">${n.title}</div>
-              <div class="notif-message">${n.message}</div>
-              <div class="notif-time">${timeAgo(n.createdAt)}</div>
-            </div>
-            ${!n.read ? `<div class="notif-dot ${n.type}"></div>` : ''}
-          </div>`).join('');
-      } catch (e) { notifList.innerHTML = `<div class="notif-empty" style="color:#fc8181;">Failed to load notifications.</div>`; }
+        if (!json.success || request !== notificationRequest) return;
+        notificationCache = Array.isArray(json.notifications) ? json.notifications : [];
+        renderNotifications(json.unreadCount);
+      } catch (e) {
+        if (request === notificationRequest && !notificationCache.length) notifList.innerHTML = `<div class="notif-empty" style="color:#fc8181;">Failed to load notifications.</div>`;
+      }
+    }
+    async function markNotificationsRead(id = null) {
+      const options = { method:'POST', credentials:'same-origin', headers:{ 'X-CSRF-TOKEN':CSRF, 'Accept':'application/json' } };
+      if (id !== null) {
+        options.headers['Content-Type'] = 'application/json';
+        options.body = JSON.stringify({ id });
+      }
+      const response = await fetch(NOTIF_READ_URL, options);
+      if (!response.ok) throw new Error(`Notification update failed with status ${response.status}`);
+      return response.json();
     }
     bell.addEventListener("click", function (e) {
       e.stopPropagation();
       const isOpen = dropdown.classList.contains("open");
       dropdown.classList.toggle("open");
-      if (!isOpen) {
-        bell.classList.remove('has-unread');
-        badge.style.display = 'none';
-        badge.textContent = '';
-        fetch(NOTIF_READ_URL, { method:'POST', headers:{ 'X-CSRF-TOKEN':CSRF, 'Accept':'application/json' } }).finally(loadNotifications);
-      }
+      if (!isOpen) loadNotifications();
     });
     document.addEventListener("click", function (e) {
       if (!document.getElementById("notifWrapper").contains(e.target)) dropdown.classList.remove("open");
     });
-    markAllRead && markAllRead.addEventListener("click", async function () {
-      try { await fetch(NOTIF_READ_URL, { method:'POST', headers:{ 'X-CSRF-TOKEN':CSRF, 'Accept':'application/json' } }); await loadNotifications(); dropdown.classList.remove("open"); } catch (e) {}
+    notifList.addEventListener('click', async function (event) {
+      const item = event.target.closest('[data-notification-id]');
+      if (!item || !item.classList.contains('unread')) return;
+      const id = Number(item.dataset.notificationId);
+      notificationCache = notificationCache.map(notification => notification.id === id ? { ...notification, read:true } : notification);
+      renderNotifications(Math.max(0, notificationUnreadCount - 1));
+      try { await markNotificationsRead(id); await loadNotifications(); } catch (error) { await loadNotifications(); }
+    });
+    notifList.addEventListener('keydown', function (event) {
+      if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); event.target.click(); }
+    });
+    markAllRead && markAllRead.addEventListener("click", async function (event) {
+      event.stopPropagation();
+      notificationCache = notificationCache.map(notification => ({ ...notification, read:true }));
+      renderNotifications(0);
+      try { await markNotificationsRead(); await loadNotifications(); } catch (error) { await loadNotifications(); }
     });
     loadNotifications();
-    setInterval(loadNotifications, 30000);
+    setInterval(loadNotifications, 15000);
+    window.addEventListener('focus', loadNotifications);
+    document.addEventListener('visibilitychange', function () { if (!document.hidden) loadNotifications(); });
 
     // ── DATA ───────────────────────────────────────────────────────────────
     const initialDashboardData = <?php echo json_encode($initialDashboardData ?? ['success' => true, 'metrics' => [], 'personnel' => []]) ?>;
     let personnel = Array.isArray(initialDashboardData.personnel) ? initialDashboardData.personnel : [];
     let chartsInitialized = false;
+    let statusCharts = [];
 
     function applyDashboardMetrics(data) {
       const m = data.metrics || {};
@@ -1974,13 +2017,10 @@
         } catch (reportError) {
           console.error('Report preparation failed:', reportError);
         }
-        if (!chartsInitialized) {
-          try {
-            initCharts(m.totalNew??0, m.totalRenewed??0, m.withinRenewal??0, m.expired??0, m.pending??0);
-            chartsInitialized = true;
-          } catch (chartError) {
-            console.error('Dashboard charts failed:', chartError);
-          }
+        try {
+          chartsInitialized = initCharts(m.totalNew??0, m.totalRenewed??0, m.withinRenewal??0, m.expired??0, m.pending??0);
+        } catch (chartError) {
+          console.error('Dashboard charts failed:', chartError);
         }
         try {
           if (currentPage === 'personnel') renderTable();
@@ -2000,8 +2040,7 @@
       });
       // Still render empty charts so the page isn't broken
       if (!chartsInitialized) {
-        initCharts(0, 0, 0, 0, 0);
-        chartsInitialized = true;
+        chartsInitialized = initCharts(0, 0, 0, 0, 0);
       }
     }
     }
@@ -2017,18 +2056,30 @@
     function initCharts(newCount, renewed, within, expired, pending) {
       if (typeof Chart === 'undefined') {
         console.warn('Chart.js is not loaded; dashboard counts will still display.');
-        return;
+        return false;
       }
 
       const data = [newCount, renewed, within, expired, pending];
-      new Chart(document.getElementById("lineChart").getContext("2d"), {
+      if (statusCharts.length === 2) {
+        statusCharts.forEach(chart => {
+          chart.data.datasets[0].data = data;
+          chart.update();
+        });
+        return true;
+      }
+      const lineCanvas = document.getElementById("lineChart");
+      const distributionCanvas = document.getElementById("pieChart");
+      if (!lineCanvas || !distributionCanvas) return false;
+      statusCharts = [];
+      statusCharts.push(new Chart(lineCanvas.getContext("2d"), {
         type:"bar", data:{ labels:CHART_LABELS, datasets:[{ label:"Personnel Count", data, backgroundColor:CHART_COLORS, borderRadius:6, borderSkipped:false, barPercentage:0.55 }] },
         options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ display:false }, tooltip:tooltipOpts }, scales:{ x:{ grid:{ color:gridColor }, ticks:{ color:tickColor, font:{size:11} }, border:{color:'transparent'} }, y:{ grid:{ color:gridColor }, ticks:{ color:tickColor, stepSize:1 }, beginAtZero:true, border:{color:'transparent'} } } }
-      });
-      new Chart(document.getElementById("pieChart").getContext("2d"), {
+      }));
+      statusCharts.push(new Chart(distributionCanvas.getContext("2d"), {
         type:"bar", data:{ labels:CHART_LABELS, datasets:[{ label:"Count", data, backgroundColor:CHART_COLORS, borderRadius:6, borderSkipped:false, barPercentage:0.6 }] },
         options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false, plugins:{ legend:{ display:false }, tooltip:tooltipOpts }, scales:{ x:{ grid:{ color:gridColor }, ticks:{ color:tickColor, stepSize:1 }, beginAtZero:true, border:{color:'transparent'} }, y:{ grid:{ color:'transparent' }, ticks:{ color:tickColor, font:{size:11} }, border:{color:'transparent'} } } }
-      });
+      }));
+      return true;
     }
 
     // ── TABLE ──────────────────────────────────────────────────────────────

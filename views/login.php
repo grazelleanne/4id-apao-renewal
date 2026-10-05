@@ -577,6 +577,8 @@
         const data = await response.json();
 
         if (data.success) {
+          // Every authenticated session starts in the accessible light theme.
+          try { localStorage.setItem('theme', 'light'); } catch (_) {}
           // Show modal
           modal.classList.add('active');
 

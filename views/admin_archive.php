@@ -128,7 +128,7 @@
     .modal-close-btn{position:absolute;right:0.75rem;top:0.75rem;border:none;background:none;color:#b0bac7;font-size:1.35rem;cursor:pointer;}
   </style>
 </head>
-<body class="min-h-screen font-inter main-bg bg-[#1a2025]">
+<body class="light-mode min-h-screen font-inter main-bg bg-[#1a2025]">
 <div class="flex min-h-screen">
 
   <!-- SIDEBAR -->
@@ -280,9 +280,11 @@ document.addEventListener("DOMContentLoaded", function () {
     iconSun.style.display  = t === 'light' ? 'none' : '';
     iconMoon.style.display = t === 'light' ? '' : 'none';
   }
-  applyTheme(localStorage.getItem('theme') || 'dark');
+  let currentTheme = localStorage.getItem('theme') || 'light';
+  applyTheme(currentTheme);
   document.getElementById('themeToggle').addEventListener('click', function () {
-    const next = localStorage.getItem('theme') === 'light' ? 'dark' : 'light';
+    const next = currentTheme === 'light' ? 'dark' : 'light';
+    currentTheme = next;
     localStorage.setItem('theme', next);
     applyTheme(next);
   });

@@ -261,7 +261,7 @@ body.light-mode .btn-save-under{background:#ede9fe;color:#6d28d9;border-color:#c
 
 </style>
 </head>
-<body class="min-h-screen font-inter app-body">
+<body class="light-mode min-h-screen font-inter app-body">
 <div class="flex min-h-screen">
 <aside id="sidebar">
   <div class="sb-top">
@@ -1308,9 +1308,11 @@ body.light-mode .btn-save-under{background:#ede9fe;color:#6d28d9;border-color:#c
       iconSun.style.display  = t === 'light' ? 'none' : '';
       iconMoon.style.display = t === 'light' ? '' : 'none';
     }
-    applyTheme(localStorage.getItem('theme') || 'dark');
+    let currentTheme = localStorage.getItem('theme') || 'light';
+    applyTheme(currentTheme);
     document.getElementById('themeToggle').addEventListener('click', function () {
-      const next = localStorage.getItem('theme') === 'light' ? 'dark' : 'light';
+      const next = currentTheme === 'light' ? 'dark' : 'light';
+      currentTheme = next;
       localStorage.setItem('theme', next);
       applyTheme(next);
     });
