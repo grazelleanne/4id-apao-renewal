@@ -98,6 +98,10 @@ try {
         require_user(['super_admin','admin']);
         inspection_data();
     }
+    if (preg_match('#^/admin/personnel/(\d+)/renewal-history$#', $path, $matches) && $method === 'GET') {
+        require_user(['super_admin','admin']);
+        personnel_renewal_history((int) $matches[1]);
+    }
     if (preg_match('#^/admin/inspection/(\d+)/detail$#', $path, $matches) && $method === 'GET') {
         require_user(['super_admin','admin']);
         inspection_detail((int) $matches[1]);
@@ -782,19 +786,42 @@ function inspection_data(): never
         $row['dateRegistered'] = $row['inspectionDateRegistered'] ?? null;
         $status = strtolower(trim((string) ($row['inspectionStatus'] ?? '')));
         $icsStatus = strtolower(trim((string) ($row['icsStatus'] ?? '')));
-        if ($status === 'approved') {
+        if ($status === 'approved' || $icsStatus === 'ready') {
             $approved++;
             $row['inspectionStatus'] = 'approved';
         } elseif ($status === 'under' || $icsStatus === 'under') {
             $under++;
             $row['inspectionStatus'] = 'under';
+        } elseif (($row['approvedStatus'] ?? '') === 'renewed') {
+            $row['inspectionStatus'] = 'renewed';
         } else {
             $pending++;
             $row['inspectionStatus'] = 'pending';
         }
     }
     unset($row);
+    $rows = array_values(array_filter($rows, static fn (array $row): bool => $row['inspectionStatus'] !== 'renewed'));
     json_response(['success' => true, 'data' => $rows, 'pending' => $pending, 'under' => $under, 'approved' => $approved]);
+}
+
+function personnel_renewal_history(int $itemNumber): never
+{
+    $personnel = db()->prepare('SELECT id FROM personnel WHERE item_number=:item LIMIT 1');
+    $personnel->execute(['item' => $itemNumber]);
+    if (!$personnel->fetchColumn()) {
+        json_response(['success' => false, 'message' => 'Personnel record not found.'], 404);
+    }
+    $query = db()->prepare(
+        'SELECT id,action,date_of_validity,previous_validity,inspected_by,remarks,created_at
+         FROM renewal_history WHERE item_number=:item ORDER BY created_at DESC,id DESC'
+    );
+    $query->execute(['item' => $itemNumber]);
+    $history = array_map(static fn (array $row): array => [
+        'id' => (int) $row['id'], 'action' => $row['action'], 'date' => $row['created_at'],
+        'dateOfValidity' => $row['date_of_validity'], 'previousValidity' => $row['previous_validity'],
+        'inspectedBy' => $row['inspected_by'], 'remarks' => $row['remarks'],
+    ], $query->fetchAll());
+    json_response(['success' => true, 'history' => $history]);
 }
 
 function ics_send_for_inspection(int $itemNumber, array $user): never

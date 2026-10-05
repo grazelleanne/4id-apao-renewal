@@ -917,9 +917,9 @@
                     <th class="py-2 px-3 font-semibold text-[#64748b]" style="text-transform:uppercase;letter-spacing:0.05em;font-size:0.68rem;">Unit / Organization</th>
                     <th class="py-2 px-3 font-semibold text-[#64748b]" style="text-transform:uppercase;letter-spacing:0.05em;font-size:0.68rem;">Pistol</th>
                     <th class="py-2 px-3 font-semibold text-[#64748b]" style="text-transform:uppercase;letter-spacing:0.05em;font-size:0.68rem;">Status</th>
-                    <th class="py-2 px-3 font-semibold text-[#64748b]" style="text-transform:uppercase;letter-spacing:0.05em;font-size:0.68rem;">Inspection Result</th>
+                    <th class="py-2 px-3 font-semibold text-[#64748b]" style="text-transform:uppercase;letter-spacing:0.05em;font-size:0.68rem;" data-ics-column="result">Inspection Result</th>
                     <th class="py-2 px-3 font-semibold text-[#64748b]" style="text-transform:uppercase;letter-spacing:0.05em;font-size:0.68rem;">Date Updated</th>
-                    <th class="py-2 px-3 font-semibold text-[#64748b]" style="text-transform:uppercase;letter-spacing:0.05em;font-size:0.68rem;">Action</th>
+                    <th class="py-2 px-3 font-semibold text-[#64748b]" style="text-transform:uppercase;letter-spacing:0.05em;font-size:0.68rem;" data-ics-column="action">Action</th>
                   </tr>
                 </thead>
                 <tbody id="ics-tbody">
@@ -3063,29 +3063,6 @@
       document.getElementById('personnelDetailsCloseBtn')?.addEventListener('click', function(){ document.getElementById('personnelDetailsOverlay').style.display='none'; });
       document.getElementById('personnelDetailsOverlay')?.addEventListener('click', function(e){ if (e.target === this) this.style.display='none'; });
 
-      let systemModalResolver = null;
-      function closeSystemModal(result) {
-        document.getElementById('systemModalOverlay').style.display = 'none';
-        if (systemModalResolver) {
-          const resolve = systemModalResolver;
-          systemModalResolver = null;
-          resolve(result);
-        }
-      }
-      function showSystemModal(title, message, isConfirm) {
-        return new Promise(function(resolve) {
-          systemModalResolver = resolve;
-          document.getElementById('systemModalTitle').textContent = title;
-          document.getElementById('systemModalMessage').textContent = message;
-          document.getElementById('systemModalCancel').style.display = isConfirm ? '' : 'none';
-          document.getElementById('systemModalOverlay').style.display = 'flex';
-          document.getElementById(isConfirm ? 'systemModalCancel' : 'systemModalConfirm').focus();
-        });
-      }
-      document.getElementById('systemModalConfirm').addEventListener('click', function(){ closeSystemModal(true); });
-      document.getElementById('systemModalCancel').addEventListener('click', function(){ closeSystemModal(false); });
-      document.getElementById('systemModalOverlay').addEventListener('click', function(e){ if (e.target === this) closeSystemModal(false); });
-
       window.renewalNotifyOne = function(itemNum) {
         var r = personnel.find(function(x){ return x.itemNumber == itemNum; });
         if (!r) return;
@@ -3152,6 +3129,29 @@
     });
 
     // ── ICS MODULE (NEW) ───────────────────────────────────────────────────
+      let systemModalResolver = null;
+      function closeSystemModal(result) {
+        document.getElementById('systemModalOverlay').style.display = 'none';
+        if (systemModalResolver) {
+          const resolve = systemModalResolver;
+          systemModalResolver = null;
+          resolve(result);
+        }
+      }
+      function showSystemModal(title, message, isConfirm) {
+        return new Promise(function(resolve) {
+          systemModalResolver = resolve;
+          document.getElementById('systemModalTitle').textContent = title;
+          document.getElementById('systemModalMessage').textContent = message;
+          document.getElementById('systemModalCancel').style.display = isConfirm ? '' : 'none';
+          document.getElementById('systemModalOverlay').style.display = 'flex';
+          document.getElementById(isConfirm ? 'systemModalCancel' : 'systemModalConfirm').focus();
+        });
+      }
+      document.getElementById('systemModalConfirm').addEventListener('click', function(){ closeSystemModal(true); });
+      document.getElementById('systemModalCancel').addEventListener('click', function(){ closeSystemModal(false); });
+      document.getElementById('systemModalOverlay').addEventListener('click', function(e){ if (e.target === this) closeSystemModal(false); });
+
     (function initICS() {
 
       var icsActiveTab = 'inspection';
@@ -3187,6 +3187,10 @@
           if (Number.isNaN(parsed.getTime())) return '—';
           return parsed.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
         }
+        var hideInspectionColumns = icsActiveTab === 'under';
+        document.querySelectorAll('[data-ics-column]').forEach(function(column) {
+          column.hidden = hideInspectionColumns;
+        });
         var q = ((document.getElementById('icsListSearch') || {}).value || '').trim().toLowerCase();
         ['inspection','under','ready'].forEach(function(t) {
           var cnt = personnel.filter(function(p){ return getIcsStatus(p) === t; }).length;
@@ -3207,7 +3211,7 @@
         var info  = document.getElementById('ics-tbl-info');
 
         if (!pageData.length) {
-          tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:28px;color:#4b5563;font-size:0.78rem;">No records found for this status.</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="' + (hideInspectionColumns ? 7 : 9) + '" style="text-align:center;padding:28px;color:#4b5563;font-size:0.78rem;">No records found for this status.</td></tr>';
           if (info) info.textContent = 'Showing 0 records';
           icsPagination(0); return;
         }
@@ -3220,8 +3224,9 @@
             : st === 'under'
             ? '<span class="ics-under-pill" style="display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:99px;font-size:0.68rem;font-weight:700;background:#0a1f38;color:#3ec6ff;"><span style="width:6px;height:6px;border-radius:50%;background:#3ec6ff;flex-shrink:0;"></span>Under Inspection</span><br><small style="color:#1e5070;">Being inspected</small>'
             : '<span class="ics-ready-pill" style="display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:99px;font-size:0.68rem;font-weight:700;background:#0c2e1a;color:#33b481;"><span style="width:6px;height:6px;border-radius:50%;background:#33b481;flex-shrink:0;"></span>Ready for Renewal</span><br><small class="ics-ready-note" style="color:#1a5c3a;">Inspection passed</small>';
-          var result = r.inspectionResult
-            ? '<span style="color:#33b481;font-weight:700;font-size:0.75rem;">✓ ' + r.inspectionResult + '</span>'
+          var inspectionResult = st === 'ready' ? 'Passed' : r.inspectionResult;
+          var result = inspectionResult
+            ? '<span style="color:#33b481;font-weight:700;font-size:0.75rem;">✓ ' + inspectionResult + '</span>'
             : '<span style="color:#374151;">—</span>';
           var action = '';
           if (st === 'inspection') {
@@ -3243,9 +3248,9 @@
             + '<td class="py-2 px-3 force-light-text">' + (r.unit||'—') + '</td>'
             + '<td class="py-2 px-3 force-light-text">' + (r.pistolNomenclature||'—') + '</td>'
             + '<td class="py-2 px-3">' + pill + '</td>'
-            + '<td class="py-2 px-3">' + result + '</td>'
+            + (hideInspectionColumns ? '' : '<td class="py-2 px-3">' + result + '</td>')
             + '<td class="py-2 px-3" style="color:#64748b;">' + (r.dateUpdated || formatDateUpdated(r.inspectionUpdatedAt || r.personnelUpdatedAt)) + '</td>'
-            + '<td class="py-2 px-3">' + action + '</td>'
+            + (hideInspectionColumns ? '' : '<td class="py-2 px-3">' + action + '</td>')
             + '</tr>';
         }).join('');
 

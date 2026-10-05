@@ -183,6 +183,16 @@
     @media (max-width:1024px) { .modal-form-grid { grid-template-columns:1fr; } }
     @media (max-width:640px) { .field-grid { grid-template-columns:1fr; } .modal-box { width:95vw; padding:1rem; } #addPersonnelModal .actions-row, #editPersonnelModal .actions-row { flex-direction:column-reverse; } .secondary-btn, #addPersonnelModal .add-btn, #editPersonnelModal .edit-btn { width:100%; } }
     .pd-row { display:flex; align-items:flex-start; gap:6px; font-size:0.76rem; line-height:1.5; }
+    .personnel-profile-frame { width:min(1000px,100%); max-height:calc(100dvh - 2rem); display:flex; flex-direction:column; }
+    .personnel-profile-body { display:flex; min-height:0; overflow-y:auto; }
+    .personnel-profile-sidebar { width:300px; flex-shrink:0; }
+    .personnel-profile-history { min-width:0; }
+    .personnel-profile-frame .pd-val { overflow-wrap:anywhere; min-width:0; }
+    @media (max-width:640px) {
+      .personnel-profile-body { flex-direction:column; }
+      .personnel-profile-sidebar { width:100%; border-right:0 !important; border-bottom:1px solid #2a3140; }
+      .personnel-profile-history { min-height:260px; flex-shrink:0; }
+    }
     .pd-lbl { color:#4b5563; font-weight:700; font-size:0.68rem; text-transform:uppercase; letter-spacing:0.05em; white-space:nowrap; min-width:80px; padding-top:1px; }
     .pd-val { color:#cbd5e0; word-break:break-word; }
     body.light-mode .pd-lbl { color:#6b7280; }
@@ -749,10 +759,10 @@ const validityDisplay = row.dateOfValidity
 
     modal.innerHTML = `
       <div class="modal-bg" id="personnelModalBg">
-        <div style="background:#1e2530;border-radius:1rem;width:min(900px,95vw);overflow:hidden;position:relative;box-shadow:0 24px 60px rgba(0,0,0,0.5);border:1px solid #2e3749;">
+        <div class="personnel-profile-frame" style="background:#1e2530;border-radius:1rem;overflow:hidden;position:relative;box-shadow:0 24px 60px rgba(0,0,0,0.5);border:1px solid #2e3749;">
 
           <!-- TOP BAR -->
-          <div style="display:flex;align-items:center;gap:12px;padding:12px 20px;background:#181c24;border-bottom:1px solid #2a3140;">
+          <div style="display:flex;flex-shrink:0;align-items:center;gap:12px;padding:12px 20px;background:#181c24;border-bottom:1px solid #2a3140;">
             <button id="personnelModalBack"
               style="display:flex;align-items:center;gap:6px;background:none;border:none;color:#94a3b8;cursor:pointer;font-size:0.8rem;font-weight:800;letter-spacing:0.06em;padding:4px 10px;border-radius:6px;transition:all 0.15s;"
               onmouseover="this.style.background='#2a3140';this.style.color='#e5eaf2'"
@@ -765,15 +775,15 @@ const validityDisplay = row.dateOfValidity
           </div>
 
           <!-- BODY -->
-          <div style="display:flex;min-height:540px;">
+          <div class="personnel-profile-body">
 
             <!-- LEFT PANEL -->
-            <div style="width:300px;min-width:260px;padding:24px 22px;display:flex;flex-direction:column;gap:14px;background:#1e2530;border-right:1px solid #2a3140;">
+            <div class="personnel-profile-sidebar" style="padding:24px 22px;display:flex;flex-direction:column;gap:14px;background:#1e2530;border-right:1px solid #2a3140;">
 
               <!-- Photo -->
               <div style="width:100%;background:#252f3e;border-radius:8px;aspect-ratio:3/4;max-height:220px;display:flex;align-items:center;justify-content:center;border:1px solid #364055;overflow:hidden;">
                 ${row.photo
-                  ? `<img src="${row.photo}" alt="Photo" style="width:100%;height:100%;object-fit:cover;display:block;">`
+                  ? `<img src="${row.photo}" alt="Photo" style="width:100%;height:100%;object-fit:contain;display:block;">`
                   : `<svg width="72" height="72" viewBox="0 0 24 24" fill="none" stroke="#374151" stroke-width="1">
                        <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/>
                        <circle cx="12" cy="7" r="4"/>
@@ -815,7 +825,7 @@ const validityDisplay = row.dateOfValidity
             </div>
 
             <!-- RIGHT PANEL -->
-            <div style="flex:1;display:flex;flex-direction:column;position:relative;overflow:hidden;background:#1a2025;">
+            <div class="personnel-profile-history" style="flex:1;display:flex;flex-direction:column;position:relative;overflow:hidden;background:#1a2025;">
 
               <!-- Watermark -->
               <img src="/images/logo2.png" alt=""
@@ -867,6 +877,7 @@ const validityDisplay = row.dateOfValidity
         headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': CSRF }
       });
       const json = await res.json();
+      if (!res.ok || !json.success) throw new Error(json.message || 'Unable to load renewal history.');
       if (loading) loading.style.display = 'none';
 
       if (!json.success || !json.history || !json.history.length) {
@@ -905,10 +916,10 @@ const validityDisplay = row.dateOfValidity
               <span style="font-size:0.7rem;color:#4b5563;">${dateFormatted}</span>
             </div>
             <div style="font-size:0.75rem;color:#94a3b8;display:flex;flex-direction:column;gap:3px;">
-              ${h.dateOfValidity    ? `<span>New Validity: <strong style="color:#e5eaf2;">${h.dateOfValidity}</strong></span>` : ''}
-              ${h.previousValidity  ? `<span>Previous Validity: <strong style="color:#e5eaf2;">${h.previousValidity}</strong></span>` : ''}
-              ${h.inspectedBy       ? `<span>Inspected by: <strong style="color:#e5eaf2;">${h.inspectedBy}</strong></span>` : ''}
-              ${h.remarks           ? `<span>Remarks: <strong style="color:#e5eaf2;">${h.remarks}</strong></span>` : ''}
+              ${h.dateOfValidity    ? `<span>New Validity: <strong style="color:#e5eaf2;">${escapeHtml(h.dateOfValidity)}</strong></span>` : ''}
+              ${h.previousValidity  ? `<span>Previous Validity: <strong style="color:#e5eaf2;">${escapeHtml(h.previousValidity)}</strong></span>` : ''}
+              ${h.inspectedBy       ? `<span>Inspected by: <strong style="color:#e5eaf2;">${escapeHtml(h.inspectedBy)}</strong></span>` : ''}
+              ${h.remarks           ? `<span>Remarks: <strong style="color:#e5eaf2;">${escapeHtml(h.remarks)}</strong></span>` : ''}
             </div>
           </div>`;
       }).join('');
