@@ -81,6 +81,11 @@ try {
         require_user(['super_admin','admin']);
         users_data();
     }
+    if ($path === '/admin/users' && $method === 'POST') {
+        require_post();
+        $user = require_user(['super_admin','admin']);
+        users_store($user);
+    }
     if ($path === '/admin/audit-data' && $method === 'GET') {
         require_user(['super_admin','admin']);
         audit_data();
@@ -372,7 +377,7 @@ function personnel_rows(bool $archived = false): array
             'pistolType' => $p['pistol_type'] ?? '', 'parNumber' => $p['par_number'] ?? '',
             'qtyAmmo' => (int) ($p['qty_ammo'] ?? 0), 'unit' => $p['unit'] ?? '',
             'approvedStatus' => $renewalStatus, 'status' => $p['status'] ?? 'active',
-            'icsStatus' => $p['ics_status'] ?? 'inspection', 'dateApproved' => $p['date_approved'],
+            'icsStatus' => $renewalStatus === 'expired' && ($p['ics_status'] ?? '') === 'ready' ? 'inspection' : ($p['ics_status'] ?? 'inspection'), 'dateApproved' => $p['date_approved'],
             'photo' => $p['photo'], 'signature' => $p['signature'],
             'inspectionStatus' => $p['inspection_status'] ?? null,
             'inspectionDateRegistered' => $p['inspection_date_registered'] ?? null,
@@ -748,6 +753,51 @@ function archive_data(): never
     json_response(['success' => true, 'data' => personnel_rows(true)]);
 }
 
+function users_store(array $admin): never
+{
+    $input = request_data();
+    $email = strtolower(personnel_text($input, 'username', 255));
+    $name = personnel_text($input, 'fullName', 255);
+    $role = personnel_text($input, 'role', 32);
+    $status = personnel_text($input, 'status', 32);
+    $password = is_string($input['password'] ?? null) ? $input['password'] : '';
+    $confirmation = is_string($input['adminPassword'] ?? null) ? $input['adminPassword'] : '';
+    if (!rate_limit('create-user:' . $admin['id'], 10, 300)) {
+        json_response(['success' => false, 'message' => 'Too many requests. Please wait a few minutes.'], 429);
+    }
+    $query = db()->prepare('SELECT password FROM users WHERE id=:id');
+    $query->execute(['id' => $admin['id']]);
+    $hash = $query->fetchColumn();
+    if (!is_string($hash) || !password_verify($confirmation, $hash)) {
+        json_response(['success' => false, 'message' => 'Your administrator password is incorrect.'], 403);
+    }
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL) || $name === ''
+        || !in_array($role, ['staff', 'admin'], true) || !in_array($status, ['Active', 'Inactive'], true)) {
+        json_response(['success' => false, 'message' => 'Enter a valid email, full name, role, and account status.'], 422);
+    }
+    if (!password_is_strong($password)) {
+        json_response(['success' => false, 'message' => 'Use 12–1024 characters with uppercase, lowercase, a number, and a symbol.'], 422);
+    }
+    $pdo = db();
+    $pdo->beginTransaction();
+    try {
+        $pdo->prepare('INSERT INTO users (name,email,password,role,is_active,session_version,created_at,updated_at)
+            VALUES (:name,:email,:password,:role,:active,1,NOW(),NOW())')->execute([
+                'name' => $name, 'email' => $email, 'password' => password_hash($password, PASSWORD_DEFAULT),
+                'role' => $role, 'active' => $status === 'Active' ? 1 : 0,
+            ]);
+        audit($admin, 'user_created', $email);
+        $pdo->commit();
+    } catch (Throwable $error) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        if ($error instanceof PDOException && (int) ($error->errorInfo[1] ?? 0) === 1062) {
+            json_response(['success' => false, 'message' => 'An account with this email already exists.'], 409);
+        }
+        throw $error;
+    }
+    json_response(['success' => true, 'message' => 'User account created successfully.'], 201);
+}
+
 function users_data(): never
 {
     $rows = db()->query('SELECT id,name,email,contact_number,role,is_active,last_login_at,created_at FROM users ORDER BY id')->fetchAll();
@@ -786,7 +836,13 @@ function inspection_data(): never
         $row['dateRegistered'] = $row['inspectionDateRegistered'] ?? null;
         $status = strtolower(trim((string) ($row['inspectionStatus'] ?? '')));
         $icsStatus = strtolower(trim((string) ($row['icsStatus'] ?? '')));
-        if ($status === 'approved' || $icsStatus === 'ready') {
+        if (($row['approvedStatus'] ?? '') === 'expired' && $status === 'approved') {
+            $pending++;
+            $row['inspectionStatus'] = 'pending';
+        } elseif ($status === 'pending' && $icsStatus === 'under') {
+            $pending++;
+            $row['inspectionStatus'] = 'pending';
+        } elseif ($status === 'approved' || $icsStatus === 'ready') {
             $approved++;
             $row['inspectionStatus'] = 'approved';
         } elseif ($status === 'under' || $icsStatus === 'under') {
@@ -834,7 +890,7 @@ function ics_send_for_inspection(int $itemNumber, array $user): never
     $pdo->beginTransaction();
     try {
         $personnelQuery = $pdo->prepare(
-            'SELECT id,item_number,first_name,middle_name,last_name,afp_serial_number,pistol_type,ics_status
+            'SELECT id,item_number,first_name,middle_name,last_name,afp_serial_number,pistol_type,ics_status,date_of_validity,approved_status
              FROM personnel WHERE item_number=:item AND archived_at IS NULL LIMIT 1 FOR UPDATE'
         );
         $personnelQuery->execute(['item' => $itemNumber]);
@@ -845,7 +901,8 @@ function ics_send_for_inspection(int $itemNumber, array $user): never
         }
 
         $currentStatus = strtolower(trim((string) ($personnel['ics_status'] ?? 'inspection')));
-        if ($currentStatus === 'ready') {
+        $expired = renewal_status_for_personnel($personnel) === 'expired';
+        if ($currentStatus === 'ready' && !$expired) {
             $pdo->rollBack();
             json_response(['success' => false, 'message' => 'This inspection has already been approved.'], 409);
         }
@@ -861,16 +918,16 @@ function ics_send_for_inspection(int $itemNumber, array $user): never
             $inspectionQuery->execute(['item' => $itemNumber]);
             $inspection = $inspectionQuery->fetch();
             if ($inspection && strtolower((string) $inspection['status']) === 'approved') {
-                throw new RuntimeException('Approved inspection has an inconsistent ICS status.');
+                $inspection = false;
             }
             if ($inspection) {
-                $pdo->prepare('UPDATE inspections SET status=\'under\',updated_at=NOW() WHERE id=:id')
+                $pdo->prepare('UPDATE inspections SET status=\'pending\',updated_at=NOW() WHERE id=:id')
                     ->execute(['id' => $inspection['id']]);
             } else {
                 $pdo->prepare(
                     'INSERT INTO inspections
                      (personnel_id,item_number,afp_serial_number,pistol_type,date_registered,status,created_at,updated_at)
-                     VALUES (:personnel_id,:item,:serial,:pistol_type,CURDATE(),\'under\',NOW(),NOW())'
+                     VALUES (:personnel_id,:item,:serial,:pistol_type,CURDATE(),\'pending\',NOW(),NOW())'
                 )->execute([
                     'personnel_id' => $personnel['id'], 'item' => $itemNumber,
                     'serial' => $personnel['afp_serial_number'], 'pistol_type' => $personnel['pistol_type'],
@@ -1002,6 +1059,15 @@ function inspection_save(array $user): never
         json_response(['success' => false, 'error' => 'Personnel record not found.'], 404);
     }
 
+    $newValidity = null;
+    if ($status === 'approved') {
+        try {
+            $newValidity = birthday_renewal_validity((string) ($personnel['dateOfBirth'] ?? ''));
+        } catch (InvalidArgumentException $error) {
+            json_response(['success' => false, 'error' => $error->getMessage()], 422);
+        }
+    }
+
     $allowedResults = ['serviceable', 'repair', 'replace', 'unserviceable', 'na', 'missing', 'damaged'];
     $partValues = [];
     foreach (inspection_parts() as $part) {
@@ -1094,12 +1160,21 @@ function inspection_save(array $user): never
 
         $personnelUpdate = $pdo->prepare(
             'UPDATE personnel SET ics_status=:ics_status,date_approved=' . ($status === 'approved' ? 'CURDATE()' : 'NULL')
-            . ($status === 'approved' ? ',approved_status=\'renewed\'' : '') . ',updated_at=NOW()
+            . ($status === 'approved' ? ',approved_status=\'renewed\',date_of_validity=:validity,last_renewed_at=NOW()' : '') . ',updated_at=NOW()
              WHERE item_number=:item'
         );
-        $personnelUpdate->execute([
+        $personnelValues = [
             'ics_status' => $status === 'approved' ? 'ready' : 'under', 'item' => $itemNumber,
-        ]);
+        ];
+        if ($status === 'approved') $personnelValues['validity'] = $newValidity;
+        $personnelUpdate->execute($personnelValues);
+        if ($status === 'approved' && $personnel['dateOfValidity'] !== $newValidity) {
+            $pdo->prepare('INSERT INTO renewal_history
+                (item_number,action,date_of_validity,previous_validity,inspected_by,remarks,created_at,updated_at)
+                VALUES (:item,\'renewed\',:validity,:previous,:name,:remarks,NOW(),NOW())')
+                ->execute(['item' => $itemNumber, 'validity' => $newValidity,
+                    'previous' => $personnel['dateOfValidity'], 'name' => $user['name'], 'remarks' => $values['remarks']]);
+        }
         audit($user, $status === 'approved' ? 'inspection_approved' : 'inspection_saved', (string) $itemNumber);
         $pdo->commit();
     } catch (Throwable $error) {

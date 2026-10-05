@@ -3158,7 +3158,10 @@
       var icsPage      = 1;
       var ICS_PER_PAGE = 10;
 
-      function getIcsStatus(p) { return p.icsStatus || 'inspection'; }
+      function getIcsStatus(p) {
+        if (p.approvedStatus === 'expired' && p.icsStatus === 'ready') return 'inspection';
+        return p.icsStatus || 'inspection';
+      }
 
       function personnelSignatureSrc(signature) {
         if (!signature) return null;
@@ -3302,7 +3305,7 @@
           }).then(function(json) {
             p.icsStatus = 'under';
             p.dateUpdated = new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
-            icsRenderTable();
+            icsSetTab('under');
             icsShowToast('Sent to Admin for inspection - ' + personnelName);
             showSystemModal(
               json.alreadySent ? 'Already sent for inspection' : 'Successfully sent for inspection',

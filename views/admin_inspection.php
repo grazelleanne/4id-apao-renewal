@@ -186,6 +186,10 @@ body.light-mode .sb-logo-text{color:#1e293b;}
 body.light-mode .sb-bottom{border-color:#e2e8f0;}
 body.light-mode .theme-btn{background:#e8edf5;color:#64748b;}
 body.light-mode .force-light-text{color:#1e293b !important;}
+body:not(.light-mode) #viewChecklist{color:#e5eaf2;}
+body:not(.light-mode) #cl_name,body:not(.light-mode) #cl_nomen,
+body:not(.light-mode) #cl_unit,body:not(.light-mode) #cl_made,
+body:not(.light-mode) #cl_sn,body:not(.light-mode) #cl_date{color:#e5eaf2;}
 body.light-mode .stat-card{background:#fff;border-color:#e2e8f0;}
 body.light-mode .stat-card:hover{background:#f8fafc;}
 body.light-mode .tbl td{color:#374151;border-color:#e5e7eb;}

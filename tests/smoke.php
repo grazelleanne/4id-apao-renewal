@@ -94,4 +94,18 @@ if (!str_contains($inspectionReport, 'INSPECTION REPORT OF SERVICEABLE AND UNSER
     || str_contains($inspectionReport, '$__env')) {
     throw new RuntimeException('Plain PHP inspection report rendering failed.');
 }
+$renewedAt = new DateTimeImmutable('2026-10-06');
+foreach (['1990-03-12' => '2028-03-12', '1990-12-20' => '2028-12-20', '2000-02-29' => '2028-02-29'] as $birth => $expected) {
+    if (birthday_renewal_validity($birth, $renewedAt) !== $expected) {
+        throw new RuntimeException('Birthday renewal validity is incorrect.');
+    }
+}
+if (birthday_renewal_validity('2000-02-29', new DateTimeImmutable('2027-10-06')) !== '2029-02-28') {
+    throw new RuntimeException('Leap-day renewal must use February 28 in a non-leap year.');
+}
+try {
+    birthday_renewal_validity('1990-02-30', $renewedAt);
+    throw new RuntimeException('Invalid birthdays must block renewal.');
+} catch (InvalidArgumentException $expected) {
+}
 echo "Smoke checks passed.\n";

@@ -233,6 +233,20 @@ function password_is_strong(string $password): bool
         && preg_match('/[A-Z]/', $password) && preg_match('/[a-z]/', $password)
         && preg_match('/[0-9]/', $password) && preg_match('/[^A-Za-z0-9]/', $password);
 }
+function birthday_renewal_validity(string $birthday, ?DateTimeImmutable $renewedAt = null): string
+{
+    $birth = DateTimeImmutable::createFromFormat('!Y-m-d', $birthday);
+    if (!$birth || $birth->format('Y-m-d') !== $birthday) {
+        throw new InvalidArgumentException('A valid personnel date of birth is required for renewal.');
+    }
+    $renewedAt ??= new DateTimeImmutable('today');
+    $year = (int) $renewedAt->format('Y') + 2;
+    $month = (int) $birth->format('m');
+    $day = (int) $birth->format('d');
+    if (!checkdate($month, $day, $year)) $day = 28;
+    return sprintf('%04d-%02d-%02d', $year, $month, $day);
+}
+
 function renewal_status_for_personnel(array $personnel, ?DateTimeImmutable $today = null): string
 {
     $today ??= new DateTimeImmutable('today');
