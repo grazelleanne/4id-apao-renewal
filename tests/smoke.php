@@ -41,9 +41,19 @@ if (str_contains($inspectionView, "return p.icsStatus === 'under';")
     throw new RuntimeException('Pending inspection filter regression detected.');
 }
 $router = file_get_contents(dirname(__DIR__) . '/public/index.php');
+if (!is_string($router) || !str_contains($router, "'personnelUpdatedAt' => \$p['updated_at'] ?? \$p['created_at'] ?? null")) {
+    throw new RuntimeException('Personnel update timestamp is missing from dashboard data.');
+}
+if (!str_contains($router, "'%s already exists under %s (Item #%d)%s.'")) {
+    throw new RuntimeException('Duplicate personnel details must identify the existing record owner.');
+}
 if (!is_string($router)
     || !str_contains($router, "'/admin/inspection/save'")
     || !str_contains($router, "'/admin/inspection/notify-staff'")
+    || !str_contains($router, '/staff/personnel/(\\d+)/notify$#')
+    || !str_contains($router, 'https://api.brevo.com/v3/smtp/email')
+    || !str_contains($router, "'email_sent'")
+    || !str_contains($router, '/staff/ics/(\\d+)/send-inspection$#')
     || !str_contains($router, '/detail$#')) {
     throw new RuntimeException('Admin inspection workflow routes are missing.');
 }
@@ -54,6 +64,20 @@ $staff = render_view('staff_dashboard', [
 ]);
 if (!str_contains($staff, 'Staff Dashboard') || str_contains($staff, '{{')) {
     throw new RuntimeException('Staff dashboard rendering failed.');
+}
+if (!str_contains($staff, 'id="notifyEmailInput"')
+    || !str_contains($staff, 'readonly aria-readonly="true"')
+    || !str_contains($staff, 'Always use the address saved during personnel registration.')
+    || !str_contains($staff, 'p.itemNumber == currentNotifyId')) {
+    throw new RuntimeException('Registered personnel email must remain locked in the notification form.');
+}
+if (!str_contains($staff, 'Successfully sent for inspection')
+    || !str_contains($staff, 'was successfully sent to the Admin for inspection.')) {
+    throw new RuntimeException('Staff inspection submission success modal is missing.');
+}
+if (!str_contains($staff, 'value="status-asc" selected')
+    || !str_contains($staff, 'const statusOrder = {new:0, pending:1, within:2, renewed:3, expired:4}')) {
+    throw new RuntimeException('Personnel list status ordering is missing or incorrect.');
 }
 $inspectionReport = render_view('pdf.inspection_report', [
     'p' => [

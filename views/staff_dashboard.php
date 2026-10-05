@@ -106,6 +106,7 @@
       .notify-modal-close:hover{color:#e5eaf2;}
       .notify-input{width:100%;background:#111827;color:#e5eaf2;border:1px solid #2e3748;border-radius:7px;padding:0.55rem 0.75rem;font-size:0.85rem;outline:none;box-sizing:border-box;transition:border-color 0.18s;font-family:inherit;}
       .notify-input:focus{border-color:#3ec6ff;}
+      .notify-input[readonly]{opacity:.75;cursor:not-allowed;background:#0d1420;}
       .notify-label{display:block;font-size:0.72rem;font-weight:700;color:#64748b;margin-bottom:0.3rem;text-transform:uppercase;letter-spacing:0.06em;}
       .notify-send-btn{background:#e53e3e;color:#fff;border:none;border-radius:7px;padding:0.5rem 1.2rem;font-size:0.85rem;font-weight:700;cursor:pointer;transition:background 0.18s;}
       .notify-send-btn:hover{background:#c53030;}
@@ -809,14 +810,15 @@
                 <option value="">All</option>
                 <option value="new">New</option>
                 <option value="pending">Pending</option>
-                <option value="renewed">Renewed</option>
                 <option value="within">Within Renewal</option>
+                <option value="renewed">Renewed</option>
                 <option value="expired">Expired</option>
               </select>
               <button id="personnelClearFilters" type="button" class="bg-[#1a2025] text-[#94a3b8] border border-[#363b48] rounded px-3 py-1 text-xs">Clear Filters</button>
               <label for="sortSelect" class="text-[#b0bac7] text-xs">Sort:</label>
               <select id="sortSelect" class="bg-[#1a2025] text-white border border-[#363b48] rounded px-2 py-1 text-xs force-light-text">
-                <option value="itemNumber-desc" selected>Item # (Desc)</option>
+                <option value="status-asc" selected>Status (New to Expired)</option>
+                <option value="itemNumber-desc">Item # (Desc)</option>
                 <option value="lastName-asc">Last Name (A-Z)</option>
                 <option value="lastName-desc">Last Name (Z-A)</option>
                 <option value="dateOfValidity-asc">Validity (Earliest)</option>
@@ -1236,10 +1238,10 @@
                 <select id="reportStatus" class="bg-[#1a2025] text-white border border-[#363b48] rounded px-3 py-2 text-xs w-full force-light-text">
                   <option value="">All</option>
                   <option value="new">New</option>
-                  <option value="renewed">Renewed</option>
-                  <option value="within">Within Renewal</option>
-                  <option value="expired">Expired</option>
                   <option value="pending">Pending</option>
+                  <option value="within">Within Renewal</option>
+                  <option value="renewed">Renewed</option>
+                  <option value="expired">Expired</option>
                 </select>
               </div>
             </div>
@@ -1734,8 +1736,8 @@
         <p style="color:#64748b;font-size:0.72rem;margin:0;margin-top:3px;" id="notifyStatusLine">Status: —</p>
       </div>
       <div style="margin-bottom:0.85rem;">
-        <label class="notify-label">Personnel Email Address <span style="color:#ef4444;">*</span></label>
-        <input id="notifyEmailInput" class="notify-input" type="email" placeholder="personnel@example.com" />
+        <label class="notify-label">Registered Personnel Email</label>
+        <input id="notifyEmailInput" class="notify-input" type="email" placeholder="No registered email" readonly aria-readonly="true" title="This email comes from the personnel registration record and cannot be edited here." />
       </div>
       <div style="margin-bottom:1rem;">
         <label class="notify-label">Message <span style="color:#ef4444;">*</span></label>
@@ -2083,7 +2085,7 @@
     }
 
     // ── TABLE ──────────────────────────────────────────────────────────────
-    let currentSort = "itemNumber-desc";
+    let currentSort = "status-asc";
     const ROWS_PER_PAGE = 15;
     let currentTablePage = 1;
 
@@ -2101,6 +2103,14 @@
     function sortList(list) {
       const [key, dir] = currentSort.split("-");
       return list.slice().sort((a, b) => {
+        if (key === 'status') {
+          const statusOrder = {new:0, pending:1, within:2, renewed:3, expired:4};
+          const statusA = String(a.approvedStatus || 'pending').toLowerCase();
+          const statusB = String(b.approvedStatus || 'pending').toLowerCase();
+          const statusDifference = (statusOrder[statusA] ?? 1) - (statusOrder[statusB] ?? 1);
+          if (statusDifference !== 0) return dir === 'asc' ? statusDifference : -statusDifference;
+          return Number(b.itemNumber || 0) - Number(a.itemNumber || 0);
+        }
         let av = ["itemNumber","qtyAmmo"].includes(key) ? Number(a[key]) : (a[key]||"").toString().toLowerCase();
         let bv = ["itemNumber","qtyAmmo"].includes(key) ? Number(b[key]) : (b[key]||"").toString().toLowerCase();
         if (av < bv) return dir === "asc" ? -1 : 1;
@@ -2330,7 +2340,7 @@
     // ── NOTIFY MODAL (FIXED — complete function, no ellipsis) ──────────────
     let currentNotifyId = null;
 
-    function openNotifyModal(id, name, status, email) {
+    function openNotifyModal(id, name, status) {
       currentNotifyId = id;
 
 
@@ -2343,23 +2353,15 @@
     status === 'renewed'  ? 'Status: ✓ Renewed — License approved and active' :
                             'Status: ⏱ Within Renewal Period — Renewal due soon';
 
-      // ── FIX: clean email ──
-      const cleanEmail = (email && email !== 'undefined' && email !== 'null' && email.trim() !== '') ? email.trim() : '';
+      // Always use the address saved during personnel registration.
+      const registeredPersonnel = personnel.find(function(p) { return p.itemNumber == id; });
+      const savedEmail = registeredPersonnel ? registeredPersonnel.email : '';
+      const cleanEmail = (savedEmail && savedEmail !== 'undefined' && savedEmail !== 'null') ? String(savedEmail).trim() : '';
 
       const emailInput = document.getElementById('notifyEmailInput');
       emailInput.value = cleanEmail;
-
-      if (cleanEmail) {
-        emailInput.readOnly = true;
-        emailInput.style.opacity = '0.7';
-        emailInput.style.cursor  = 'not-allowed';
-        emailInput.title = 'Email auto-filled from personnel record';
-      } else {
-        emailInput.readOnly = false;
-        emailInput.style.opacity = '';
-        emailInput.style.cursor  = '';
-        emailInput.title = '';
-      }
+      emailInput.readOnly = true;
+      emailInput.title = 'Registered email address. Edit the personnel record to change it.';
 
       // Reset feedback
       document.getElementById('notifyFeedback').textContent = '';
@@ -2367,7 +2369,7 @@
 
       // Set send button
       const sendBtn = document.getElementById('notifyModalSend');
-      sendBtn.disabled = false;
+      sendBtn.disabled = !cleanEmail;
       sendBtn.className =   status === 'expired' ? 'notify-send-btn' :
     status === 'renewed' ? 'notify-send-btn' : 'notify-within-btn';
       sendBtn.style.background = status === 'renewed' ? '#276749' : '';
@@ -2387,9 +2389,8 @@
       // Show warning if no email
       if (!cleanEmail) {
         setTimeout(() => {
-          emailInput.focus();
           document.getElementById('notifyFeedback').style.color = '#f6e05e';
-          document.getElementById('notifyFeedback').textContent = '⚠ No email on record. Please enter the personnel email manually.';
+          document.getElementById('notifyFeedback').textContent = '⚠ No registered email found. Update the personnel record before sending.';
         }, 100);
       }
     }
@@ -2406,7 +2407,8 @@
     document.getElementById('notifyModalOverlay').addEventListener('click', function(e) { if (e.target === this) closeNotifyModal(); });
 
     document.getElementById('notifyModalSend').addEventListener('click', async function () {
-      const email    = document.getElementById('notifyEmailInput').value.trim();
+      const notifyPersonnel = personnel.find(function(p) { return p.itemNumber == currentNotifyId; });
+      const email    = notifyPersonnel && notifyPersonnel.email ? String(notifyPersonnel.email).trim() : '';
       const message  = document.getElementById('notifyMessageInput').value.trim();
       const feedback = document.getElementById('notifyFeedback');
       if (!email)   { feedback.style.color = '#fc8181'; feedback.textContent = '⚠ Please enter the personnel email address.'; return; }
@@ -2415,7 +2417,7 @@
       this.innerHTML = `Sending...`;
       feedback.style.color = '#94a3b8'; feedback.textContent = 'Sending email, please wait...';
       try {
-        const res  = await fetch(NOTIFY_URL(currentNotifyId), { method:'POST', headers:{'Content-Type':'application/json','X-CSRF-TOKEN':CSRF}, body:JSON.stringify({email, message}) });
+        const res  = await fetch(NOTIFY_URL(currentNotifyId), { method:'POST', headers:{'Content-Type':'application/json','Accept':'application/json','X-CSRF-TOKEN':CSRF}, body:JSON.stringify({message}) });
         const json = await res.json();
         if (json.success) {
           feedback.style.color = '#33b481'; feedback.textContent = '✓ Email sent successfully!';
@@ -3088,7 +3090,7 @@
         var r = personnel.find(function(x){ return x.itemNumber == itemNum; });
         if (!r) return;
         var name = ((r.rank||'') + ' ' + (r.lastName||'') + ', ' + (r.firstName||'') + ' ' + (r.middleName||'')).replace(/\s+/g,' ').trim();
-        window.openNotifyModal(r.itemNumber, name, r.approvedStatus, r.email || '');
+        window.openNotifyModal(r.itemNumber, name, r.approvedStatus);
       };
     
       window.renewalNotifyAll = function() {
@@ -3125,7 +3127,7 @@
             return fetch('/staff/personnel/' + r.itemNumber + '/notify', {
               method: 'POST',
               headers: { 'Content-Type':'application/json', 'X-CSRF-TOKEN':CSRF },
-              body: JSON.stringify({ email: r.email, message: defaultMessage(r) })
+              body: JSON.stringify({ message: defaultMessage(r) })
             }).then(function(res){ return res.json(); }).then(function(json){ if (json.success) sent++; else failed++; })
               .catch(function(){ failed++; });
           });
@@ -3179,6 +3181,12 @@
       };
 
       function icsRenderTable() {
+        function formatDateUpdated(value) {
+          if (!value) return '—';
+          var parsed = new Date(String(value).replace(' ', 'T'));
+          if (Number.isNaN(parsed.getTime())) return '—';
+          return parsed.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+        }
         var q = ((document.getElementById('icsListSearch') || {}).value || '').trim().toLowerCase();
         ['inspection','under','ready'].forEach(function(t) {
           var cnt = personnel.filter(function(p){ return getIcsStatus(p) === t; }).length;
@@ -3236,7 +3244,7 @@
             + '<td class="py-2 px-3 force-light-text">' + (r.pistolNomenclature||'—') + '</td>'
             + '<td class="py-2 px-3">' + pill + '</td>'
             + '<td class="py-2 px-3">' + result + '</td>'
-            + '<td class="py-2 px-3" style="color:#64748b;">' + (r.dateUpdated || (r.inspectionUpdatedAt ? new Date(r.inspectionUpdatedAt).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : (r.updated_at ? new Date(r.updated_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '—'))) + '</td>'
+            + '<td class="py-2 px-3" style="color:#64748b;">' + (r.dateUpdated || formatDateUpdated(r.inspectionUpdatedAt || r.personnelUpdatedAt)) + '</td>'
             + '<td class="py-2 px-3">' + action + '</td>'
             + '</tr>';
         }).join('');
@@ -3265,22 +3273,43 @@
 
       window.icsSendForInspection = function(itemNum, btn) {
         var p = personnel.find(function(x){ return x.itemNumber == itemNum; });
-        if (!p) return;
-        if (btn) { btn.disabled = true; btn.textContent = 'Sending…'; }
-      fetch('/staff/ics/' + itemNum + '/send-inspection', {
-          method: 'POST',
-          headers: { 'X-CSRF-TOKEN': CSRF, 'Accept': 'application/json' }
-        }).then(function(r){ return r.json(); }).then(function(json){
-          if (json.success) {
+        if (!p || (btn && btn.disabled)) return;
+        var personnelName = ((p.lastName || '') + ', ' + (p.firstName || '')).replace(/^,\s*|,\s*$/g, '').trim();
+        showSystemModal(
+          'Send for Admin inspection?',
+          'Send ' + (personnelName || ('Item #' + itemNum)) + ' to the administrator for inspection?',
+          true
+        ).then(function(confirmed) {
+          if (!confirmed) return;
+          var originalHtml = btn ? btn.innerHTML : '';
+          if (btn) { btn.disabled = true; btn.textContent = 'Sending...'; }
+          fetch('/staff/ics/' + encodeURIComponent(itemNum) + '/send-inspection', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'X-CSRF-TOKEN': CSRF, 'Accept': 'application/json' }
+          }).then(function(response) {
+            return response.json().catch(function() {
+              return { success:false, message:'The server returned an invalid response.' };
+            }).then(function(json) {
+              if (!response.ok || !json.success) throw new Error(json.message || 'Unable to send the inspection request.');
+              return json;
+            });
+          }).then(function(json) {
             p.icsStatus = 'under';
             p.dateUpdated = new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
             icsRenderTable();
-            icsShowToast('Sent to Admin for inspection — ' + (p.lastName||'') + ', ' + (p.firstName||''));
-          } else {
-            if (btn) { btn.disabled = false; btn.textContent = 'Send for Inspection'; }
-          }
-        }).catch(function() {
-          if (btn) { btn.disabled = false; btn.textContent = 'Send for Inspection'; }
+            icsShowToast('Sent to Admin for inspection - ' + personnelName);
+            showSystemModal(
+              json.alreadySent ? 'Already sent for inspection' : 'Successfully sent for inspection',
+              json.alreadySent
+                ? (personnelName + ' is already waiting for Admin inspection.')
+                : (personnelName + ' was successfully sent to the Admin for inspection.'),
+              false
+            );
+          }).catch(function(error) {
+            if (btn) { btn.disabled = false; btn.innerHTML = originalHtml; }
+            showSystemModal('Unable to send inspection', error.message || 'Please try again.', false);
+          });
         });
       };
 
@@ -3892,4 +3921,3 @@
 
 </body>
   </html>
-

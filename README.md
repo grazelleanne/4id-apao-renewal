@@ -36,6 +36,22 @@ existing system's personnel data or credentials.
 Use HTTPS in production. Set up your mail transport before relying on password
 reset email.
 
+## Brevo transactional email
+
+Create and verify a sender in Brevo, then add these environment variables to
+the Render web service:
+
+```text
+BREVO_API_KEY=xkeysib-your-api-key
+BREVO_SENDER_EMAIL=verified-sender@example.com
+BREVO_SENDER_NAME=APAO Renewal System
+BREVO_REPLY_TO_EMAIL=optional-reply-address@example.com
+```
+
+Personnel notification emails are sent with Brevo's transactional email API.
+The recipient address is always loaded from the personnel registration record;
+the browser cannot override it. Never commit the API key to `.env` or Git.
+
 ## Importing personnel
 
 For a personnel-only CSV, use `php bin/import-personnel.php file.csv`. The CSV

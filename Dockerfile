@@ -1,6 +1,9 @@
 FROM php:8.4-apache
 
-RUN docker-php-ext-install pdo_mysql \
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends libcurl4-openssl-dev \
+    && docker-php-ext-install curl pdo_mysql \
+    && rm -rf /var/lib/apt/lists/* \
     && a2enmod rewrite
 
 RUN sed -ri 's!/var/www/html!/var/www/html/public!g' \

@@ -63,6 +63,16 @@ try {
         $user = require_user(['staff','super_admin','admin']);
         personnel_store($user);
     }
+    if (preg_match('#^/staff/personnel/(\d+)/notify$#', $path, $matches) && $method === 'POST') {
+        require_post();
+        $user = require_user(['staff','super_admin','admin']);
+        staff_notify_personnel((int) $matches[1], $user);
+    }
+    if (preg_match('#^/staff/ics/(\d+)/send-inspection$#', $path, $matches) && $method === 'POST') {
+        require_post();
+        $user = require_user(['staff','super_admin','admin']);
+        ics_send_for_inspection((int) $matches[1], $user);
+    }
     if ($path === '/admin/archive-data' && $method === 'GET') {
         require_user(['super_admin','admin']);
         archive_data();
@@ -365,6 +375,7 @@ function personnel_rows(bool $archived = false): array
             'inspectionResult' => $p['inspection_remarks'] ?? '',
             'inspectionRemarks' => $p['inspection_remarks'] ?? '',
             'inspectionUpdatedAt' => $p['inspection_updated_at'] ?? null,
+            'personnelUpdatedAt' => $p['updated_at'] ?? $p['created_at'] ?? null,
             'dateArchived' => $p['archived_at'] ?? null,
         ];
     }, $statement->fetchAll());
@@ -384,10 +395,10 @@ function personnel_data(): never
 function personnel_duplicate_errors(array $input): array
 {
     $checks = [
-        'afpSerialNumber' => ['column' => 'afp_serial_number', 'message' => 'This AFP serial number is already registered.'],
-        'email' => ['column' => 'email', 'message' => 'This email address is already registered.'],
-        'contactNumber' => ['column' => 'contact_number', 'message' => 'This contact number is already registered.'],
-        'pistolSerialNumber' => ['column' => 'pistol_serial_number', 'message' => 'This pistol serial number is already registered.'],
+        'afpSerialNumber' => ['column' => 'afp_serial_number', 'label' => 'AFP serial number'],
+        'email' => ['column' => 'email', 'label' => 'Email address'],
+        'contactNumber' => ['column' => 'contact_number', 'label' => 'Contact number'],
+        'pistolSerialNumber' => ['column' => 'pistol_serial_number', 'label' => 'Pistol serial number'],
     ];
     $errors = [];
     foreach ($checks as $field => $check) {
@@ -396,10 +407,27 @@ function personnel_duplicate_errors(array $input): array
             continue;
         }
         $comparison = $field === 'email' ? 'LOWER(`email`)=LOWER(:value)' : '`' . $check['column'] . '`=:value';
-        $statement = db()->prepare('SELECT 1 FROM personnel WHERE ' . $comparison . ' LIMIT 1');
+        $statement = db()->prepare(
+            'SELECT item_number,first_name,middle_name,last_name,`rank`,archived_at
+             FROM personnel WHERE ' . $comparison . ' LIMIT 1'
+        );
         $statement->execute(['value' => $value]);
-        if ($statement->fetchColumn()) {
-            $errors[$field] = [$check['message']];
+        $existing = $statement->fetch();
+        if ($existing) {
+            $ownerName = trim(implode(' ', array_filter([
+                $existing['rank'] ?? null,
+                $existing['first_name'] ?? null,
+                $existing['middle_name'] ?? null,
+                $existing['last_name'] ?? null,
+            ])));
+            $recordState = empty($existing['archived_at']) ? '' : ' (archived record)';
+            $errors[$field] = [sprintf(
+                '%s already exists under %s (Item #%d)%s.',
+                $check['label'],
+                $ownerName !== '' ? $ownerName : 'another personnel record',
+                (int) $existing['item_number'],
+                $recordState,
+            )];
         }
     }
     return $errors;
@@ -414,6 +442,117 @@ function personnel_availability(): never
         'available' => $errors === [],
         'errors' => $errors,
     ], $errors === [] ? 200 : 409);
+}
+
+function brevo_send_transactional_email(string $recipientEmail, string $recipientName, string $subject, string $html): string
+{
+    $apiKey = trim(env_value('BREVO_API_KEY'));
+    $senderEmail = strtolower(trim(env_value('BREVO_SENDER_EMAIL')));
+    $senderName = trim(env_value('BREVO_SENDER_NAME', 'APAO Renewal System'));
+    if ($apiKey === '' || preg_match('/[\r\n]/', $apiKey) || !filter_var($senderEmail, FILTER_VALIDATE_EMAIL)) {
+        throw new RuntimeException('Brevo is not configured.');
+    }
+    if (!function_exists('curl_init')) {
+        throw new RuntimeException('The PHP cURL extension is unavailable.');
+    }
+
+    $payload = [
+        'sender' => ['name' => $senderName !== '' ? $senderName : 'APAO Renewal System', 'email' => $senderEmail],
+        'to' => [['name' => $recipientName, 'email' => $recipientEmail]],
+        'subject' => $subject,
+        'htmlContent' => $html,
+        'tags' => ['apao-renewal'],
+    ];
+    $replyTo = strtolower(trim(env_value('BREVO_REPLY_TO_EMAIL')));
+    if ($replyTo !== '' && filter_var($replyTo, FILTER_VALIDATE_EMAIL)) {
+        $payload['replyTo'] = ['email' => $replyTo, 'name' => $senderName];
+    }
+
+    $handle = curl_init('https://api.brevo.com/v3/smtp/email');
+    if ($handle === false) {
+        throw new RuntimeException('Unable to initialize the Brevo request.');
+    }
+    curl_setopt_array($handle, [
+        CURLOPT_POST => true,
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_CONNECTTIMEOUT => 5,
+        CURLOPT_TIMEOUT => 20,
+        CURLOPT_HTTPHEADER => [
+            'Accept: application/json',
+            'Content-Type: application/json',
+            'api-key: ' . $apiKey,
+        ],
+        CURLOPT_POSTFIELDS => json_encode($payload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR),
+    ]);
+    $response = curl_exec($handle);
+    $curlError = curl_error($handle);
+    $status = (int) curl_getinfo($handle, CURLINFO_RESPONSE_CODE);
+    curl_close($handle);
+
+    if (!is_string($response) || $curlError !== '' || $status < 200 || $status >= 300) {
+        error_log('[APAO Brevo] HTTP ' . $status . ($curlError !== '' ? ': ' . $curlError : ''));
+        throw new RuntimeException('Brevo rejected the email request.');
+    }
+    $decoded = json_decode($response, true);
+    return is_array($decoded) && is_string($decoded['messageId'] ?? null) ? $decoded['messageId'] : '';
+}
+
+function staff_notify_personnel(int $itemNumber, array $user): never
+{
+    $input = request_data();
+    $message = personnel_text($input, 'message', 5000);
+    if ($itemNumber < 1 || $message === '') {
+        json_response(['success' => false, 'error' => 'Personnel and notification message are required.'], 422);
+    }
+    if (!rate_limit('brevo-personnel:' . ($user['id'] ?? 0), 20, 300)) {
+        json_response(['success' => false, 'error' => 'Too many emails were requested. Please wait a few minutes.'], 429);
+    }
+
+    $statement = db()->prepare(
+        'SELECT id,item_number,first_name,middle_name,last_name,`rank`,email,date_of_validity,
+                approved_status,ics_status
+         FROM personnel WHERE item_number=:item AND archived_at IS NULL LIMIT 1'
+    );
+    $statement->execute(['item' => $itemNumber]);
+    $personnel = $statement->fetch();
+    if (!$personnel) {
+        json_response(['success' => false, 'error' => 'Personnel record not found.'], 404);
+    }
+
+    $recipientEmail = strtolower(trim((string) ($personnel['email'] ?? '')));
+    if (!filter_var($recipientEmail, FILTER_VALIDATE_EMAIL)) {
+        json_response(['success' => false, 'error' => 'This personnel record has no valid registered email address.'], 422);
+    }
+    $recipientName = trim(implode(' ', array_filter([
+        $personnel['rank'] ?? null,
+        $personnel['first_name'] ?? null,
+        $personnel['middle_name'] ?? null,
+        $personnel['last_name'] ?? null,
+    ])));
+    $status = renewal_status_for_personnel($personnel);
+    $subject = match ($status) {
+        'expired' => 'Action Required: Pistol License Renewal',
+        'within' => 'Pistol License Renewal Reminder',
+        'renewed' => 'Pistol License Renewal Approved',
+        default => 'APAO Pistol License Notification',
+    };
+    $html = render_view('emails.personnel_notify', [
+        'personnelName' => $recipientName,
+        'body' => $message,
+    ]);
+
+    try {
+        brevo_send_transactional_email($recipientEmail, $recipientName, $subject, $html);
+    } catch (Throwable $error) {
+        error_log('[APAO Brevo] ' . $error->getMessage());
+        json_response([
+            'success' => false,
+            'error' => 'The email could not be sent. Check the Brevo API key and verified sender in Render.',
+        ], 502);
+    }
+
+    audit($user, 'email_sent', (string) $itemNumber);
+    json_response(['success' => true, 'message' => 'Notification email sent successfully.']);
 }
 
 function personnel_text(array $input, string $key, int $maximum = 255): string
@@ -656,6 +795,90 @@ function inspection_data(): never
     }
     unset($row);
     json_response(['success' => true, 'data' => $rows, 'pending' => $pending, 'under' => $under, 'approved' => $approved]);
+}
+
+function ics_send_for_inspection(int $itemNumber, array $user): never
+{
+    if ($itemNumber < 1) {
+        json_response(['success' => false, 'message' => 'Invalid personnel item number.'], 422);
+    }
+
+    $pdo = db();
+    $pdo->beginTransaction();
+    try {
+        $personnelQuery = $pdo->prepare(
+            'SELECT id,item_number,first_name,middle_name,last_name,afp_serial_number,pistol_type,ics_status
+             FROM personnel WHERE item_number=:item AND archived_at IS NULL LIMIT 1 FOR UPDATE'
+        );
+        $personnelQuery->execute(['item' => $itemNumber]);
+        $personnel = $personnelQuery->fetch();
+        if (!$personnel) {
+            $pdo->rollBack();
+            json_response(['success' => false, 'message' => 'Personnel record not found.'], 404);
+        }
+
+        $currentStatus = strtolower(trim((string) ($personnel['ics_status'] ?? 'inspection')));
+        if ($currentStatus === 'ready') {
+            $pdo->rollBack();
+            json_response(['success' => false, 'message' => 'This inspection has already been approved.'], 409);
+        }
+
+        $alreadySent = $currentStatus === 'under';
+        if (!$alreadySent) {
+            $pdo->prepare('UPDATE personnel SET ics_status=\'under\',updated_at=NOW() WHERE id=:id')
+                ->execute(['id' => $personnel['id']]);
+
+            $inspectionQuery = $pdo->prepare(
+                'SELECT id,status FROM inspections WHERE item_number=:item ORDER BY id DESC LIMIT 1 FOR UPDATE'
+            );
+            $inspectionQuery->execute(['item' => $itemNumber]);
+            $inspection = $inspectionQuery->fetch();
+            if ($inspection && strtolower((string) $inspection['status']) === 'approved') {
+                throw new RuntimeException('Approved inspection has an inconsistent ICS status.');
+            }
+            if ($inspection) {
+                $pdo->prepare('UPDATE inspections SET status=\'under\',updated_at=NOW() WHERE id=:id')
+                    ->execute(['id' => $inspection['id']]);
+            } else {
+                $pdo->prepare(
+                    'INSERT INTO inspections
+                     (personnel_id,item_number,afp_serial_number,pistol_type,date_registered,status,created_at,updated_at)
+                     VALUES (:personnel_id,:item,:serial,:pistol_type,CURDATE(),\'under\',NOW(),NOW())'
+                )->execute([
+                    'personnel_id' => $personnel['id'], 'item' => $itemNumber,
+                    'serial' => $personnel['afp_serial_number'], 'pistol_type' => $personnel['pistol_type'],
+                ]);
+            }
+
+            $name = trim(implode(' ', array_filter([
+                $personnel['first_name'], $personnel['middle_name'], $personnel['last_name'],
+            ])));
+            $pdo->prepare(
+                'INSERT INTO notifications
+                 (type,title,message,personnel_name,personnel_id,read_by_admin,read_by_staff,created_at,updated_at)
+                 VALUES (\'inspection_submitted\',\'Inspection request submitted\',:message,:name,:id,0,1,NOW(),NOW())'
+            )->execute([
+                'message' => $name . ' was sent by staff for administrator inspection.',
+                'name' => $name, 'id' => $personnel['id'],
+            ]);
+            audit($user, 'inspection_submitted', (string) $itemNumber);
+        }
+        $pdo->commit();
+
+        json_response([
+            'success' => true,
+            'status' => 'under',
+            'alreadySent' => $alreadySent,
+            'message' => $alreadySent
+                ? 'This record is already waiting for administrator inspection.'
+                : 'Inspection request sent to the administrator successfully.',
+        ]);
+    } catch (Throwable $error) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        throw $error;
+    }
 }
 
 function inspection_parts(): array
