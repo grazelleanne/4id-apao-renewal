@@ -377,7 +377,7 @@ function personnel_rows(bool $archived = false): array
             'pistolType' => $p['pistol_type'] ?? '', 'parNumber' => $p['par_number'] ?? '',
             'qtyAmmo' => (int) ($p['qty_ammo'] ?? 0), 'unit' => $p['unit'] ?? '',
             'approvedStatus' => $renewalStatus, 'status' => $p['status'] ?? 'active',
-            'icsStatus' => $renewalStatus === 'expired' && ($p['ics_status'] ?? '') === 'ready' ? 'inspection' : ($p['ics_status'] ?? 'inspection'), 'dateApproved' => $p['date_approved'],
+            'icsStatus' => $renewalStatus === 'expired' && ($p['ics_status'] ?? '') !== 'under' ? 'expired' : ($p['ics_status'] ?? 'inspection'), 'dateApproved' => $p['date_approved'],
             'photo' => $p['photo'], 'signature' => $p['signature'],
             'inspectionStatus' => $p['inspection_status'] ?? null,
             'inspectionDateRegistered' => $p['inspection_date_registered'] ?? null,
@@ -836,9 +836,8 @@ function inspection_data(): never
         $row['dateRegistered'] = $row['inspectionDateRegistered'] ?? null;
         $status = strtolower(trim((string) ($row['inspectionStatus'] ?? '')));
         $icsStatus = strtolower(trim((string) ($row['icsStatus'] ?? '')));
-        if (($row['approvedStatus'] ?? '') === 'expired' && $status === 'approved') {
-            $pending++;
-            $row['inspectionStatus'] = 'pending';
+        if (($row['approvedStatus'] ?? '') === 'expired' && ($icsStatus !== 'under' || $status === 'approved')) {
+            $row['inspectionStatus'] = 'expired';
         } elseif ($status === 'pending' && $icsStatus === 'under') {
             $pending++;
             $row['inspectionStatus'] = 'pending';
@@ -856,7 +855,7 @@ function inspection_data(): never
         }
     }
     unset($row);
-    $rows = array_values(array_filter($rows, static fn (array $row): bool => $row['inspectionStatus'] !== 'renewed'));
+    $rows = array_values(array_filter($rows, static fn (array $row): bool => !in_array($row['inspectionStatus'], ['renewed', 'expired'], true)));
     json_response(['success' => true, 'data' => $rows, 'pending' => $pending, 'under' => $under, 'approved' => $approved]);
 }
 
@@ -1149,8 +1148,10 @@ function inspection_save(array $user): never
         }
         $assignments[] = '`status`=:status';
         $assignments[] = '`remarks`=:remarks';
+        if ($status === 'approved') $assignments[] = '`next_renewal_date`=:next_validity';
         $assignments[] = '`inspected_by_user_id`=:user_id';
         $updateValues = $values;
+        if ($status === 'approved') $updateValues['next_validity'] = $newValidity;
         unset($updateValues['item']);
         $updateValues['id'] = $inspectionId;
         $update = $pdo->prepare(

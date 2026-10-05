@@ -93,7 +93,7 @@ $isUnserviceable = $hasUnserviceable;
 $dateToday = $formatDate($inspection['inspected_at'] ?? null, date('d F Y'));
 $dateApproved = $formatDate($inspection['inspected_at'] ?? null, '-');
 $nextRenewal = $formatDate(
-    $inspection['next_renewal_date'] ?? $p['date_of_validity'] ?? null,
+    ($p['date_of_validity'] ?? '') ?: (($inspection['next_renewal_date'] ?? '') ?: null),
     '-'
 );
 $logo1Data = $imageData($publicImage('logo1.png'));

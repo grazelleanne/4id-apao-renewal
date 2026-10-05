@@ -95,6 +95,13 @@ if (!str_contains($inspectionReport, 'INSPECTION REPORT OF SERVICEABLE AND UNSER
     throw new RuntimeException('Plain PHP inspection report rendering failed.');
 }
 $renewedAt = new DateTimeImmutable('2026-10-06');
+$renewedReport = render_view('pdf.inspection_report', [
+    'p' => ['date_of_validity' => '2028-03-12', 'date_of_birth' => '1990-03-12'],
+    'inspection' => ['status' => 'approved', 'next_renewal_date' => '', 'inspected_at' => '2026-10-06'],
+]);
+if (!str_contains($renewedReport, '12 March 2028')) {
+    throw new RuntimeException('Inspection print must show the corrected personnel renewal validity.');
+}
 foreach (['1990-03-12' => '2028-03-12', '1990-12-20' => '2028-12-20', '2000-02-29' => '2028-02-29'] as $birth => $expected) {
     if (birthday_renewal_validity($birth, $renewedAt) !== $expected) {
         throw new RuntimeException('Birthday renewal validity is incorrect.');

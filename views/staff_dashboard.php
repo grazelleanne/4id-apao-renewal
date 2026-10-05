@@ -3159,7 +3159,7 @@
       var ICS_PER_PAGE = 10;
 
       function getIcsStatus(p) {
-        if (p.approvedStatus === 'expired' && p.icsStatus === 'ready') return 'inspection';
+        if (p.approvedStatus === 'expired' && p.icsStatus !== 'under') return 'expired';
         return p.icsStatus || 'inspection';
       }
 
