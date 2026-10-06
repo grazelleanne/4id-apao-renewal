@@ -7,14 +7,14 @@ final class LoginResponse extends RuntimeException
 }
 $input = [];
 $sentCode = null;
-$attemptState = ['remaining' => 3, 'retryAfter' => 0];
+$attemptState = ['remaining' => 5, 'retryAfter' => 0];
 $testUser = ['id' => 1, 'name' => 'Test Staff', 'email' => 'staff@example.com',
     'password' => password_hash('Example1!', PASSWORD_DEFAULT), 'role' => 'staff', 'is_active' => 1, 'session_version' => 1];
 function require_post(): void {}
 function request_data(): array { return $GLOBALS['input']; }
 function rate_limit(string $key, int $limit, int $window): bool { return true; }
 function login_attempts(string $key, string $action = 'check'): array {
-    if ($action === 'reset') $GLOBALS['attemptState'] = ['remaining' => 3, 'retryAfter' => 0];
+    if ($action === 'reset') $GLOBALS['attemptState'] = ['remaining' => 5, 'retryAfter' => 0];
     if ($action === 'fail') {
         $GLOBALS['attemptState']['remaining']--;
         if ($GLOBALS['attemptState']['remaining'] <= 0) $GLOBALS['attemptState']['retryAfter'] = 180;
@@ -50,39 +50,26 @@ function response(callable $call): LoginResponse {
     throw new RuntimeException('Missing login response.');
 }
 function check(bool $condition, string $message): void { if (!$condition) throw new RuntimeException($message); }
-function beginLogin(): void {
+function credentials(string $password = 'Example1!'): void {
     $_SESSION = ['captcha' => 4];
-    $GLOBALS['attemptState'] = ['remaining' => 3, 'retryAfter' => 0];
-    $GLOBALS['input'] = ['email' => 'staff@example.com', 'password' => 'Example1!', 'captcha' => '4'];
-    $result = response('login');
-    check($result->payload['otpRequired'] === true && !isset($_SESSION['user']), 'Password must not create an authenticated session.');
-    check(!str_contains(json_encode($result->payload), $GLOBALS['sentCode']), 'OTP must not be returned to the browser.');
+    $GLOBALS['input'] = ['email' => 'staff@example.com', 'password' => $password, 'captcha' => '4'];
 }
-beginLogin();
-$input = ['otp' => $sentCode];
-$result = response('login_verify_otp');
-check($result->status === 200 && isset($_SESSION['user']) && !isset($_SESSION['login_otp']), 'Correct OTP must authenticate and consume the challenge.');
-check(response('login_verify_otp')->status === 401, 'Consumed codes must not replay.');
-beginLogin();
-$_SESSION['login_otp']['expires'] = time() - 1;
-$input = ['otp' => $sentCode];
-check(response('login_verify_otp')->status === 401 && !isset($_SESSION['user']), 'Expired OTP must not authenticate.');
-beginLogin();
-$input = ['otp' => 'invalid'];
-check(response('login_verify_otp')->status === 422, 'First incorrect OTP must be rejected.');
-response('login_verify_otp');
-check(response('login_verify_otp')->status === 429 && !isset($_SESSION['user'], $_SESSION['login_otp']), 'Three wrong codes must lock out and clear the challenge.');
-beginLogin();
-$input = ['email' => 'staff@example.com', 'password' => 'wrong', 'captcha' => '4'];
-for ($attempt = 0; $attempt < 3; $attempt++) {
-    $_SESSION['captcha'] = 4;
+credentials();
+$result = response('login');
+check($result->status === 200 && isset($_SESSION['user']) && isset($result->payload['redirect']), 'Correct credentials must authenticate directly.');
+check($sentCode === null && !isset($result->payload['otpRequired']), 'Login must not send or request email codes.');
+$attemptState = ['remaining' => 5, 'retryAfter' => 0];
+for ($attempt = 0; $attempt < 5; $attempt++) {
+    credentials('wrong');
     $result = response('login');
 }
-check($result->status === 429 && !isset($_SESSION['user']), 'Three failed passwords must block login.');
-beginLogin();
+check($result->status === 429 && !isset($_SESSION['user']), 'Five failed passwords must block login.');
+credentials();
+check(response('login')->status === 429 && !isset($_SESSION['user']), 'A correct password must not bypass an active lockout.');
+$attemptState = ['remaining' => 5, 'retryAfter' => 0];
 $testUser['is_active'] = 0;
-$input = ['otp' => $sentCode];
-check(response('login_verify_otp')->status === 403 && !isset($_SESSION['user']), 'An account deactivated after sending OTP must not authenticate.');
+credentials();
+check(response('login')->status === 403 && !isset($_SESSION['user']), 'Inactive accounts must not authenticate.');
 $start = strpos($source, 'function audit_data(): never');
 $end = strpos($source, 'function inspection_data', $start);
 eval(substr($source, $start, $end - $start));
@@ -94,4 +81,4 @@ $_GET = ['date_from' => '2026-10-32'];
 check(response('audit_data')->status === 422, 'Invalid audit date must be rejected.');
 $_GET = ['date_from' => '2026-10-06', 'date_to' => '2026-10-01'];
 check(response('audit_data')->status === 422, 'Reversed audit ranges must be rejected.');
-echo "Login OTP security checks passed.\n";
+echo "Login and audit security checks passed.\n";

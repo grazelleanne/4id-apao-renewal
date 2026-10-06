@@ -244,15 +244,15 @@ function login_attempts(string $key, string $action = 'check'): array
         $now = time();
         if (!is_array($state) || ($state['until'] ?? 0) <= $now) $state = ['count' => 0, 'until' => $now + 180];
         if ($action === 'reset') $state = ['count' => 0, 'until' => $now + 180];
-        if ($action === 'fail' && $state['count'] < 3) {
+        if ($action === 'fail' && $state['count'] < 5) {
             $state['count']++;
-            if ($state['count'] === 3) $state['until'] = $now + 180;
+            if ($state['count'] === 5) $state['until'] = $now + 180;
         }
         rewind($handle);
         ftruncate($handle, 0);
         $encoded = json_encode($state, JSON_THROW_ON_ERROR);
         if (fwrite($handle, $encoded) !== strlen($encoded) || !fflush($handle)) throw new RuntimeException('Cannot save login protection.');
-        return ['remaining' => max(0, 3 - $state['count']), 'retryAfter' => $state['count'] >= 3 ? max(0, $state['until'] - $now) : 0];
+        return ['remaining' => max(0, 5 - $state['count']), 'retryAfter' => $state['count'] >= 5 ? max(0, $state['until'] - $now) : 0];
     } finally {
         flock($handle, LOCK_UN);
         fclose($handle);

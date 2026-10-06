@@ -102,13 +102,15 @@ if (!password_is_strong('Abcdef1!') || password_is_strong('Abcde1!')
 $loginTestKey = 'test-login-' . bin2hex(random_bytes(16));
 try {
     login_attempts($loginTestKey, 'reset');
-    login_attempts($loginTestKey, 'fail');
-    login_attempts($loginTestKey, 'fail');
+    for ($attempt = 0; $attempt < 4; $attempt++) {
+        $state = login_attempts($loginTestKey, 'fail');
+        if ($state['retryAfter'] !== 0) throw new RuntimeException('Login must allow five attempts before lockout.');
+    }
     $locked = login_attempts($loginTestKey, 'fail');
     if ($locked['remaining'] !== 0 || $locked['retryAfter'] < 179 || $locked['retryAfter'] > 180) {
-        throw new RuntimeException('Third failed attempt must start a three-minute lockout.');
+        throw new RuntimeException('Fifth failed attempt must start a three-minute lockout.');
     }
-    if (login_attempts($loginTestKey)['retryAfter'] === 0 || login_attempts($loginTestKey, 'reset')['remaining'] !== 3) {
+    if (login_attempts($loginTestKey)['retryAfter'] === 0 || login_attempts($loginTestKey, 'reset')['remaining'] !== 5) {
         throw new RuntimeException('Login lockout persistence/reset is incorrect.');
     }
 } finally {

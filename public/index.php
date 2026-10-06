@@ -16,9 +16,6 @@ try {
     if ($path === '/login' && $method === 'POST') {
         login();
     }
-    if ($path === '/login/otp' && $method === 'POST') {
-        login_verify_otp();
-    }
     if ($path === '/logout' && $method === 'POST') {
         require_post();
         $user = current_user();
@@ -205,7 +202,7 @@ function login(): never
     $key = 'login:' . $email . '|' . $ip;
     unset($_SESSION['login_otp']);
     if (login_attempts($key)['retryAfter'] > 0) {
-        login_error('Three failed attempts. Wait 3 minutes before trying again.', 429);
+        login_error('Five failed attempts. Wait 3 minutes before trying again.', 429);
     }
     if (!filter_var($email, FILTER_VALIDATE_EMAIL) || $password === '' || strlen($password) > 4096
         || $answer === null || !ctype_digit($captcha) || (int) $captcha !== (int) $answer) {
@@ -224,61 +221,7 @@ function login(): never
     if (!(int) $user['is_active'] || !in_array($user['role'], ['super_admin','admin','staff'], true)) {
         login_error('This account cannot access the system.', 403);
     }
-    $otp = (string) random_int(100000, 999999);
-    if (!rate_limit('login-otp-send:' . $user['id'], 3, 180)) {
-        login_error('Too many code requests. Wait 3 minutes before requesting another code.', 429);
-    }
-    try {
-        brevo_send_transactional_email($user['email'], $user['name'], 'APAO Login Verification Code',
-            '<p>Your APAO login code is <strong>' . $otp . '</strong>.</p><p>It expires in 3 minutes. Do not share this code.</p>');
-    } catch (Throwable $error) {
-        error_log('[APAO Login OTP] ' . $error->getMessage());
-        login_error('Could not send your login code. Please contact the administrator or try again.', 502);
-    }
-    session_regenerate_id(true);
-    $_SESSION['login_otp'] = ['id' => (int) $user['id'], 'version' => (int) $user['session_version'],
-        'hash' => password_hash($otp, PASSWORD_DEFAULT), 'expires' => time() + 180, 'attempts' => 0, 'key' => $key];
-    json_response(['success' => true, 'otpRequired' => true, 'message' => 'Enter the 6-digit code sent to your account email. It expires in 3 minutes.']);
-}
-
-function login_failed(string $key, string $message, int $status): never
-{
-    $state = login_attempts($key, 'fail');
-    if ($state['retryAfter'] > 0) login_error('Three failed attempts. Wait 3 minutes before trying again.', 429);
-    login_error($message . ' ' . $state['remaining'] . ' attempts remaining.', $status);
-}
-
-function login_verify_otp(): never
-{
-    require_post();
-    $pending = $_SESSION['login_otp'] ?? null;
-    if (!is_array($pending) || $pending['expires'] <= time()) {
-        unset($_SESSION['login_otp']);
-        json_response(['success' => false, 'restartLogin' => true, 'message' => 'Your code expired. Sign in again to get a new code.'], 401);
-    }
-    if (login_attempts($pending['key'])['retryAfter'] > 0) {
-        unset($_SESSION['login_otp']);
-        json_response(['success' => false, 'restartLogin' => true, 'message' => 'Wait 3 minutes before trying again.'], 429);
-    }
-    $input = request_data();
-    $otp = is_string($input['otp'] ?? null) ? trim($input['otp']) : '';
-    if (!preg_match('/^\d{6}$/', $otp) || !password_verify($otp, $pending['hash'])) {
-        $_SESSION['login_otp']['attempts']++;
-        $state = login_attempts($pending['key'], 'fail');
-        $restart = $_SESSION['login_otp']['attempts'] >= 3 || $state['retryAfter'] > 0;
-        if ($restart) unset($_SESSION['login_otp']);
-        json_response(['success' => false, 'restartLogin' => $restart,
-            'message' => $restart ? 'Too many incorrect codes. Wait 3 minutes and sign in again.' : 'Incorrect code. ' . $state['remaining'] . ' attempts remaining.'], $restart ? 429 : 422);
-    }
-    $query = db()->prepare('SELECT id,name,email,role,is_active,session_version FROM users WHERE id=:id');
-    $query->execute(['id' => $pending['id']]);
-    $user = $query->fetch();
-    unset($_SESSION['login_otp']);
-    if (!$user || !(int) $user['is_active'] || (int) $user['session_version'] !== $pending['version']
-        || !in_array($user['role'], ['super_admin','admin','staff'], true)) {
-        json_response(['success' => false, 'restartLogin' => true, 'message' => 'This account can no longer sign in.'], 403);
-    }
-    login_attempts($pending['key'], 'reset');
+    login_attempts($key, 'reset');
     session_regenerate_id(true);
     $_SESSION['user'] = [
         'id' => (int) $user['id'], 'name' => $user['name'], 'email' => $user['email'],
@@ -292,6 +235,13 @@ function login_verify_otp(): never
         'message' => 'Welcome back, ' . $user['name'] . '!',
         'redirect' => $user['role'] === 'staff' ? '/staff/dashboard' : '/admin/dashboard',
     ]);
+}
+
+function login_failed(string $key, string $message, int $status): never
+{
+    $state = login_attempts($key, 'fail');
+    if ($state['retryAfter'] > 0) login_error('Five failed attempts. Wait 3 minutes before trying again.', 429);
+    login_error($message . ' ' . $state['remaining'] . ' attempts remaining.', $status);
 }
 
 function login_error(string $message, int $status): never
