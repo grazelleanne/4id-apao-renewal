@@ -174,6 +174,7 @@
   </style>
   <link rel="stylesheet" href="/css/typography.css">
   <link rel="stylesheet" href="/css/dashboard-theme.css">
+  <script src="/js/dashboard-lists.js" defer></script>
 </head>
 <body class="app-dashboard light-mode min-h-screen font-inter">
 <div class="flex min-h-screen">
@@ -354,15 +355,6 @@
           <div class="pw-strength-bar-wrap"><div class="pw-strength-bar" id="modalStrengthBar"></div></div>
           <div class="pw-strength-text" id="modalStrengthText"></div>
           <div class="field-help">New staff must replace this temporary password on their first login before accessing the dashboard.</div>
-        </div>
-
-        <div class="mb-2">
-          <label class="block mb-1 text-sm font-semibold">Initial Status</label>
-          <label class="switch-tgl">
-            <input id="userStatusToggle" name="statusToggle" type="checkbox" checked />
-            <span class="slider-tgl"></span>
-          </label>
-          <span id="userStatusLabel" class="status-switch-label force-light-text">Active</span>
         </div>
 
         <div class="mb-1">
@@ -713,11 +705,8 @@ document.addEventListener('DOMContentLoaded', function () {
   // ===== ADD USER =====
   const userModal = document.getElementById('userModal');
   const userForm = document.getElementById('userForm');
-  const statusToggle = document.getElementById('userStatusToggle');
-  const statusLabel = document.getElementById('userStatusLabel');
   function closeAddModal(){userModal.style.display='none';userForm.reset();document.getElementById('modalStrengthBar').style.width='0';document.getElementById('modalStrengthText').textContent='';}
-  document.getElementById('addUserBtn').addEventListener('click',()=>{userForm.reset();statusToggle.checked=true;statusLabel.textContent='Active';userModal.style.display='flex';setTimeout(()=>document.getElementById('userEmail').focus(),100);});
-  statusToggle.addEventListener('change',()=>statusLabel.textContent=statusToggle.checked?'Active':'Inactive');
+  document.getElementById('addUserBtn').addEventListener('click',()=>{userForm.reset();userModal.style.display='flex';setTimeout(()=>document.getElementById('userEmail').focus(),100);});
   document.getElementById('closeModalBtn').addEventListener('click',closeAddModal); document.getElementById('cancelUserBtn').addEventListener('click',closeAddModal);
   userModal.addEventListener('mousedown',e=>{if(e.target===userModal)closeAddModal();});
   document.getElementById('generatePasswordBtn').addEventListener('click',()=>{const p=generateStrongPassword();document.getElementById('userPassword').value=p;updatePasswordStrength('userPassword','modalStrengthBar','modalStrengthText');});
@@ -731,7 +720,7 @@ document.addEventListener('DOMContentLoaded', function () {
       fullName:document.getElementById('userFullName').value.trim(),
       role:document.getElementById('userRole').value,
       password:document.getElementById('userPassword').value,
-      status:statusToggle.checked?'Active':'Inactive',
+      status:'Active',
       adminPassword:document.getElementById('createAdminPassword').value
     };
     if(!payload.username||!payload.fullName||!payload.password||!payload.adminPassword){showToast('Complete all required fields.','error');return;}

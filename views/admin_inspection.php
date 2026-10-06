@@ -266,6 +266,7 @@ body.light-mode .btn-save-under{background:#ede9fe;color:#6d28d9;border-color:#c
 </style>
   <link rel="stylesheet" href="/css/typography.css">
   <link rel="stylesheet" href="/css/dashboard-theme.css">
+  <script src="/js/dashboard-lists.js" defer></script>
 </head>
 <body class="app-dashboard light-mode min-h-screen font-inter app-body">
 <div class="flex min-h-screen">
