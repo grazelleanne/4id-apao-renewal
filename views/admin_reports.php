@@ -758,15 +758,18 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   // ===== PERSONNEL DATA =====
-  let allPersonnel = [];
+  let allPersonnel = <?php echo json_encode($initialPersonnel ?? [], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
   let currentSort  = "status-asc";
 
   async function loadPersonnel() {
     try {
-      const res  = await fetch(ROUTES.personnelData);
+      const res  = await fetch(ROUTES.personnelData, {headers: {'Accept': 'application/json'}});
       const json = await res.json();
-      allPersonnel = (json.success && Array.isArray(json.data)) ? json.data : [];
-    } catch (e) { allPersonnel = []; }
+      if (!res.ok || !json.success || !Array.isArray(json.data)) throw new Error('Unable to refresh report personnel.');
+      allPersonnel = json.data;
+    } catch (e) {
+      console.error('Report personnel refresh failed:', e);
+    }
     renderPersonnelTable(allPersonnel);
   }
 

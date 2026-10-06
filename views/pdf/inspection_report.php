@@ -94,9 +94,9 @@ $dateToday = $formatDate($inspection['inspected_at'] ?? null, date('d F Y'));
 $dateApproved = $formatDate($inspection['inspected_at'] ?? null, '-');
 $nextRenewalDate = trim((string) ($p['date_of_validity'] ?? ''))
     ?: trim((string) ($inspection['next_renewal_date'] ?? ''));
-if ($nextRenewalDate === '' && $isServiceable && !empty($p['date_of_birth'])) {
+if ($nextRenewalDate === '' && !$hasUnserviceable && !$hasRepair && !empty($p['date_of_birth'])) {
     try {
-        $approvalDate = ($p['date_approved'] ?? '') ?: ($inspection['inspected_at'] ?? '');
+        $approvalDate = ($p['date_approved'] ?? '') ?: (($inspection['inspected_at'] ?? '') ?: date('Y-m-d'));
         if ($approvalDate !== '') {
             $nextRenewalDate = birthday_renewal_validity((string) $p['date_of_birth'], new DateTimeImmutable($approvalDate));
         }

@@ -131,7 +131,9 @@ try {
     ];
     if (isset($adminViews[$path]) && $method === 'GET') {
         $user = require_user(['super_admin','admin']);
-        echo render_view($adminViews[$path], ['user' => (object) $user]);
+        $viewData = ['user' => (object) $user];
+        if ($path === '/admin/reports') $viewData['initialPersonnel'] = personnel_rows();
+        echo render_view($adminViews[$path], $viewData);
         exit;
     }
     if ($path === '/staff/dashboard' && $method === 'GET') {
