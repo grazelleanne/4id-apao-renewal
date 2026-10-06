@@ -26,25 +26,28 @@
 
     body {
       font-family: 'Inter', system-ui, sans-serif;
-      background: var(--bg);
+      background: linear-gradient(105deg, rgba(7,28,21,.82), rgba(7,28,21,.32)), url('/images/4idapao.jpg') center center / cover no-repeat;
+      background-color: #123c2c;
       min-height: 100vh;
       display: flex;
       align-items: center;
       justify-content: center;
+      padding: 28px 18px;
     }
 
     .card {
       display: flex;
       width: min(900px, 95vw);
       min-height: 520px;
-      border-radius: 20px;
+      border-radius: 24px;
+      border: 1px solid rgba(255,255,255,.3);
       overflow: hidden;
-      box-shadow: 0 25px 60px rgba(0,0,0,0.15);
+      box-shadow: 0 28px 80px rgba(0,0,0,.4);
     }
 
     /* LEFT */
     .side.left {
-      background: linear-gradient(160deg, var(--forest-dark) 0%, var(--forest) 60%, var(--forest-light) 100%);
+      background: linear-gradient(160deg, rgba(12,48,33,.95), rgba(36,94,66,.9));
       width: 40%;
       display: flex;
       flex-direction: column;
@@ -115,7 +118,7 @@
 
     /* RIGHT */
     .side.right {
-      background: var(--card-bg);
+      background: rgba(255,255,255,.97);
       flex: 1;
       display: flex;
       flex-direction: column;
@@ -356,9 +359,12 @@
 
     /* RESPONSIVE */
     @media (max-width: 640px) {
+      body { padding: 16px 12px; background-position: 55% center; }
       .card { flex-direction: column; }
-      .side.left { width: 100%; min-height: 160px; padding: 2rem; }
-      .brand-logo { width: min(120px, 60%); max-height: 120px; }
+      .side.left { width: 100%; min-height: 160px; padding: 1.25rem; gap:8px; }
+      .brand-logo { width: 84px; max-height: 84px; }
+      .brand-title { font-size: 1rem; }
+      .brand-subtitle { font-size:.72rem; }
       .side.right { padding: 2rem 1.5rem; }
     }
   </style>
@@ -383,6 +389,8 @@
           </svg>
         </div>
       </div>
+      <h1 class="brand-title" style="margin-top:22px;position:relative;z-index:1;">4ID APAO</h1>
+      <p class="brand-subtitle" style="color:#e2eee6;text-align:center;line-height:1.6;margin-top:10px;position:relative;z-index:1;">Army Property Accountability Office<br>Firearm Inspection &amp; Renewal System</p>
     </section>
 
     <!-- RIGHT -->

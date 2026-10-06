@@ -4,4 +4,13 @@
   button, input, select, textarea { font-family: inherit; }
   input, select, textarea { line-height: 1.5; }
   th, td { line-height: 1.5; }
+  body.light-mode.main-bg, body.light-mode.app-body { background:#f1f5f3; }
+  body.light-mode #sidebar { background:#fff; border-right-color:#dbe5de; }
+  body.light-mode .sb-link:hover { background:#edf5ef; }
+  body.light-mode .sb-link.active { background:#e3f0e7; color:#176340; }
+  button, a, input, select, textarea { transition:background-color .15s, border-color .15s, box-shadow .15s; }
+  button:focus-visible, a:focus-visible { outline:2px solid #40916c; outline-offset:3px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  button, a, input, select, textarea { transition:none; }
 }

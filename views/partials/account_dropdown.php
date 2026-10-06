@@ -72,10 +72,15 @@
       <form id="adminPasswordForm" novalidate>
         <div class="admin-profile-grid">
           <div class="admin-profile-field full"><label for="adminPasswordCurrent">Current Password</label><input id="adminPasswordCurrent" name="current_password" type="password" autocomplete="current-password" required></div>
-          <div class="admin-profile-field"><label for="adminPasswordNew">New Password</label><input id="adminPasswordNew" name="new_password" type="password" autocomplete="new-password" required></div>
+          <div class="admin-profile-field">
+            <label for="adminPasswordNew">New Password</label>
+            <input id="adminPasswordNew" name="new_password" type="password" autocomplete="new-password" minlength="8" maxlength="1024" aria-describedby="adminPasswordStrength adminPasswordRules" required>
+            <div style="height:5px;background:#94a3b840;border-radius:4px;overflow:hidden;" aria-hidden="true"><div id="adminPasswordStrengthBar" style="height:100%;width:0;transition:width .15s;"></div></div>
+            <span id="adminPasswordStrength" class="admin-profile-help" role="status" aria-live="polite">Enter a new password.</span>
+          </div>
           <div class="admin-profile-field"><label for="adminPasswordConfirm">Confirm New Password</label><input id="adminPasswordConfirm" name="new_password_confirmation" type="password" autocomplete="new-password" required></div>
         </div>
-        <div class="admin-profile-help" style="margin-top:9px">Minimum 10 characters, with uppercase, lowercase, a number, and a special character.</div>
+        <div id="adminPasswordRules" class="admin-profile-help" style="margin-top:9px">Minimum 8 characters, with uppercase, lowercase, a number, and a special character.</div>
         <div class="admin-profile-errors" id="adminPasswordErrors" role="alert"></div>
         <div class="admin-profile-actions">
           <button type="submit" class="admin-profile-save">Change Password</button>
@@ -96,6 +101,22 @@ document.addEventListener('DOMContentLoaded', function () {
   const passwordForm = document.getElementById('adminPasswordForm');
   const status = document.getElementById('adminProfileStatus');
   const csrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
+  const newPassword = document.getElementById('adminPasswordNew');
+  function updatePasswordStrength() {
+    const value = newPassword.value;
+    const rules = [value.length >= 8 && value.length <= 1024, /[A-Z]/.test(value), /[a-z]/.test(value), /[0-9]/.test(value), /[^A-Za-z0-9]/.test(value)];
+    const score = rules.filter(Boolean).length;
+    const strong = rules.every(Boolean);
+    const label = document.getElementById('adminPasswordStrength');
+    const bar = document.getElementById('adminPasswordStrengthBar');
+    label.textContent = !value ? 'Enter a new password.' : strong ? 'Strong — meets all password requirements.' : 'Weak — ' + score + ' of 5 requirements met.';
+    bar.style.width = value ? (score / 5 * 100) + '%' : '0%';
+    bar.style.background = strong ? '#22c55e' : '#ef4444';
+    return strong;
+  }
+  newPassword.addEventListener('input', updatePasswordStrength);
+  passwordForm.addEventListener('reset', () => setTimeout(updatePasswordStrength, 0));
+  updatePasswordStrength();
 
   function setMenu(open) { menu.classList.toggle('open', open); toggle.setAttribute('aria-expanded', String(open)); }
   function setModal(open) {
@@ -148,6 +169,15 @@ document.addEventListener('DOMContentLoaded', function () {
   });
   passwordForm.addEventListener('submit', async event => {
     event.preventDefault();
+    if (!updatePasswordStrength()) {
+      document.getElementById('adminPasswordErrors').textContent = 'Use at least 8 characters with uppercase, lowercase, a number, and a special character.';
+      newPassword.focus();
+      return;
+    }
+    if (newPassword.value !== document.getElementById('adminPasswordConfirm').value) {
+      document.getElementById('adminPasswordErrors').textContent = 'New passwords do not match.';
+      return;
+    }
     const data = await submitForm(passwordForm, <?php echo json_encode($passwordUrl, 15, 512) ?>, document.getElementById('adminPasswordErrors'));
     if (data) passwordForm.reset();
   });
