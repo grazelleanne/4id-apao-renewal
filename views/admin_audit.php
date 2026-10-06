@@ -386,8 +386,8 @@ document.addEventListener("DOMContentLoaded", function () {
           <div class="notif-item ${!n.read?'unread':''}">
             <div class="notif-icon">${getNotifIcon(n.type)}</div>
             <div class="notif-content">
-              <div class="notif-title">${n.title}</div>
-              <div class="notif-message">${n.message}</div>
+              <div class="notif-title">${String(n.title ?? "").replace(/[&<>"']/g, c => "&#" + c.charCodeAt(0) + ";")}</div>
+              <div class="notif-message">${String(n.message ?? "").replace(/[&<>"']/g, c => "&#" + c.charCodeAt(0) + ";")}</div>
               <div class="notif-time">${timeAgo(n.createdAt)}</div>
             </div>
             ${!n.read?`<div class="notif-dot"></div>`:''}

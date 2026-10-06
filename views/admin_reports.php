@@ -365,6 +365,7 @@
     <div class="bg-[#23272f] rounded-lg p-6 shadow shadow-black/10 mb-10">
       <div class="flex flex-wrap items-center justify-between mb-4 gap-2">
         <h2 class="font-semibold text-base force-light-text tracking-tight">Personnel Renewal List</h2>
+        <p id="reportLoadStatus" role="status" hidden class="text-sm text-amber-600"></p>
         <div class="flex flex-wrap gap-2 items-center ml-auto">
           <label for="sortSelect" class="text-[#b0bac7] text-xs force-light-text">Sort by:</label>
           <select id="sortSelect" class="bg-[#23272f] text-white border border-[#363b48] rounded px-2 py-1 text-xs force-light-text">
@@ -681,8 +682,8 @@ document.addEventListener("DOMContentLoaded", function () {
         <div class="notif-item ${!n.read ? 'unread' : ''}">
           <div class="notif-icon">${getNotifIcon(n.type)}</div>
           <div class="notif-content">
-            <div class="notif-title">${n.title}</div>
-            <div class="notif-message">${n.message}</div>
+            <div class="notif-title">${String(n.title ?? "").replace(/[&<>"']/g, c => "&#" + c.charCodeAt(0) + ";")}</div>
+            <div class="notif-message">${String(n.message ?? "").replace(/[&<>"']/g, c => "&#" + c.charCodeAt(0) + ";")}</div>
             <div class="notif-time">${timeAgo(n.createdAt)}</div>
           </div>
           ${!n.read ? `<div class="notif-dot"></div>` : ''}
@@ -760,17 +761,21 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   // ===== PERSONNEL DATA =====
-  let allPersonnel = <?php echo json_encode($initialPersonnel ?? [], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
+  let allPersonnel = <?php echo json_encode($initialPersonnel ?? [], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_INVALID_UTF8_SUBSTITUTE); ?>;
   let currentSort  = "status-asc";
 
   async function loadPersonnel() {
     try {
-      const res  = await fetch(ROUTES.personnelData, {headers: {'Accept': 'application/json'}});
+      const res  = await fetch(ROUTES.personnelData, {headers: {'Accept': 'application/json'}, signal: AbortSignal.timeout(20000)});
       const json = await res.json();
       if (!res.ok || !json.success || !Array.isArray(json.data)) throw new Error('Unable to refresh report personnel.');
       allPersonnel = json.data;
+      document.getElementById('reportLoadStatus').hidden = true;
     } catch (e) {
       console.error('Report personnel refresh failed:', e);
+      const status = document.getElementById('reportLoadStatus');
+      status.hidden = false;
+      status.textContent = allPersonnel.length ? 'Could not refresh. Showing the personnel loaded with this page.' : 'Could not load personnel. Refresh the page to retry.';
     }
     renderPersonnelTable(allPersonnel);
   }
@@ -830,25 +835,25 @@ document.addEventListener("DOMContentLoaded", function () {
       updateMetrics([]);
       return;
     }
-    displayed.forEach(row => {
-      tbody.innerHTML += `<tr class="border-b border-[#2a2f3a] hover:bg-[#1e2329] transition-colors">
-        <td class="py-2 px-2 force-light-text">${row.itemNumber||''}</td>
-        <td class="py-2 px-2 force-light-text">${row.dateOfValidity||''}</td>
+    tbody.innerHTML = displayed.map(row => `<tr class="border-b border-[#2a2f3a] hover:bg-[#1e2329] transition-colors">
+        <td class="py-2 px-2 force-light-text">${rpcspEscape(row.itemNumber||'')}</td>
+        <td class="py-2 px-2 force-light-text">${rpcspEscape(row.dateOfValidity||'')}</td>
         <td class="py-2 px-2">${statusBadgeHtml(row)}</td>
-        <td class="py-2 px-2 force-light-text">${row.lastName||''}</td>
-        <td class="py-2 px-2 force-light-text">${row.firstName||''}</td>
-        <td class="py-2 px-2 force-light-text">${row.middleName||''}</td>
-        <td class="py-2 px-2 force-light-text">${row.afpSerialNumber||''}</td>
-        <td class="py-2 px-2 force-light-text">${row.dateOfBirth||''}</td>
-        <td class="py-2 px-2 force-light-text">${row.pistolNomenclature||''}</td>
-        <td class="py-2 px-2 force-light-text">${row.pistolSerialNumber||''}</td>
-        <td class="py-2 px-2 force-light-text">${row.qtyAmmo||0}</td>
-      </tr>`;
-    });
+        <td class="py-2 px-2 force-light-text">${rpcspEscape(row.lastName||'')}</td>
+        <td class="py-2 px-2 force-light-text">${rpcspEscape(row.firstName||'')}</td>
+        <td class="py-2 px-2 force-light-text">${rpcspEscape(row.middleName||'')}</td>
+        <td class="py-2 px-2 force-light-text">${rpcspEscape(row.afpSerialNumber||'')}</td>
+        <td class="py-2 px-2 force-light-text">${rpcspEscape(row.dateOfBirth||'')}</td>
+        <td class="py-2 px-2 force-light-text">${rpcspEscape(row.pistolNomenclature||'')}</td>
+        <td class="py-2 px-2 force-light-text">${rpcspEscape(row.pistolSerialNumber||'')}</td>
+        <td class="py-2 px-2 force-light-text">${rpcspEscape(row.qtyAmmo||0)}</td>
+      </tr>`).join('');
     updateMetrics(displayed);
   }
 
   document.getElementById("searchInput").addEventListener("input", () => renderPersonnelTable());
+  // Display the server-provided rows before starting background requests.
+  renderPersonnelTable(allPersonnel);
   document.getElementById("sortSelect").addEventListener("change", function (e) { currentSort = e.target.value; renderPersonnelTable(); });
 
   // ===== PERIOD FILTER =====
@@ -933,6 +938,11 @@ document.addEventListener("DOMContentLoaded", function () {
 
     if (isRpcsp) {
       populateRpcspUnitFilter();
+      renderRpcsp();
+      rpcspPreviewSection.hidden = false;
+      const previewButton = document.getElementById('previewRpcspBtn');
+      previewButton.textContent = 'Hide RPCSP Preview';
+      previewButton.setAttribute('aria-expanded', 'true');
     }
   }
 

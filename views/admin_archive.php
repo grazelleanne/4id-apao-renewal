@@ -343,8 +343,8 @@ document.addEventListener("DOMContentLoaded", function () {
         <div class="notif-item ${!n.read ? 'unread' : ''}">
           <div class="notif-icon">${getNotifIcon(n.type)}</div>
           <div class="notif-content">
-            <div class="notif-title">${n.title}</div>
-            <div class="notif-message">${n.message}</div>
+            <div class="notif-title">${String(n.title ?? "").replace(/[&<>"']/g, c => "&#" + c.charCodeAt(0) + ";")}</div>
+            <div class="notif-message">${String(n.message ?? "").replace(/[&<>"']/g, c => "&#" + c.charCodeAt(0) + ";")}</div>
             <div class="notif-time">${timeAgo(n.createdAt)}</div>
           </div>
           ${!n.read ? `<div class="notif-dot"></div>` : ''}
@@ -451,10 +451,10 @@ async function restoreArchived(itemNumber) {
     const formData = new FormData();
     formData.append('id', itemNumber);
     formData.append('_token', CSRF);
-    const res  = await fetch("<?php echo e(route('admin.archive.restore')); ?>", { method: 'POST', body: formData });
+    const res  = await fetch("<?php echo e(route('admin.archive.restore')); ?>", { method: 'POST', body: formData, headers:{'Accept':'application/json'} });
     const json = await res.json();
     if (json.success) { document.getElementById('restoreModal').style.display = 'none'; loadArchive(); alert('Personnel restored successfully!'); }
-    else alert(json.error || 'Restore failed.');
+    else alert(json.message || json.error || 'Restore failed.');
   } catch (e) { alert('Something went wrong.'); }
 }
 

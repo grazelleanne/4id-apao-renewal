@@ -1,4 +1,11 @@
 Options -Indexes
+<FilesMatch "(?i)^(\.|.*\.(env|sql|log|ini|bak|pem|key)$)">
+    Require all denied
+</FilesMatch>
+<Files "router.php">
+    Require all denied
+</Files>
+LimitRequestBody 8388608
 RewriteEngine On
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d

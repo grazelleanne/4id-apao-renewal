@@ -24,7 +24,10 @@ load_env(APP_ROOT . '/.env');
 ini_set('display_errors', '0');
 ini_set('log_errors', '1');
 date_default_timezone_set('Asia/Manila');
-$https = !empty($_SERVER['HTTPS']) && strtolower((string) $_SERVER['HTTPS']) !== 'off';
+// Render terminates TLS at its load balancer. Its runtime flag, rather than
+// client-controlled forwarded headers, determines production cookie security.
+$https = request_uses_https($_SERVER, (string) getenv('RENDER'), (string) getenv('APP_ENV'));
+ini_set('expose_php', '0');
 ini_set('session.use_strict_mode', '1');
 ini_set('session.use_only_cookies', '1');
 session_name('APAOSESSID');
@@ -33,6 +36,12 @@ session_set_cookie_params([
 ]);
 session_start();
 
+function request_uses_https(array $server, string $render = '', string $environment = ''): bool
+{
+    return (!empty($server['HTTPS']) && strtolower((string) $server['HTTPS']) !== 'off')
+        || $render === 'true' || $environment === 'production';
+}
+
 function env_value(string $key, string $default = ''): string
 {
     $value = getenv($key);
@@ -40,6 +49,9 @@ function env_value(string $key, string $default = ''): string
 }
 function security_headers(): void
 {
+    if (request_uses_https($_SERVER, env_value('RENDER'), env_value('APP_ENV'))) {
+        header('Strict-Transport-Security: max-age=31536000');
+    }
     header('X-Content-Type-Options: nosniff');
     header('X-Frame-Options: SAMEORIGIN');
     header('Referrer-Policy: strict-origin-when-cross-origin');
@@ -119,9 +131,9 @@ function request_expects_json(): bool
     return str_contains(strtolower((string) ($_SERVER['HTTP_ACCEPT'] ?? '')), 'application/json')
         || str_contains(strtolower((string) ($_SERVER['CONTENT_TYPE'] ?? '')), 'application/json');
 }
-function require_post(): void
+function require_post(array $allowedMethods = ['POST']): void
 {
-    if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST') {
+    if (!in_array($_SERVER['REQUEST_METHOD'] ?? 'GET', $allowedMethods, true)) {
         if (request_expects_json()) {
             json_response(['success' => false, 'message' => 'Method not allowed.'], 405);
         }
@@ -140,7 +152,7 @@ function json_response(array $payload, int $status = 200): never
 {
     http_response_code($status);
     header('Content-Type: application/json; charset=utf-8');
-    echo json_encode($payload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
+    echo json_encode($payload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE | JSON_THROW_ON_ERROR);
     exit;
 }
 function current_user(): ?array
@@ -186,6 +198,12 @@ function require_user(array $roles = []): array
             json_response(['success' => false, 'message' => 'Access denied.'], 403);
         }
         page_error('Access denied.', 403);
+    }
+    // Read requests must not serialize dashboard, notification and detail queries
+    // behind the same session-file lock.
+    if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'GET') {
+        csrf_token();
+        session_write_close();
     }
     return $user;
 }

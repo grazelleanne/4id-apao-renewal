@@ -734,7 +734,7 @@ body.light-mode .btn-save-under{background:#ede9fe;color:#6d28d9;border-color:#c
 
     function actionBtn(p) {
       if (activeTab === 'pending') {
-        return `<button onclick="openInspect(${p.itemNumber})" class="btn-inspect">Inspect</button>`;
+        return `<button onclick="openInspect(${p.itemNumber}, this)" class="btn-inspect">Inspect</button>`;
       }
       if (activeTab === 'renewal') {
         return `<button type="button" onclick="openNotifyModal(${JSON.stringify(p).replace(/"/g,'&quot;')})" class="btn-notify" aria-label="Notify staff about renewal">
@@ -743,7 +743,7 @@ body.light-mode .btn-save-under{background:#ede9fe;color:#6d28d9;border-color:#c
         </button>`;
       }
       if (activeTab === 'under') {
-        return `<button onclick="openInspect(${p.itemNumber})" class="btn-continue">Continue Inspection</button>`;
+        return `<button onclick="openInspect(${p.itemNumber}, this)" class="btn-continue">Continue Inspection</button>`;
       }
       return '';
     }
@@ -1000,11 +1000,15 @@ body.light-mode .btn-save-under{background:#ede9fe;color:#6d28d9;border-color:#c
       }
     });
 
-    async function openInspect(itemNumber) {
-      currentItemNumber = itemNumber;
+    let inspectionOpening = false;
+    async function openInspect(itemNumber, button) {
+      if (inspectionOpening) return;
+      inspectionOpening = true;
+      const buttonLabel = button?.textContent;
+      if (button) { button.disabled = true; button.textContent = 'Opening...'; }
       let data;
       try {
-        const res = await fetch(`/admin/inspection/${itemNumber}/detail`, {headers:{'Accept':'application/json'}});
+        const res = await fetch(`/admin/inspection/${itemNumber}/detail`, {headers:{'Accept':'application/json'}, signal:AbortSignal.timeout(20000)});
         data = await res.json();
         if (!res.ok || !data.success) {
           throw new Error(data.message || 'Unable to open the inspection checklist.');
@@ -1013,7 +1017,11 @@ body.light-mode .btn-save-under{background:#ede9fe;color:#6d28d9;border-color:#c
         console.error('Failed to open inspection:', error);
         window.alert(error.message || 'Unable to open the inspection checklist.');
         return;
+      } finally {
+        inspectionOpening = false;
+        if (button) { button.disabled = false; button.textContent = buttonLabel; }
       }
+      currentItemNumber = itemNumber;
       const p=data.personnel, ins=data.inspection, ics=data.ics||{};
       const activeParts = Array.isArray(data.checklistParts) ? data.checklistParts : PARTS;
 

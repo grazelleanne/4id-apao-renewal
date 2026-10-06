@@ -628,9 +628,7 @@ document.addEventListener("DOMContentLoaded", function () {
       document.getElementById("pendingInspectionCount").innerText =
         m.pendingInspection ?? m.forInspection ?? m.pending ?? '0';
 
-      if (Array.isArray(json.recentActivity) && json.recentActivity.length) {
-        renderRecentActivities(json.recentActivity);
-      }
+      renderRecentActivities(Array.isArray(json.recentActivity) ? json.recentActivity : []);
 
       initCharts(m.totalNew ?? 0, m.totalRenewed ?? 0, m.withinRenewal ?? 0, m.expired ?? 0, m.pending ?? 0);
     } catch (e) {
@@ -641,7 +639,6 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   }
 loadDashboard();
-loadRecentActivity();
 
 });
 </script>

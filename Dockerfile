@@ -12,6 +12,8 @@ RUN sed -ri 's!/var/www/html!/var/www/html/public!g' \
     /etc/apache2/apache2.conf
 
 WORKDIR /var/www/html
+ENV APP_ENV=production
+RUN printf 'expose_php=Off\ndisplay_errors=Off\nlog_errors=On\npost_max_size=8M\nupload_max_filesize=2M\n' > /usr/local/etc/php/conf.d/security.ini
 COPY . .
 
 RUN mkdir -p storage/limits \

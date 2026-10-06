@@ -431,8 +431,8 @@ document.addEventListener("DOMContentLoaded", function () {
           <div class="notif-item ${!n.read ? 'unread' : ''}">
             <div class="notif-icon">${getNotifIcon(n.type)}</div>
             <div class="notif-content">
-              <div class="notif-title">${n.title}</div>
-              <div class="notif-message">${n.message}</div>
+              <div class="notif-title">${String(n.title ?? "").replace(/[&<>"']/g, c => "&#" + c.charCodeAt(0) + ";")}</div>
+              <div class="notif-message">${String(n.message ?? "").replace(/[&<>"']/g, c => "&#" + c.charCodeAt(0) + ";")}</div>
               <div class="notif-time">${timeAgo(n.createdAt)}</div>
             </div>
             ${!n.read ? `<div class="notif-dot"></div>` : ''}
@@ -506,7 +506,7 @@ dateOfValidity: (s.dateOfValidity && s.dateOfValidity !== 'null' && s.dateOfVali
 
   async function loadPersonnelData() {
     try {
-      const res  = await fetch(ROUTES.personnelData);
+      const res  = await fetch(ROUTES.personnelData, {headers:{'Accept':'application/json'}, signal:AbortSignal.timeout(20000)});
       const json = await res.json();
       if (json.success && Array.isArray(json.data)) {
         personnel = json.data.map((row, i) => normalizeRow(row, i));
@@ -696,10 +696,10 @@ const validityDisplay = row.dateOfValidity
           <button class="action-btn view-btn" data-idx="${i}" title="View Details">
             <svg fill="none" stroke="currentColor" class="w-4 h-4 text-accent" viewBox="0 0 24 24"><path stroke-width="2" d="M1.777 12C3.397 7.943 7.386 5 12 5s8.603 2.943 10.223 7c-1.62 4.057-5.609 7-10.223 7s-8.603-2.943-10.223-7zm10.223 4a4 4 0 100-8 4 4 0 000 8z"/><circle cx="12" cy="12" r="2" stroke-width="2"/></svg>
           </button>
-          <button class="action-btn edit-btn" data-idx="${i}" title="Edit Personnel">
-            <svg class="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M12.5 7.5l4 4m1.121-2.121a2 2 0 000-2.828l-2.172-2.172a2 2 0 00-2.828 0L5 10.586V15h4.414l7.207-7.207z"/></svg>
+          <button type="button" class="action-btn personnel-edit-btn" data-idx="${i}" title="Edit Personnel" aria-label="Edit personnel">
+            <svg width="17" height="17" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M16 4l4 4M4 20l4-1 12-12a2.8 2.8 0 0 0-4-4L4 15l-1 6 6-1M13 21h8"/></svg>
           </button>
-          <button class="action-btn remove-btn" data-idx="${i}" title="Archive Personnel">
+          <button type="button" class="action-btn remove-btn" data-idx="${i}" title="Archive Personnel" aria-label="Archive personnel">
             <svg class="w-4 h-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M6 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-1"/><path stroke-width="2" d="M9 10v6m6-6v6M10 4h4a1 1 0 011 1v2H9V5a1 1 0 011-1z"/></svg>
           </button>
         </td>
@@ -715,7 +715,7 @@ const validityDisplay = row.dateOfValidity
     document.querySelectorAll('.view-btn').forEach(btn =>
       btn.addEventListener('click', function () { showPersonnelModal(pageRows[parseInt(this.dataset.idx)]); })
     );
-    document.querySelectorAll('.edit-btn').forEach(btn =>
+    document.querySelectorAll('.personnel-edit-btn').forEach(btn =>
       btn.addEventListener('click', function () { showEditPersonnelModal(pageRows[parseInt(this.dataset.idx)]); })
     );
     document.querySelectorAll('.remove-btn').forEach(btn =>
@@ -728,11 +728,13 @@ const validityDisplay = row.dateOfValidity
         const actualIndex = personnel.findIndex(p => p.itemNumber === selected.itemNumber);
         if (actualIndex === -1) return;
         try {
-          const res  = await fetch(ROUTES.personnelDelete(selected.itemNumber), { method:'DELETE', headers:{ 'X-CSRF-TOKEN':CSRF } });
+          this.disabled = true;
+          const res  = await fetch(ROUTES.personnelDelete(selected.itemNumber), { method:'DELETE', headers:{ 'X-CSRF-TOKEN':CSRF, 'Accept':'application/json' }, signal:AbortSignal.timeout(20000) });
           const json = await res.json();
           if (json.success) { personnel.splice(actualIndex, 1); renderPersonnelTable(); }
-          else alert(json.error || 'Archive failed.');
+          else alert(json.message || json.error || 'Archive failed.');
         } catch (e) { alert('Archive failed. Please try again.'); }
+        finally { this.disabled = false; }
       })
     );
   }
@@ -783,9 +785,9 @@ const validityDisplay = row.dateOfValidity
             <div class="personnel-profile-sidebar" style="padding:24px 22px;display:flex;flex-direction:column;gap:14px;background:#1e2530;border-right:1px solid #2a3140;">
 
               <!-- Photo -->
-              <div style="width:100%;background:#252f3e;border-radius:8px;aspect-ratio:3/4;max-height:220px;display:flex;align-items:center;justify-content:center;border:1px solid #364055;overflow:hidden;">
+              <div class="personnel-profile-photo">
                 ${row.photo
-                  ? `<img src="${row.photo}" alt="Photo" style="width:100%;height:100%;object-fit:contain;display:block;">`
+                  ? `<img src="${escapeHtml(row.photo)}" alt="Personnel photo" width="192" height="192">`
                   : `<svg width="72" height="72" viewBox="0 0 24 24" fill="none" stroke="#374151" stroke-width="1">
                        <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/>
                        <circle cx="12" cy="7" r="4"/>
@@ -876,7 +878,7 @@ const validityDisplay = row.dateOfValidity
 
     try {
       const res  = await fetch(ROUTES.renewalHistory(itemNumber), {
-        headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': CSRF }
+        headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': CSRF }, signal:AbortSignal.timeout(20000)
       });
       const json = await res.json();
       if (!res.ok || !json.success) throw new Error(json.message || 'Unable to load renewal history.');
@@ -970,7 +972,7 @@ const validityDisplay = row.dateOfValidity
       try {
         const res  = await fetch(ROUTES.personnelUpdate(row.itemNumber), {
           method:  'PUT',
-          headers: { 'Content-Type':'application/json', 'X-CSRF-TOKEN':CSRF },
+          headers: { 'Content-Type':'application/json', 'X-CSRF-TOKEN':CSRF, 'Accept':'application/json' },
           body:    JSON.stringify(payload),
         });
         const json = await res.json();
@@ -980,7 +982,7 @@ const validityDisplay = row.dateOfValidity
           close();
           renderPersonnelTable();
         } else {
-          alert(json.error || 'Update failed.');
+          alert(json.message || json.error || 'Update failed.');
         }
       } catch (x) {
         alert('Update failed. Please try again.');
