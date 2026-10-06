@@ -261,6 +261,23 @@
         <button id="exportCsvBtn" class="export-btn self-end ml-auto">⬇ Export Excel</button>
       </div>
 
+      <div class="flex flex-wrap gap-3 mb-4 items-end">
+        <div class="flex flex-col gap-1">
+          <label for="filterAction" class="text-xs font-semibold">Action</label>
+          <select id="filterAction" class="filter-input px-3 py-2"><option value="">All Actions</option></select>
+        </div>
+        <div class="flex flex-col gap-1">
+          <label for="filterRole" class="text-xs font-semibold">Role</label>
+          <select id="filterRole" class="filter-input px-3 py-2">
+            <option value="">All Roles</option><option value="super_admin">System Administrator</option>
+            <option value="admin">Admin</option><option value="staff">Staff</option><option value="system">System</option>
+          </select>
+        </div>
+        <div class="flex flex-col gap-1 flex-1">
+          <label for="filterSearch" class="text-xs font-semibold">Search user, target or IP address</label>
+          <input id="filterSearch" type="search" maxlength="255" placeholder="Enter name, target or IP..." class="filter-input px-3 py-2">
+        </div>
+      </div>
       <!-- SUMMARY BADGES -->
       <div class="flex flex-wrap gap-2 mb-1" id="summaryBadges"></div>
     </div>
@@ -422,6 +439,7 @@ document.addEventListener("DOMContentLoaded", function () {
   const ROWS_PER_PAGE = 20;
 
   const ACTION_LABELS = {
+    first_login_password_changed: 'First Login Password Changed',
     login:               'Login',
     logout:              'Logout',
     personnel_added:     'Personnel Added',
@@ -464,7 +482,14 @@ document.addEventListener("DOMContentLoaded", function () {
     return map[(role||'').toLowerCase()] || `<span style="color:#94a3b8;">${role||'—'}</span>`;
   }
 
+  let auditRequestVersion = 0;
+  let appliedFilters = {};
   async function loadAuditLogs() {
+    const requestVersion = ++auditRequestVersion;
+    allLogs = [];
+    document.getElementById('summaryBadges').innerHTML = '';
+    document.getElementById('auditCount').textContent = 'Loading filtered records...';
+    document.getElementById('exportCsvBtn').disabled = true;
     const tbody = document.getElementById('auditTableBody');
     tbody.innerHTML = `<tr><td colspan="8" class="text-center py-10 text-[#64748b]">Loading...</td></tr>`;
 
@@ -473,10 +498,15 @@ document.addEventListener("DOMContentLoaded", function () {
     const to   = document.getElementById('filterDateTo').value;
     if (from) params.set('date_from', from);
     if (to)   params.set('date_to', to);
+    ['Action','Role','Search'].forEach(name => {
+      const value = document.getElementById('filter' + name).value.trim();
+      if (value) params.set(name.toLowerCase(), value);
+    });
 
     try {
       const res  = await fetch(`${AUDIT_URL}?${params.toString()}`, { headers: { 'Accept':'application/json','X-CSRF-TOKEN':CSRF } });
       const rawText = await res.text();
+      if (requestVersion !== auditRequestVersion) return;
       let json;
       try {
         json = JSON.parse(rawText);
@@ -499,15 +529,24 @@ document.addEventListener("DOMContentLoaded", function () {
       allLogs = json.data || json.logs || json.audit_logs || json.records || [];
 
       if (!Array.isArray(allLogs)) allLogs = [];
+      appliedFilters = Object.fromEntries(params);
+      const actionSelect = document.getElementById('filterAction');
+      const selectedAction = actionSelect.value;
+      allLogs.forEach(log => { if (log.action) knownActions.add(log.action); });
+      actionSelect.innerHTML = '<option value="">All Actions</option>' + Array.from(knownActions).sort().map(action => `<option value="${escapeHtml(action)}">${escapeHtml(ACTION_LABELS[action] || action.replace(/_/g, ' '))}</option>`).join('');
+      actionSelect.value = selectedAction;
 
       currentPage = 1;
       renderSummary();
       renderTable();
 
     } catch(e) {
+      if (requestVersion !== auditRequestVersion) return;
       tbody.innerHTML = `<tr><td colspan="8" class="text-center py-10 text-red-400">
         Unable to load audit logs: ${escapeHtml(e.message)}
       </td></tr>`;
+    } finally {
+      if (requestVersion === auditRequestVersion) document.getElementById('exportCsvBtn').disabled = !allLogs.length;
     }
   }
 
@@ -618,8 +657,8 @@ document.addEventListener("DOMContentLoaded", function () {
   // EXPORT EXCEL
   document.getElementById('exportCsvBtn').addEventListener('click', function() {
     if (!allLogs.length) return;
-    const from = document.getElementById('filterDateFrom').value;
-    const to = document.getElementById('filterDateTo').value;
+    const from = appliedFilters.date_from || '';
+    const to = appliedFilters.date_to || '';
     const today = new Date();
     const filenameDate = [
       today.getFullYear(),
@@ -630,6 +669,9 @@ document.addEventListener("DOMContentLoaded", function () {
     if (from && to) period = `${from} to ${to}`;
     else if (from) period = `From ${from}`;
     else if (to) period = `Up to ${to}`;
+    if (appliedFilters.action) period += ` | Action: ${ACTION_LABELS[appliedFilters.action] || appliedFilters.action}`;
+    if (appliedFilters.role) period += ` | Role: ${appliedFilters.role}`;
+    if (appliedFilters.search) period += ` | Search: ${appliedFilters.search}`;
 
     window.exportAuditLogExcel({
       filename: `APAO_Audit_Log_${filenameDate}.xls`,
@@ -653,10 +695,16 @@ document.addEventListener("DOMContentLoaded", function () {
   });
 
   // FILTER EVENTS
+  const knownActions = new Set(Object.keys(ACTION_LABELS));
+  ['filterAction','filterRole'].forEach(id => document.getElementById(id).addEventListener('change', loadAuditLogs));
+  document.getElementById('filterSearch').addEventListener('keydown', event => {
+    if (event.key === 'Enter') { event.preventDefault(); loadAuditLogs(); }
+  });
   document.getElementById('applyFiltersBtn').addEventListener('click', loadAuditLogs);
   document.getElementById('clearFiltersBtn').addEventListener('click', function() {
     document.getElementById('filterDateFrom').value = '';
     document.getElementById('filterDateTo').value   = '';
+    ['filterAction','filterRole','filterSearch'].forEach(id => document.getElementById(id).value = '');
     loadAuditLogs();
   });
 

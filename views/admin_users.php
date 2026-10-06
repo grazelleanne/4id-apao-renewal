@@ -353,6 +353,7 @@
           </div>
           <div class="pw-strength-bar-wrap"><div class="pw-strength-bar" id="modalStrengthBar"></div></div>
           <div class="pw-strength-text" id="modalStrengthText"></div>
+          <div class="field-help">New staff must replace this temporary password on their first login before accessing the dashboard.</div>
         </div>
 
         <div class="mb-2">

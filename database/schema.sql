@@ -6,6 +6,7 @@ CREATE TABLE IF NOT EXISTS users (
  email VARCHAR(255) NOT NULL UNIQUE, contact_number VARCHAR(30) NULL,
  password VARCHAR(255) NOT NULL, role VARCHAR(32) NOT NULL DEFAULT 'viewer',
  is_active TINYINT(1) NOT NULL DEFAULT 1, session_version INT UNSIGNED NOT NULL DEFAULT 1,
+ must_change_password TINYINT(1) NOT NULL DEFAULT 0,
  last_login_at TIMESTAMP NULL, remember_token VARCHAR(100) NULL,
  created_at TIMESTAMP NULL, updated_at TIMESTAMP NULL, KEY users_role_active(role,is_active)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

@@ -159,7 +159,7 @@ function current_user(): ?array
 {
     return isset($_SESSION['user']) && is_array($_SESSION['user']) ? $_SESSION['user'] : null;
 }
-function require_user(array $roles = []): array
+function require_user(array $roles = [], bool $allowTemporaryPassword = false): array
 {
     $user = current_user();
     if (!$user) {
@@ -177,7 +177,7 @@ function require_user(array $roles = []): array
         }
         redirect('/login');
     }
-    $query = db()->prepare('SELECT id,name,email,role,is_active,session_version FROM users WHERE id=:id');
+    $query = db()->prepare('SELECT * FROM users WHERE id=:id');
     $query->execute(['id' => $user['id'] ?? 0]);
     $fresh = $query->fetch();
     if (!$fresh || !(int) $fresh['is_active'] || (int) $fresh['session_version'] !== (int) ($user['session_version'] ?? 0)) {
@@ -191,6 +191,7 @@ function require_user(array $roles = []): array
     $_SESSION['user'] = $user = [
         'id' => (int) $fresh['id'], 'name' => $fresh['name'], 'email' => $fresh['email'],
         'role' => $fresh['role'], 'session_version' => (int) $fresh['session_version'],
+        'must_change_password' => (bool) ($fresh['must_change_password'] ?? false),
     ];
     $_SESSION['_last_activity'] = time();
     if ($roles && !in_array($user['role'], $roles, true)) {
@@ -198,6 +199,12 @@ function require_user(array $roles = []): array
             json_response(['success' => false, 'message' => 'Access denied.'], 403);
         }
         page_error('Access denied.', 403);
+    }
+    if (!$allowTemporaryPassword && $user['role'] === 'staff' && $user['must_change_password']) {
+        if (request_expects_json()) {
+            json_response(['success' => false, 'message' => 'Create your new password before accessing the system.', 'redirect' => '/staff/first-password'], 403);
+        }
+        redirect('/staff/first-password');
     }
     // Read requests must not serialize dashboard, notification and detail queries
     // behind the same session-file lock.

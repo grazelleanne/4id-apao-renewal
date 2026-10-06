@@ -7,6 +7,14 @@ $path = rtrim((string) parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH), 
 $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 
 try {
+    if ($path === '/staff/first-password' && in_array($method, ['GET', 'POST'], true)) {
+        if ($method === 'POST') require_post();
+        $user = require_user(['staff'], true);
+        if ($method === 'POST') staff_first_password($user);
+        if (!$user['must_change_password']) redirect('/staff/dashboard');
+        echo render_view('staff_first_password', ['user' => (object) $user]);
+        exit;
+    }
     if (preg_match('#^/admin/personnel-data/(\d+)$#', $path, $matches) && in_array($method, ['PUT', 'DELETE'], true)) {
         require_post(['PUT', 'DELETE']);
         $user = require_user(['super_admin', 'admin']);
@@ -222,7 +230,7 @@ function login(): never
         || $answer === null || !ctype_digit($captcha) || (int) $captcha !== (int) $answer) {
         login_failed($key, 'Invalid details or security answer. Try the new question.', 422);
     }
-    $query = db()->prepare('SELECT id,name,email,password,role,is_active,session_version FROM users WHERE LOWER(email)=:email LIMIT 1');
+    $query = db()->prepare('SELECT * FROM users WHERE LOWER(email)=:email LIMIT 1');
     $query->execute(['email' => $email]);
     $user = $query->fetch();
     $dummy = '$2y$12$MXfSXi/zXc56DdJMxnzQvueXTWnKjf1K9QAiKQWwmFXTCCbn488y2';
@@ -240,6 +248,7 @@ function login(): never
     $_SESSION['user'] = [
         'id' => (int) $user['id'], 'name' => $user['name'], 'email' => $user['email'],
         'role' => $user['role'], 'session_version' => (int) $user['session_version'],
+        'must_change_password' => (bool) ($user['must_change_password'] ?? false),
     ];
     $_SESSION['_last_activity'] = time();
     db()->prepare('UPDATE users SET last_login_at=NOW() WHERE id=:id')->execute(['id' => $user['id']]);
@@ -247,8 +256,52 @@ function login(): never
     json_response([
         'success' => true,
         'message' => 'Welcome back, ' . $user['name'] . '!',
-        'redirect' => $user['role'] === 'staff' ? '/staff/dashboard' : '/admin/dashboard',
+        'redirect' => $user['role'] === 'staff'
+            ? (!empty($user['must_change_password']) ? '/staff/first-password' : '/staff/dashboard') : '/admin/dashboard',
     ]);
+}
+
+function staff_first_password(array $user): never
+{
+    if ($user['role'] !== 'staff' || empty($user['must_change_password'])) {
+        json_response(['success' => false, 'message' => 'Your first-login password has already been set.'], 409);
+    }
+    if (!rate_limit('first-password:' . $user['id'], 10, 300)) {
+        json_response(['success' => false, 'message' => 'Too many requests. Try again in a few minutes.'], 429);
+    }
+    $input = request_data();
+    $password = is_string($input['password'] ?? null) ? $input['password'] : '';
+    $confirmation = is_string($input['password_confirmation'] ?? null) ? $input['password_confirmation'] : '';
+    if (!password_is_strong($password) || $password !== $confirmation) {
+        json_response(['success' => false, 'message' => 'Use at least 8 characters with uppercase, lowercase, a number and a symbol. Both passwords must match.'], 422);
+    }
+    $pdo = db();
+    $pdo->beginTransaction();
+    try {
+        $query = $pdo->prepare('SELECT password,must_change_password,is_active,session_version FROM users WHERE id=:id FOR UPDATE');
+        $query->execute(['id' => $user['id']]);
+        $record = $query->fetch();
+        if (!$record || !$record['is_active'] || !$record['must_change_password']
+            || (int) $record['session_version'] !== (int) $user['session_version']) {
+            $pdo->rollBack();
+            json_response(['success' => false, 'message' => 'Your session is no longer valid. Sign in again.'], 409);
+        }
+        if (password_verify($password, $record['password'])) {
+            $pdo->rollBack();
+            json_response(['success' => false, 'message' => 'Choose a password different from your temporary password.'], 422);
+        }
+        $pdo->prepare('UPDATE users SET password=:password,must_change_password=0,session_version=session_version+1,updated_at=NOW() WHERE id=:id')
+            ->execute(['password' => password_hash($password, PASSWORD_DEFAULT), 'id' => $user['id']]);
+        audit($user, 'first_login_password_changed', $user['email']);
+        $pdo->commit();
+    } catch (Throwable $error) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        throw $error;
+    }
+    session_regenerate_id(true);
+    $_SESSION['user'] = array_replace($user, ['must_change_password' => false, 'session_version' => (int) $user['session_version'] + 1]);
+    $_SESSION['_last_activity'] = time();
+    json_response(['success' => true, 'redirect' => '/staff/dashboard']);
 }
 
 function login_failed(string $key, string $message, int $status): never
@@ -931,10 +984,11 @@ function users_store(array $admin): never
     $pdo = db();
     $pdo->beginTransaction();
     try {
-        $pdo->prepare('INSERT INTO users (name,email,password,role,is_active,session_version,created_at,updated_at)
-            VALUES (:name,:email,:password,:role,:active,1,NOW(),NOW())')->execute([
+        $pdo->prepare('INSERT INTO users (name,email,password,role,is_active,session_version,must_change_password,created_at,updated_at)
+            VALUES (:name,:email,:password,:role,:active,1,:firstPassword,NOW(),NOW())')->execute([
                 'name' => $name, 'email' => $email, 'password' => password_hash($password, PASSWORD_DEFAULT),
                 'role' => $role, 'active' => $status === 'Active' ? 1 : 0,
+                'firstPassword' => $role === 'staff' ? 1 : 0,
             ]);
         audit($admin, 'user_created', $email);
         $pdo->commit();
@@ -966,6 +1020,24 @@ function audit_data(): never
 {
     $conditions = [];
     $parameters = [];
+    foreach (['action' => 'action', 'role' => 'user_role'] as $filter => $column) {
+        $value = $_GET[$filter] ?? '';
+        if ($value === '') continue;
+        if (!is_string($value) || strlen($value) > 128
+            || ($filter === 'role' && !in_array($value, ['super_admin','admin','staff','system'], true))) {
+            json_response(['success' => false, 'message' => 'Invalid audit filter.'], 422);
+        }
+        $conditions[] = $column . '=:' . $filter;
+        $parameters[$filter] = $value;
+    }
+    $search = $_GET['search'] ?? '';
+    if (!is_string($search) || strlen($search) > 255) {
+        json_response(['success' => false, 'message' => 'Search must be at most 255 characters.'], 422);
+    }
+    if (trim($search) !== '') {
+        $conditions[] = '(LOCATE(:search_user,user_name)>0 OR LOCATE(:search_target,target)>0 OR LOCATE(:search_subject,subject)>0 OR LOCATE(:search_ip,ip_address)>0)';
+        foreach (['search_user','search_target','search_subject','search_ip'] as $key) $parameters[$key] = trim($search);
+    }
     foreach (['date_from', 'date_to'] as $field) {
         $value = $_GET[$field] ?? '';
         if ($value === '') continue;
