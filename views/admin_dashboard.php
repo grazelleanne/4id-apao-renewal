@@ -204,6 +204,7 @@
 
   <!-- MAIN -->
   <main class="flex-1 main-bg bg-[#1a2025] p-7 overflow-y-auto">
+    <p id="dashboardLoadError" role="status" hidden class="mb-4 text-sm text-red-500"></p>
 
     <header class="flex flex-wrap justify-end mb-8 items-center gap-4">
       <div class="flex flex-row-reverse items-center gap-4">
@@ -608,11 +609,12 @@ document.addEventListener("DOMContentLoaded", function () {
   async function loadDashboard() {
     try {
       const res = await fetch("<?php echo e(route('admin.dashboard.data')); ?>", {
-        headers: { "Accept": "application/json", "X-CSRF-TOKEN": CSRF }
+        headers: { "Accept": "application/json", "X-CSRF-TOKEN": CSRF }, signal:AbortSignal.timeout(20000)
       });
       if (res.status === 401 || res.status === 403) { window.location.href = "<?php echo e(route('login')); ?>"; return; }
       const json = await res.json();
-      if (!json.success) throw new Error("Failed");
+      if (!res.ok || !json.success) throw new Error(json.message || 'Unable to load dashboard data.');
+      document.getElementById('dashboardLoadError').hidden = true;
       const m = json.metrics || {};
       document.getElementById("totalUsers").innerText    = json.totalUsers  ?? '--';
       document.getElementById("totalRenewed").innerText  = m.totalRenewed   ?? '0';
@@ -630,9 +632,16 @@ document.addEventListener("DOMContentLoaded", function () {
 
       renderRecentActivities(Array.isArray(json.recentActivity) ? json.recentActivity : []);
 
-      initCharts(m.totalNew ?? 0, m.totalRenewed ?? 0, m.withinRenewal ?? 0, m.expired ?? 0, m.pending ?? 0);
+      try {
+        initCharts(m.totalNew ?? 0, m.totalRenewed ?? 0, m.withinRenewal ?? 0, m.expired ?? 0, m.pending ?? 0);
+      } catch (chartError) {
+        console.error('Dashboard chart error:', chartError);
+      }
     } catch (e) {
       console.error('Dashboard load error:', e);
+      const status = document.getElementById('dashboardLoadError');
+      status.hidden = false;
+      status.textContent = 'Dashboard data could not load. Refresh to retry. If this continues, check the server logs.';
       ["totalUsers","totalRenewed","withinRenewal","expired"].forEach(id => {
         document.getElementById(id).innerText = '--';
       });

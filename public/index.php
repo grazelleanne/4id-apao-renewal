@@ -380,8 +380,8 @@ function personnel_rows(bool $archived = false, ?int $itemNumber = null): array
                 p.citizenship,p.civil_status,p.pistol_nomenclature,p.pistol_serial_number,p.pistol_type,
                 p.par_number,p.qty_ammo,p.unit,p.approved_status,p.status,p.ics_status,p.date_approved,
                 p.updated_at,p.created_at,p.archived_at,
-                (p.photo IS NOT NULL AND p.photo <> "") AS has_photo,
-                (p.signature IS NOT NULL AND p.signature <> "") AS has_signature,
+                (OCTET_LENGTH(p.photo) > 0) AS has_photo,
+                (OCTET_LENGTH(p.signature) > 0) AS has_signature,
                 i.status AS inspection_status, i.remarks AS inspection_remarks,
                 i.date_registered AS inspection_date_registered,
                 i.updated_at AS inspection_updated_at

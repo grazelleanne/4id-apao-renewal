@@ -60,5 +60,5 @@ $record = false;
 expect_response(fn() => personnel_change(999, $user, true), 404);
 inspection_find_personnel(22);
 [$sql, $values] = end($database->queries);
-if (!str_contains($sql, 'AND p.item_number=:item') || $values !== ['item' => 22] || str_contains($sql, 'SELECT p.*')) throw new RuntimeException('Inspection detail must load one lightweight record.');
+if (!str_contains($sql, 'AND p.item_number=:item') || $values !== ['item' => 22] || str_contains($sql, 'SELECT p.*') || str_contains($sql, '""')) throw new RuntimeException('Inspection detail must load one lightweight record with SQL-mode-independent syntax.');
 echo "Personnel archive, restore, update and lookup checks passed.\n";
