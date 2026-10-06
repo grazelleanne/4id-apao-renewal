@@ -26,7 +26,7 @@
 
     body {
       font-family: 'Inter', system-ui, sans-serif;
-      background: linear-gradient(105deg, rgba(7,28,21,.82), rgba(7,28,21,.32)), url('/images/4idapao.jpg') center center / cover no-repeat;
+      background: linear-gradient(105deg, rgba(7,28,21,.82), rgba(7,28,21,.32)), url('/images/4idapao2-clean.png') center center / cover no-repeat;
       background-color: #123c2c;
       min-height: 100vh;
       display: flex;

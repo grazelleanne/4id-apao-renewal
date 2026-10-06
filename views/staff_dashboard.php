@@ -628,8 +628,9 @@
 
 </style>
     <link rel="stylesheet" href="/css/typography.css">
+  <link rel="stylesheet" href="/css/dashboard-theme.css">
 </head>
-  <body class="light-mode min-h-screen font-inter main-bg bg-[#1a2025]">
+  <body class="app-dashboard light-mode min-h-screen font-inter main-bg bg-[#1a2025]">
   <?php
     $staffInitialPersonnel = collect($initialDashboardData['personnel'] ?? []);
     $staffIcsCounts = $staffInitialPersonnel->countBy(fn ($person) => $person['icsStatus'] ?? 'inspection');

@@ -1,0 +1,96 @@
+/* Application screens only. Printed forms keep their document styles. */
+@media screen {
+  .app-dashboard {
+    --ui-page:#101b18; --ui-panel:#182722; --ui-panel-soft:#20352b;
+    --ui-text:#e7f0ea; --ui-muted:#aac0b2; --ui-border:#30463a;
+    --ui-brand:#55cc8d; --ui-active:#244d37;
+    background:var(--ui-page)!important; color:var(--ui-text);
+    font-family:'Inter',system-ui,sans-serif; -webkit-font-smoothing:antialiased;
+  }
+  .app-dashboard.light-mode {
+    --ui-page:#f0f5f2; --ui-panel:#ffffff; --ui-panel-soft:#f5f8f6;
+    --ui-text:#1d3025; --ui-muted:#607567; --ui-border:#dce7df;
+    --ui-brand:#197544; --ui-active:#e4f2e9;
+  }
+  .app-dashboard .main-bg, .app-dashboard.app-body,
+  .app-dashboard main[class~="bg-[#1a2025]"] { background:var(--ui-page)!important; }
+  .app-dashboard main { min-width:0; }
+  .app-dashboard #sidebar {
+    background:var(--ui-panel)!important; border-right:1px solid var(--ui-border)!important;
+    box-shadow:4px 0 24px rgba(13,39,24,.035); padding-top:22px;
+  }
+  .app-dashboard .sb-top { padding-bottom:20px; margin-bottom:20px; border-bottom:1px solid var(--ui-border); }
+  .app-dashboard .sb-logo img { border-color:var(--ui-brand)!important; background:var(--ui-panel-soft); }
+  .app-dashboard .sb-logo-text { color:var(--ui-text)!important; font-size:.9rem; font-weight:800; letter-spacing:-.02em; }
+  .app-dashboard .sb-nav { gap:5px; }
+  .app-dashboard #sidebar .nav-item {
+    color:var(--ui-muted)!important; border-radius:11px; padding-top:12px;padding-bottom:12px;
+    font-size:.82rem; font-weight:600; border:1px solid transparent;
+  }
+  .app-dashboard #sidebar .nav-item:hover { background:var(--ui-panel-soft)!important; color:var(--ui-text)!important; }
+  .app-dashboard #sidebar .nav-item.active {
+    background:var(--ui-active)!important; color:var(--ui-brand)!important;
+    border-color:var(--ui-border); box-shadow:inset 3px 0 var(--ui-brand);
+  }
+  .app-dashboard .sb-bottom { border-color:var(--ui-border)!important; padding-top:18px; }
+  .app-dashboard .theme-btn, .app-dashboard .sb-toggle { color:var(--ui-muted)!important; background:var(--ui-panel-soft)!important; border-radius:10px; }
+  .app-dashboard main > header { padding-bottom:18px; border-bottom:1px solid var(--ui-border); margin-bottom:26px; }
+  .app-dashboard h1 { color:var(--ui-text)!important; letter-spacing:-.035em; font-weight:800; }
+  .app-dashboard h2,.app-dashboard h3 { letter-spacing:-.02em; }
+  .app-dashboard .force-light-text { color:var(--ui-text)!important; }
+  .app-dashboard .admin-account-toggle { color:var(--ui-text)!important; background:var(--ui-panel)!important; border:1px solid var(--ui-border); border-radius:12px; padding:10px 13px; }
+  .app-dashboard .notification-bell { color:var(--ui-brand)!important; }
+  .app-dashboard :is(.stat-card,.metric-card,[class~="bg-[#23272f]"],[class~="bg-[#1e2430]"],[class~="bg-[#1e2530]"]) {
+    background:var(--ui-panel)!important; border-color:var(--ui-border)!important;
+    border-radius:16px; box-shadow:0 3px 18px rgba(13,39,24,.045);
+  }
+  .app-dashboard :is(.stat-card,.metric-card) { border:1px solid var(--ui-border); padding:22px; }
+  .app-dashboard :is(.stat-card,.metric-card):hover { box-shadow:0 6px 22px rgba(13,39,24,.09); }
+  .app-dashboard .stat-num { font-variant-numeric:tabular-nums; letter-spacing:-.04em; }
+  .app-dashboard table:not(.cl-table) { border-collapse:separate; border-spacing:0; }
+  .app-dashboard table:not(.cl-table) thead tr,
+  .app-dashboard table:not(.cl-table) th {
+    background:var(--ui-panel-soft)!important; color:var(--ui-muted)!important;
+    border-color:var(--ui-border)!important; font-size:.7rem; font-weight:700;
+    letter-spacing:.055em; padding-top:15px; padding-bottom:15px;
+  }
+  .app-dashboard table:not(.cl-table) td {
+    border-color:var(--ui-border)!important; padding-top:14px; padding-bottom:14px; vertical-align:middle;
+  }
+  .app-dashboard table:not(.cl-table) tbody tr:hover td { background:var(--ui-panel-soft); }
+  .app-dashboard :is(.tbl,.cl-table) td { color:var(--ui-text); }
+  .app-dashboard :is(input:not([type="checkbox"]):not([type="radio"]),select,textarea) {
+    background:var(--ui-panel-soft)!important; color:var(--ui-text)!important;
+    border:1px solid var(--ui-border)!important; border-radius:9px!important;
+  }
+  .app-dashboard :is(input,textarea)::placeholder { color:var(--ui-muted); opacity:.8; }
+  .app-dashboard :is(input,select,textarea):focus {
+    outline:none; border-color:var(--ui-brand)!important; box-shadow:0 0 0 3px rgba(42,145,81,.14);
+  }
+  .app-dashboard :is(.btn-inspect,.btn-renew,.admin-profile-save,.add-btn,.edit-btn) {
+    background:#197544!important; color:#fff!important; border-radius:9px; box-shadow:0 3px 9px rgba(25,117,68,.15);
+  }
+  .app-dashboard :is(.btn-inspect,.btn-renew,.admin-profile-save,.add-btn,.edit-btn):hover { background:#125c34!important; }
+  .app-dashboard :is(.admin-account-menu,.admin-profile-dialog,.modal-box,.modal-box-lg,.modal-content) {
+    background:var(--ui-panel)!important; color:var(--ui-text)!important; border-color:var(--ui-border)!important; border-radius:16px;
+  }
+  .app-dashboard .admin-profile-title { color:var(--ui-text); }
+  .app-dashboard .admin-profile-field label { color:var(--ui-text)!important; }
+  .app-dashboard .admin-profile-help,.app-dashboard .admin-account-email { color:var(--ui-muted)!important; }
+  .app-dashboard .admin-profile-section + .admin-profile-section { border-color:var(--ui-border); }
+  .app-dashboard :is(.badge,.abadge) { border-radius:7px; padding:5px 10px; font-weight:700; }
+  .app-dashboard .admin-account-item { color:var(--ui-text)!important; }
+  .app-dashboard .admin-account-item:hover { background:var(--ui-panel-soft)!important; }
+  .app-dashboard .admin-account-logout { color:#ef6666!important; }
+  @media(max-width:640px) {
+    .app-dashboard, .app-dashboard main { box-sizing:border-box; max-width:100vw; }
+    .app-dashboard main { width:100%; overflow-x:hidden; }
+    .app-dashboard .staff-topbar { max-width:calc(100vw - 76px); }
+    .app-dashboard .staff-topbar-inner { min-width:0; max-width:100%; }
+    .app-dashboard .admin-account-trigger { max-width:100%; min-width:0; }
+    .app-dashboard .admin-account-trigger span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .app-dashboard :is(.stat-card,.metric-card) { padding:16px; border-radius:12px; }
+    .app-dashboard main > header { margin-bottom:18px; gap:12px; }
+    .app-dashboard table:not(.cl-table) td { padding-top:12px; padding-bottom:12px; }
+  }
+}
