@@ -362,6 +362,7 @@
       .side.right { padding: 2rem 1.5rem; }
     }
   </style>
+  <link rel="stylesheet" href="/css/typography.css">
 </head>
 <body>
 
@@ -429,6 +430,12 @@
             pattern="[0-9]*" placeholder="Enter the answer" required autocomplete="off" />
         </div>
 
+        <div class="field" id="loginOtpField" hidden>
+          <label class="label" for="loginOtp">Email verification code</label>
+          <p id="loginOtpHelp" style="font-size:.85rem;line-height:1.5;">Enter the 6-digit code sent to your account email. It expires in 3 minutes.</p>
+          <input class="input" id="loginOtp" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" />
+          <button type="button" id="restartLogin" style="margin-top:8px;">Start over / Get a new code</button>
+        </div>
         <button type="submit" class="btn" id="loginBtn">Login</button>
 
 
@@ -515,6 +522,21 @@
       });
     });
 
+    let otpRequired = false;
+    const otpField = document.getElementById('loginOtpField');
+    const otpInput = document.getElementById('loginOtp');
+    function resetLoginStep() {
+      otpRequired = false;
+      otpField.hidden = true;
+      otpInput.value = '';
+      document.getElementById('loginBtn').textContent = 'Login';
+      document.querySelectorAll('#email, #password, #captcha').forEach(input => {
+        input.disabled = false;
+        input.closest('.field').hidden = false;
+      });
+      refreshCaptcha().catch(() => {});
+    }
+    document.getElementById('restartLogin').addEventListener('click', resetLoginStep);
     document.getElementById('loginForm').addEventListener('submit', async function (e) {
       e.preventDefault();
 
@@ -533,21 +555,21 @@
       captchaEl.classList.remove('error');
 
       // Basic client validation
-      if (!emailEl.value.trim()) {
+      if (!otpRequired && !emailEl.value.trim()) {
         errorBox.textContent = 'Email is required.';
         errorBox.classList.add('visible');
         emailEl.classList.add('error');
         return;
       }
 
-      if (!passEl.value.trim()) {
+      if (!otpRequired && !passEl.value.trim()) {
         errorBox.textContent = 'Password is required.';
         errorBox.classList.add('visible');
         passEl.classList.add('error');
         return;
       }
 
-      if (!captchaEl.value.trim()) {
+      if (!otpRequired && !captchaEl.value.trim()) {
         errorBox.textContent = 'Security answer is required.';
         errorBox.classList.add('visible');
         captchaEl.classList.add('error');
@@ -558,14 +580,14 @@
       btn.textContent = 'Signing in…';
 
       try {
-        const response = await fetch('/login', {
+        const response = await fetch(otpRequired ? '/login/otp' : '/login', {
           method: 'POST',
           headers: {
             'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
             'Accept':       'application/json',
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({
+          body: JSON.stringify(otpRequired ? {otp: otpInput.value.trim()} : {
             email:    emailEl.value.trim(),
             password: passEl.value,
             remember: document.getElementById('remember').checked,
@@ -576,7 +598,17 @@
 
         const data = await response.json();
 
-        if (data.success) {
+        if (data.success && data.otpRequired) {
+          otpRequired = true;
+          otpField.hidden = false;
+          document.getElementById('loginOtpHelp').textContent = data.message;
+          [emailEl, passEl, captchaEl].forEach(input => {
+            input.disabled = true;
+            input.closest('.field').hidden = true;
+          });
+          passEl.value = '';
+          otpInput.focus();
+        } else if (data.success) {
           // Every authenticated session starts in the accessible light theme.
           try { localStorage.setItem('theme', 'light'); } catch (_) {}
           // Show modal
@@ -597,6 +629,7 @@
           }, 1000);
 
         } else {
+          if (data.restartLogin) resetLoginStep();
           errorBox.textContent = data.message || 'Login failed. Please try again.';
           errorBox.classList.add('visible');
           emailEl.classList.add('error');
@@ -614,7 +647,7 @@
         console.error('Login error:', err);
       } finally {
         btn.disabled = false;
-        btn.textContent = 'Login';
+        btn.textContent = otpRequired ? 'Verify code' : 'Login';
       }
     });
   </script>

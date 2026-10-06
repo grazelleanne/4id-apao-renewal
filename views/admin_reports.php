@@ -179,6 +179,7 @@
     @media(max-width:640px){.rpcsp-config-grid{grid-template-columns:1fr;}}
 
   </style>
+  <link rel="stylesheet" href="/css/typography.css">
 </head>
 <body class="light-mode min-h-screen font-inter main-bg bg-[#1a2025]">
 <div class="flex min-h-screen">
@@ -873,7 +874,8 @@ document.addEventListener("DOMContentLoaded", function () {
     renderPersonnelTable(filtered);
   });
 
-  document.getElementById("downloadReportBtn").onclick = function () { const rows = document.querySelectorAll("#personnelTableBody tr"); if (!rows.length || (rows.length === 1 && rows[0].querySelector("td[colspan]"))) { alert("No data. Click Preview first."); return; } const headers = ["Item #","Date of Validity","Status","Last Name","First Name","Middle Name","AFP Serial #","Date of Birth","Nomenclature of Pistol","Pistol Serial #","Qty Ammo"]; let tableRows = ""; rows.forEach(row => { const cells = row.querySelectorAll("td"); if (!cells.length) return; let r = ""; cells.forEach(cell => { r += `<td style="border:1px solid #ccc;padding:5px 8px;font-size:11px;">${cell.innerText.trim()}</td>`; }); tableRows += `<tr>${r}</tr>`; }); const today = new Date().toLocaleDateString(); const win = window.open("","_blank"); win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>APAO Report</title><style>body{font-family:Arial;margin:30px;}h2{text-align:center;}table{width:100%;border-collapse:collapse;}th{background:#1a3a2a;color:#fff;padding:6px;font-size:11px;border:1px solid #ccc;text-align:left;}</style></head><body><h2>ARMY PROPERTY ACCOUNTABILITY OFFICE</h2><h2>Personnel Renewal Report</h2><p style="text-align:center;font-size:12px;color:#555;">Generated: ${today}</p><table><thead><tr>${headers.map(h=>"<th>"+h+"</th>").join("")}</tr></thead><tbody>${tableRows}</tbody></table></body></html>`); win.document.close(); setTimeout(()=>{win.focus();win.print();},400); };
+  document.getElementById("downloadReportBtn").onclick = function () { const rows = document.querySelectorAll("#personnelTableBody tr"); if (!rows.length || (rows.length === 1 && rows[0].querySelector("td[colspan]"))) { alert("No data. Click Preview first."); return; } const headers = ["Item #","Date of Validity","Status","Last Name","First Name","Middle Name","AFP Serial #","Date of Birth","Nomenclature of Pistol","Pistol Serial #","Qty Ammo"]; let tableRows = ""; rows.forEach(row => { const cells = row.querySelectorAll("td"); if (!cells.length) return; let r = ""; cells.forEach(cell => { r += `<td style="border:1px solid #ccc;padding:5px 8px;font-size:11px;">${cell.innerText.trim()}</td>`; }); tableRows += `<tr>${r}</tr>`; }); const today = new Date().toLocaleDateString(); const win = window.open("","_blank"); win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>APAO Report</title><style>body{font-family:Arial;margin:30px;}h2{text-align:center;}table{width:100%;border-collapse:collapse;}th{background:#1a3a2a;color:#fff;padding:6px;font-size:11px;border:1px solid #ccc;text-align:left;}</style>  
+</head><body><h2>ARMY PROPERTY ACCOUNTABILITY OFFICE</h2><h2>Personnel Renewal Report</h2><p style="text-align:center;font-size:12px;color:#555;">Generated: ${today}</p><table><thead><tr>${headers.map(h=>"<th>"+h+"</th>").join("")}</tr></thead><tbody>${tableRows}</tbody></table></body></html>`); win.document.close(); setTimeout(()=>{win.focus();win.print();},400); };
   document.getElementById("exportExcelBtn").onclick = function () {
     const tableRows = document.querySelectorAll("#personnelTableBody tr");
     if (!tableRows.length || (tableRows.length === 1 && tableRows[0].querySelector("td[colspan]"))) {
@@ -1160,7 +1162,8 @@ document.addEventListener("DOMContentLoaded", function () {
           .rpcsp-signatory p { margin:0; }
           .rpcsp-signatory-name { font-weight:700; }
         </style>
-      </head>
+        
+</head>
       <body>
         <div class="rpcsp-document">${report}</div>
       </body>

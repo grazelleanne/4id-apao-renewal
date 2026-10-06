@@ -158,6 +158,7 @@
     .export-btn{background:#0d3325;color:#33b481;border:1px solid #1a5c3a;border-radius:0.5rem;font-weight:600;font-size:0.78rem;padding:0.42rem 0.9rem;cursor:pointer;transition:background 0.15s;}
     .export-btn:hover{background:#154d32;}
   </style>
+  <link rel="stylesheet" href="/css/typography.css">
 </head>
 <body class="light-mode min-h-screen font-inter main-bg bg-[#1a2025]">
 <div class="flex min-h-screen">

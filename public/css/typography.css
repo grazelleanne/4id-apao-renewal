@@ -1,0 +1,7 @@
+/* Shared screen typography; printed document layouts retain their own fonts. */
+@media screen {
+  body { font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif; line-height: 1.5; }
+  button, input, select, textarea { font-family: inherit; }
+  input, select, textarea { line-height: 1.5; }
+  th, td { line-height: 1.5; }
+}

@@ -172,6 +172,7 @@
     body.light-mode .security-standard{background:#e2e8f0;color:#475569;}
 
   </style>
+  <link rel="stylesheet" href="/css/typography.css">
 </head>
 <body class="light-mode min-h-screen font-inter">
 <div class="flex min-h-screen">
@@ -345,7 +346,7 @@
         <div class="mb-1">
           <label for="userPassword" class="block mb-1 text-sm font-semibold">Initial Password</label>
           <div class="generated-password-box">
-            <input id="userPassword" name="password" type="password" required autocomplete="new-password" placeholder="Min 12 chars, uppercase, number, symbol" />
+            <input id="userPassword" name="password" type="password" required autocomplete="new-password" placeholder="Min 8 chars, uppercase, number, symbol" />
             <button id="generatePasswordBtn" type="button" class="mini-btn">Generate</button>
             <button id="showAddPasswordBtn" type="button" class="mini-btn">Show</button>
           </div>
@@ -506,7 +507,7 @@ function normalizeRole(role) {
 }
 
 function isStrongPassword(value) {
-  return value.length >= 12 && value.length <= 1024 && /[A-Z]/.test(value) && /[a-z]/.test(value) && /[0-9]/.test(value) && /[^A-Za-z0-9]/.test(value);
+  return value.length >= 8 && value.length <= 1024 && /[A-Z]/.test(value) && /[a-z]/.test(value) && /[0-9]/.test(value) && /[^A-Za-z0-9]/.test(value);
 }
 
 function generateStrongPassword(length = 14) {
@@ -568,7 +569,7 @@ function updatePasswordStrength(inputId, barId, textId) {
   const bar = document.getElementById(barId);
   const text = document.getElementById(textId);
   let score = 0;
-  if (val.length >= 12) score++;
+  if (val.length >= 8) score++;
   if (/[A-Z]/.test(val) && /[a-z]/.test(val)) score++;
   if (/[0-9]/.test(val)) score++;
   if (/[^A-Za-z0-9]/.test(val)) score++;
@@ -732,7 +733,7 @@ document.addEventListener('DOMContentLoaded', function () {
       adminPassword:document.getElementById('createAdminPassword').value
     };
     if(!payload.username||!payload.fullName||!payload.password||!payload.adminPassword){showToast('Complete all required fields.','error');return;}
-    if(!isStrongPassword(payload.password)){showToast('Use a password with at least 12 characters, uppercase, lowercase, number, and symbol.','error');return;}
+    if(!isStrongPassword(payload.password)){showToast('Use a password with at least 8 characters, uppercase, lowercase, number, and symbol.','error');return;}
     try{
       await secureFetch(ROUTES.usersStore,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
       closeAddModal(); await loadUsers(); showToast('User account created and recorded in the Audit Log.');
@@ -804,7 +805,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const username=document.getElementById('resetUsername').value; const u=users.find(x=>x.username===username); if(!u)return;
     const newPassword=document.getElementById('resetNewPassword').value; const confirm=document.getElementById('resetConfirmPassword').value; const adminPassword=document.getElementById('resetAdminPassword').value;
     if(newPassword!==confirm){showToast('New passwords do not match.','error');return;}
-    if(!isStrongPassword(newPassword)){showToast('New password must be at least 12 characters with uppercase, lowercase, number, and symbol.','error');return;}
+    if(!isStrongPassword(newPassword)){showToast('New password must be at least 8 characters with uppercase, lowercase, number, and symbol.','error');return;}
     try{await secureFetch(ROUTES.usersUpdate,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:u.username,fullName:u.fullName,role:normalizeRole(u.role),status:u.status,newPassword,adminPassword})});closeReset();showToast('Password reset successfully.');}catch(err){showToast(err.message,'error');}
   });
 });

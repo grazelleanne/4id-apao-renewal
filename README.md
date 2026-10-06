@@ -38,6 +38,14 @@ reset email.
 
 ## Brevo transactional email
 
+Login requires a correct password and an email verification code sent through
+Brevo. Codes expire after three minutes and can be used only once. Three failed
+password/security-answer or code attempts lock that email/IP combination for
+three minutes. Code requests are limited to three per account every three minutes.
+New passwords require at least eight characters, including uppercase, lowercase,
+a number, and a symbol. Configure the Brevo API key and verified sender before
+deploying the login verification flow.
+
 Create and verify a sender in Brevo, then add these environment variables to
 the Render web service:
 

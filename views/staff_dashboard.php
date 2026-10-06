@@ -627,7 +627,8 @@
       @media(max-width:640px){.rpcsp-config-grid{grid-template-columns:1fr;}}
 
 </style>
-  </head>
+    <link rel="stylesheet" href="/css/typography.css">
+</head>
   <body class="light-mode min-h-screen font-inter main-bg bg-[#1a2025]">
   <?php
     $staffInitialPersonnel = collect($initialDashboardData['personnel'] ?? []);
@@ -2781,7 +2782,8 @@
             .rpcsp-signatory p{margin:0;}
             .rpcsp-signatory-name{font-weight:700;}
           </style>
-        </head>
+          
+</head>
         <body>
           <div class="rpcsp-document">${documentEl.innerHTML}</div>
         </body>
@@ -3378,7 +3380,8 @@
           html,body{margin:0!important;padding:0!important;background:#fff!important;}
           .ics-paper{width:210mm!important;max-width:210mm!important;min-height:0!important;height:auto!important;margin:0!important;border:0!important;border-radius:0!important;box-shadow:none!important;overflow:visible!important;}
           .ics-paper-grid{width:210mm!important;min-height:0!important;padding:10mm!important;background-image:none!important;box-sizing:border-box!important;}
-        </style></head><body>${paper.outerHTML}</body></html>`);
+        </style>  
+</head><body>${paper.outerHTML}</body></html>`);
         printWindow.document.close();
         const images = Array.from(printWindow.document.images);
         Promise.all(images.map(img => img.complete ? Promise.resolve() : new Promise(resolve => { img.onload = resolve; img.onerror = resolve; })))

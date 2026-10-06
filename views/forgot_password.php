@@ -218,7 +218,8 @@
         .form-title { font-size: 22px; }
       }
     </style>
-  </head>
+    <link rel="stylesheet" href="/css/typography.css">
+</head>
   <body>
     <main class="card" role="main" aria-label="Forgot password">
 

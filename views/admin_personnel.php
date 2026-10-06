@@ -198,6 +198,7 @@
     body.light-mode .pd-lbl { color:#6b7280; }
     body.light-mode .pd-val { color:#1f2937; }
   </style>
+  <link rel="stylesheet" href="/css/typography.css">
 </head>
 <body class="light-mode min-h-screen font-inter main-bg bg-[#1a2025]">
 <div class="flex min-h-screen">

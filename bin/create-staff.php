@@ -36,7 +36,7 @@ if (PHP_OS_FAMILY === 'Windows') {
 
 $password = trim((string) $password);
 if (!password_is_strong($password)) {
-    fwrite(STDERR, "Use at least 12 characters with uppercase, lowercase, a number, and a symbol.\n");
+    fwrite(STDERR, "Use at least 8 characters with uppercase, lowercase, a number, and a symbol.\n");
     exit(2);
 }
 

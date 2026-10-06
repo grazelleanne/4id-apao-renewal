@@ -16,6 +16,9 @@ try {
     if ($path === '/login' && $method === 'POST') {
         login();
     }
+    if ($path === '/login/otp' && $method === 'POST') {
+        login_verify_otp();
+    }
     if ($path === '/logout' && $method === 'POST') {
         require_post();
         $user = current_user();
@@ -200,12 +203,13 @@ function login(): never
     $captcha = is_string($captcha) ? $captcha : '';
     $ip = (string) ($_SERVER['REMOTE_ADDR'] ?? 'unknown');
     $key = 'login:' . $email . '|' . $ip;
-    if (!rate_limit($key, 5, 300)) {
-        login_error('Too many failed attempts. Wait five minutes before trying again.', 429);
+    unset($_SESSION['login_otp']);
+    if (login_attempts($key)['retryAfter'] > 0) {
+        login_error('Three failed attempts. Wait 3 minutes before trying again.', 429);
     }
     if (!filter_var($email, FILTER_VALIDATE_EMAIL) || $password === '' || strlen($password) > 4096
         || $answer === null || !ctype_digit($captcha) || (int) $captcha !== (int) $answer) {
-        login_error('Invalid details or security answer. Try the new question.', 422);
+        login_failed($key, 'Invalid details or security answer. Try the new question.', 422);
     }
     $query = db()->prepare('SELECT id,name,email,password,role,is_active,session_version FROM users WHERE LOWER(email)=:email LIMIT 1');
     $query->execute(['email' => $email]);
@@ -215,11 +219,66 @@ function login(): never
         if ($user) {
             audit(['id' => (int) $user['id'], 'name' => $user['name'], 'role' => $user['role']], 'login_failed', $email);
         }
-        login_error('Invalid email or password.', 401);
+        login_failed($key, 'Invalid email or password.', 401);
     }
     if (!(int) $user['is_active'] || !in_array($user['role'], ['super_admin','admin','staff'], true)) {
         login_error('This account cannot access the system.', 403);
     }
+    $otp = (string) random_int(100000, 999999);
+    if (!rate_limit('login-otp-send:' . $user['id'], 3, 180)) {
+        login_error('Too many code requests. Wait 3 minutes before requesting another code.', 429);
+    }
+    try {
+        brevo_send_transactional_email($user['email'], $user['name'], 'APAO Login Verification Code',
+            '<p>Your APAO login code is <strong>' . $otp . '</strong>.</p><p>It expires in 3 minutes. Do not share this code.</p>');
+    } catch (Throwable $error) {
+        error_log('[APAO Login OTP] ' . $error->getMessage());
+        login_error('Could not send your login code. Please contact the administrator or try again.', 502);
+    }
+    session_regenerate_id(true);
+    $_SESSION['login_otp'] = ['id' => (int) $user['id'], 'version' => (int) $user['session_version'],
+        'hash' => password_hash($otp, PASSWORD_DEFAULT), 'expires' => time() + 180, 'attempts' => 0, 'key' => $key];
+    json_response(['success' => true, 'otpRequired' => true, 'message' => 'Enter the 6-digit code sent to your account email. It expires in 3 minutes.']);
+}
+
+function login_failed(string $key, string $message, int $status): never
+{
+    $state = login_attempts($key, 'fail');
+    if ($state['retryAfter'] > 0) login_error('Three failed attempts. Wait 3 minutes before trying again.', 429);
+    login_error($message . ' ' . $state['remaining'] . ' attempts remaining.', $status);
+}
+
+function login_verify_otp(): never
+{
+    require_post();
+    $pending = $_SESSION['login_otp'] ?? null;
+    if (!is_array($pending) || $pending['expires'] <= time()) {
+        unset($_SESSION['login_otp']);
+        json_response(['success' => false, 'restartLogin' => true, 'message' => 'Your code expired. Sign in again to get a new code.'], 401);
+    }
+    if (login_attempts($pending['key'])['retryAfter'] > 0) {
+        unset($_SESSION['login_otp']);
+        json_response(['success' => false, 'restartLogin' => true, 'message' => 'Wait 3 minutes before trying again.'], 429);
+    }
+    $input = request_data();
+    $otp = is_string($input['otp'] ?? null) ? trim($input['otp']) : '';
+    if (!preg_match('/^\d{6}$/', $otp) || !password_verify($otp, $pending['hash'])) {
+        $_SESSION['login_otp']['attempts']++;
+        $state = login_attempts($pending['key'], 'fail');
+        $restart = $_SESSION['login_otp']['attempts'] >= 3 || $state['retryAfter'] > 0;
+        if ($restart) unset($_SESSION['login_otp']);
+        json_response(['success' => false, 'restartLogin' => $restart,
+            'message' => $restart ? 'Too many incorrect codes. Wait 3 minutes and sign in again.' : 'Incorrect code. ' . $state['remaining'] . ' attempts remaining.'], $restart ? 429 : 422);
+    }
+    $query = db()->prepare('SELECT id,name,email,role,is_active,session_version FROM users WHERE id=:id');
+    $query->execute(['id' => $pending['id']]);
+    $user = $query->fetch();
+    unset($_SESSION['login_otp']);
+    if (!$user || !(int) $user['is_active'] || (int) $user['session_version'] !== $pending['version']
+        || !in_array($user['role'], ['super_admin','admin','staff'], true)) {
+        json_response(['success' => false, 'restartLogin' => true, 'message' => 'This account can no longer sign in.'], 403);
+    }
+    login_attempts($pending['key'], 'reset');
     session_regenerate_id(true);
     $_SESSION['user'] = [
         'id' => (int) $user['id'], 'name' => $user['name'], 'email' => $user['email'],
@@ -227,7 +286,7 @@ function login(): never
     ];
     $_SESSION['_last_activity'] = time();
     db()->prepare('UPDATE users SET last_login_at=NOW() WHERE id=:id')->execute(['id' => $user['id']]);
-    audit($_SESSION['user'], 'login', $email);
+    audit($_SESSION['user'], 'login', $user['email']);
     json_response([
         'success' => true,
         'message' => 'Welcome back, ' . $user['name'] . '!',
@@ -778,7 +837,7 @@ function users_store(array $admin): never
         json_response(['success' => false, 'message' => 'Enter a valid email, full name, role, and account status.'], 422);
     }
     if (!password_is_strong($password)) {
-        json_response(['success' => false, 'message' => 'Use 12–1024 characters with uppercase, lowercase, a number, and a symbol.'], 422);
+        json_response(['success' => false, 'message' => 'Use 8–1024 characters with uppercase, lowercase, a number, and a symbol.'], 422);
     }
     $pdo = db();
     $pdo->beginTransaction();
@@ -816,7 +875,24 @@ function users_data(): never
 
 function audit_data(): never
 {
-    $rows = db()->query('SELECT * FROM audit_logs ORDER BY id DESC LIMIT 1000')->fetchAll();
+    $conditions = [];
+    $parameters = [];
+    foreach (['date_from', 'date_to'] as $field) {
+        $value = $_GET[$field] ?? '';
+        if ($value === '') continue;
+        $date = is_string($value) ? DateTimeImmutable::createFromFormat('!Y-m-d', $value) : false;
+        if (!$date || $date->format('Y-m-d') !== $value) {
+            json_response(['success' => false, 'message' => 'Enter valid filter dates.'], 422);
+        }
+        $conditions[] = $field === 'date_from' ? 'created_at >= :date_from' : 'created_at < :date_to';
+        $parameters[$field] = $field === 'date_from' ? $date->format('Y-m-d') : $date->modify('+1 day')->format('Y-m-d');
+    }
+    if (isset($_GET['date_from'], $_GET['date_to']) && $_GET['date_from'] !== '' && $_GET['date_to'] !== '' && $_GET['date_from'] > $_GET['date_to']) {
+        json_response(['success' => false, 'message' => 'Start date must not be after end date.'], 422);
+    }
+    $statement = db()->prepare('SELECT * FROM audit_logs' . ($conditions ? ' WHERE ' . implode(' AND ', $conditions) : '') . ' ORDER BY id DESC LIMIT 1000');
+    $statement->execute($parameters);
+    $rows = $statement->fetchAll();
     $logs = array_map(static fn (array $row): array => [
         'id' => (int) $row['id'], 'userName' => $row['user_name'] ?? 'System',
         'userRole' => $row['user_role'] ?? 'system', 'action' => $row['action'] ?? '',

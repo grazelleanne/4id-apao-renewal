@@ -95,6 +95,25 @@ if (!str_contains($inspectionReport, 'INSPECTION REPORT OF SERVICEABLE AND UNSER
     throw new RuntimeException('Plain PHP inspection report rendering failed.');
 }
 $renewedAt = new DateTimeImmutable('2026-10-06');
+if (!password_is_strong('Abcdef1!') || password_is_strong('Abcde1!')
+    || password_is_strong('abcdefgh') || password_is_strong('ABCDEFG1!') || password_is_strong('Abcdefgh!') || password_is_strong('Abcdefg1')) {
+    throw new RuntimeException('Passwords must contain at least 8 characters and all required character types.');
+}
+$loginTestKey = 'test-login-' . bin2hex(random_bytes(16));
+try {
+    login_attempts($loginTestKey, 'reset');
+    login_attempts($loginTestKey, 'fail');
+    login_attempts($loginTestKey, 'fail');
+    $locked = login_attempts($loginTestKey, 'fail');
+    if ($locked['remaining'] !== 0 || $locked['retryAfter'] < 179 || $locked['retryAfter'] > 180) {
+        throw new RuntimeException('Third failed attempt must start a three-minute lockout.');
+    }
+    if (login_attempts($loginTestKey)['retryAfter'] === 0 || login_attempts($loginTestKey, 'reset')['remaining'] !== 3) {
+        throw new RuntimeException('Login lockout persistence/reset is incorrect.');
+    }
+} finally {
+    unlink(APP_ROOT . '/storage/limits/login-' . hash('sha256', $loginTestKey) . '.json');
+}
 $legacyReport = render_view('pdf.inspection_report', [
     'p' => ['date_of_birth' => '1990-03-12', 'date_of_validity' => null,
         'pistol_type' => '', 'pistol_nomenclature' => 'Pistol Cal .45'],

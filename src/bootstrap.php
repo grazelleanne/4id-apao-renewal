@@ -229,9 +229,34 @@ function rate_limit(string $key, int $limit, int $window): bool
 }
 function password_is_strong(string $password): bool
 {
-    return strlen($password) >= 12 && strlen($password) <= 1024
+    return strlen($password) >= 8 && strlen($password) <= 1024
         && preg_match('/[A-Z]/', $password) && preg_match('/[a-z]/', $password)
         && preg_match('/[0-9]/', $password) && preg_match('/[^A-Za-z0-9]/', $password);
+}
+function login_attempts(string $key, string $action = 'check'): array
+{
+    $dir = APP_ROOT . '/storage/limits';
+    if (!is_dir($dir) && !mkdir($dir, 0700, true) && !is_dir($dir)) throw new RuntimeException('Cannot initialize login protection.');
+    $handle = fopen($dir . '/login-' . hash('sha256', $key) . '.json', 'c+');
+    if (!$handle || !flock($handle, LOCK_EX)) throw new RuntimeException('Cannot lock login protection.');
+    try {
+        $state = json_decode((string) stream_get_contents($handle), true);
+        $now = time();
+        if (!is_array($state) || ($state['until'] ?? 0) <= $now) $state = ['count' => 0, 'until' => $now + 180];
+        if ($action === 'reset') $state = ['count' => 0, 'until' => $now + 180];
+        if ($action === 'fail' && $state['count'] < 3) {
+            $state['count']++;
+            if ($state['count'] === 3) $state['until'] = $now + 180;
+        }
+        rewind($handle);
+        ftruncate($handle, 0);
+        $encoded = json_encode($state, JSON_THROW_ON_ERROR);
+        if (fwrite($handle, $encoded) !== strlen($encoded) || !fflush($handle)) throw new RuntimeException('Cannot save login protection.');
+        return ['remaining' => max(0, 3 - $state['count']), 'retryAfter' => $state['count'] >= 3 ? max(0, $state['until'] - $now) : 0];
+    } finally {
+        flock($handle, LOCK_UN);
+        fclose($handle);
+    }
 }
 function birthday_renewal_validity(string $birthday, ?DateTimeImmutable $renewedAt = null): string
 {
