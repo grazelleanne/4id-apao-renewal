@@ -95,6 +95,14 @@ if (!str_contains($inspectionReport, 'INSPECTION REPORT OF SERVICEABLE AND UNSER
     throw new RuntimeException('Plain PHP inspection report rendering failed.');
 }
 $renewedAt = new DateTimeImmutable('2026-10-06');
+$legacyReport = render_view('pdf.inspection_report', [
+    'p' => ['date_of_birth' => '1990-03-12', 'date_of_validity' => null,
+        'pistol_type' => '', 'pistol_nomenclature' => 'Pistol Cal .45'],
+    'inspection' => ['status' => 'approved', 'inspected_at' => '2026-10-06', 'next_renewal_date' => null],
+]);
+if (!str_contains($legacyReport, '12 March 2028') || !str_contains($legacyReport, 'Pistol Cal .45')) {
+    throw new RuntimeException('Approved report must fill missing renewal date and pistol type from recorded data.');
+}
 $renewedReport = render_view('pdf.inspection_report', [
     'p' => ['date_of_validity' => '2028-03-12', 'date_of_birth' => '1990-03-12'],
     'inspection' => ['status' => 'approved', 'next_renewal_date' => '', 'inspected_at' => '2026-10-06'],

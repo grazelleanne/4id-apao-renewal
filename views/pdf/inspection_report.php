@@ -92,10 +92,19 @@ $isNeedsRepair = !$hasUnserviceable && $hasRepair;
 $isUnserviceable = $hasUnserviceable;
 $dateToday = $formatDate($inspection['inspected_at'] ?? null, date('d F Y'));
 $dateApproved = $formatDate($inspection['inspected_at'] ?? null, '-');
-$nextRenewal = $formatDate(
-    ($p['date_of_validity'] ?? '') ?: (($inspection['next_renewal_date'] ?? '') ?: null),
-    '-'
-);
+$nextRenewalDate = trim((string) ($p['date_of_validity'] ?? ''))
+    ?: trim((string) ($inspection['next_renewal_date'] ?? ''));
+if ($nextRenewalDate === '' && $isServiceable && !empty($p['date_of_birth'])) {
+    try {
+        $approvalDate = ($p['date_approved'] ?? '') ?: ($inspection['inspected_at'] ?? '');
+        if ($approvalDate !== '') {
+            $nextRenewalDate = birthday_renewal_validity((string) $p['date_of_birth'], new DateTimeImmutable($approvalDate));
+        }
+    } catch (Exception $error) {
+        $nextRenewalDate = '';
+    }
+}
+$nextRenewal = $formatDate($nextRenewalDate ?: null, '-');
 $logo1Data = $imageData($publicImage('logo1.png'));
 $logo2Data = $imageData($publicImage('logo2.png'));
 ?>
@@ -301,7 +310,7 @@ $logo2Data = $imageData($publicImage('logo2.png'));
       <td class="info-spacer"></td>
       <td class="info-lbl">MAKE / MODEL</td>
       <td class="info-colon">:</td>
-      <td class="info-val"><?= $escape($p['pistol_type'] ?? $p['pistol_nomenclature'] ?? '') ?></td>
+      <td class="info-val"><?= $escape(trim((string) ($p['pistol_type'] ?? '')) ?: ($p['pistol_nomenclature'] ?? 'Not recorded')) ?></td>
     </tr>
     <tr>
       <td class="info-lbl">UNIT</td>

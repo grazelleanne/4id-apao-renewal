@@ -1017,8 +1017,8 @@ body.light-mode .btn-save-under{background:#ede9fe;color:#6d28d9;border-color:#c
 
       document.getElementById('cl_name').textContent  = `${p.lastName} ${p.rank}, ${p.firstName}`;
       document.getElementById('cl_unit').textContent  = p.unit||'—';
-      document.getElementById('cl_nomen').textContent = `Pistol 9mm, ${p.pistolType||'Glock 17'}`;
-      document.getElementById('cl_made').textContent  = p.pistolType||'Glock 17';
+      document.getElementById('cl_nomen').textContent = p.pistolNomenclature || p.pistolType || 'Not recorded';
+      document.getElementById('cl_made').textContent  = p.pistolType || 'Not recorded';
       document.getElementById('cl_sn').textContent    = p.afpSerialNumber||'—';
       document.getElementById('cl_date').textContent  = new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
 

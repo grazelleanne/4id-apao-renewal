@@ -366,6 +366,7 @@
         <div class="flex flex-wrap gap-2 items-center ml-auto">
           <label for="sortSelect" class="text-[#b0bac7] text-xs force-light-text">Sort by:</label>
           <select id="sortSelect" class="bg-[#23272f] text-white border border-[#363b48] rounded px-2 py-1 text-xs force-light-text">
+            <option value="status-asc" selected>Status (Pending to Expired)</option>
             <option value="itemNumber-asc">Item # (Asc)</option>
             <option value="itemNumber-desc">Item # (Desc)</option>
             <option value="lastName-asc">Last Name (A-Z)</option>
@@ -758,7 +759,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // ===== PERSONNEL DATA =====
   let allPersonnel = [];
-  let currentSort  = "itemNumber-asc";
+  let currentSort  = "status-asc";
 
   async function loadPersonnel() {
     try {
@@ -794,6 +795,11 @@ document.addEventListener("DOMContentLoaded", function () {
   function sortPersonnel(list, sortBy) {
     const [key, dir] = sortBy.split("-");
     return list.slice().sort((a, b) => {
+      if (key === "status") {
+        const order = {pending:0, new:0, renewed:1, within:2, expired:3};
+        const difference = (order[resolveStatus(a)] ?? 0) - (order[resolveStatus(b)] ?? 0);
+        return (dir === "asc" ? difference : -difference) || Number(a.itemNumber) - Number(b.itemNumber);
+      }
       let aVal = a[key], bVal = b[key];
       if (key === "itemNumber" || key === "qtyAmmo") { aVal = Number(aVal); bVal = Number(bVal); }
       else if (key !== "dateOfValidity" && key !== "dateOfBirth") { aVal = (aVal||"").toString().toLowerCase(); bVal = (bVal||"").toString().toLowerCase(); }

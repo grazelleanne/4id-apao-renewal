@@ -374,7 +374,7 @@ function personnel_rows(bool $archived = false): array
             'citizenship' => $p['citizenship'] ?? 'Filipino', 'civilStatus' => $p['civil_status'] ?? '',
             'pistolNomenclature' => $p['pistol_nomenclature'] ?? '',
             'pistolSerialNumber' => $p['pistol_serial_number'] ?? '',
-            'pistolType' => $p['pistol_type'] ?? '', 'parNumber' => $p['par_number'] ?? '',
+            'pistolType' => trim((string) ($p['pistol_type'] ?? '')) ?: trim((string) ($p['pistol_nomenclature'] ?? '')), 'parNumber' => $p['par_number'] ?? '',
             'qtyAmmo' => (int) ($p['qty_ammo'] ?? 0), 'unit' => $p['unit'] ?? '',
             'approvedStatus' => $renewalStatus, 'status' => $p['status'] ?? 'active',
             'icsStatus' => $renewalStatus === 'expired' && ($p['ics_status'] ?? '') !== 'under' ? 'expired' : ($p['ics_status'] ?? 'inspection'), 'dateApproved' => $p['date_approved'],
