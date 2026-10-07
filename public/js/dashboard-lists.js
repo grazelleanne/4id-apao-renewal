@@ -7,6 +7,7 @@
   function refresh() {
     queued = false;
     const tables = [...main.querySelectorAll('table')].filter(table =>
+      table.dataset.listLayout !== 'pagination' &&
       table.querySelector('thead') && table.querySelector('tbody[id]') &&
       !table.closest('[role="dialog"], .modal-box, .modal-bg, .rpcsp-preview-section, .rpcsp-paper, .ics-paper, #viewChecklist, #page-registration')
     );

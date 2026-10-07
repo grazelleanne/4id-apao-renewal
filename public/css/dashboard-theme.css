@@ -23,6 +23,10 @@
     max-height:60dvh; min-width:0; position:relative;
   }
   .app-dashboard .list-scroll-region:focus-visible { outline:2px solid var(--ui-brand); outline-offset:3px; }
+  .app-dashboard .paginated-list-region {
+    height:auto; max-height:none; overflow-x:auto; min-width:0;
+  }
+  .app-dashboard .paginated-list-region table.aligned-list-table th { position:static; }
   .app-dashboard table.aligned-list-table { width:100%; border-collapse:separate!important; border-spacing:0; }
   .app-dashboard table.aligned-list-table th {
     position:sticky; top:0; z-index:2; box-shadow:0 1px 0 var(--ui-border);
