@@ -1530,11 +1530,11 @@
                 <div style="display:flex;align-items:center;gap:10px;font-weight:700;font-size:.85rem;color:#e5eaf2;margin-bottom:18px;text-transform:uppercase;letter-spacing:.04em;">Firearm Information</div>
                 <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;">
                   <div><label class="reg-label">Nomenclature of Pistol <span style="color:#ef4444;">*</span></label><select id="rp_pistolNomenclature" class="reg-input"><option value="">Select nomenclature</option><option>Pistol 9mm, Glock 17</option><option>Pistol Cal .45</option><option>Pistol 9mm</option><option>Glock 17</option></select></div>
-                  <div><label class="reg-label">Pistol Type <span style="color:#ef4444;">*</span></label><select id="rp_pistolType" class="reg-input"><option value="">Select pistol type</option><option>Pistol</option><option>Revolver</option></select></div>
+                  <div><label class="reg-label">Pistol Type <span style="color:#ef4444;">*</span></label><input id="rp_pistolType" class="reg-input" value="Pistol" readonly></div>
                   <div><label class="reg-label">Pistol Serial Number <span style="color:#ef4444;">*</span></label><input type="text" id="rp_pistolSerial" class="reg-input" placeholder="Enter pistol serial number"></div>
                   <div><label class="reg-label">Quantity of Ammo Issued <span style="color:#ef4444;">*</span></label><input type="number" id="rp_ammo" class="reg-input" placeholder="Enter quantity" min="0" step="1" oninput="if (this.value !== '' && Number(this.value) < 0) this.value = 0;"></div>
                   <div><label class="reg-label">Date Issued</label><input type="date" id="rp_dateIssued" class="reg-input"></div>
-                  <div><label class="reg-label">Issued By <span style="color:#ef4444;">*</span></label><select id="rp_issuedBy" class="reg-input"><option value="">Select issuing officer</option><option>MS ROSEMARIE O VILBAR</option><option>MS EVANGELINE M SINGUEO, Ph.D.</option></select></div>
+                  <div><label class="reg-label">Issued By <span style="color:#ef4444;">*</span></label><datalist id="registrationIssuers"><option value="MS ROSEMARIE O VILBAR"></option><option value="MS EVANGELINE M SINGUEO, Ph.D."></option></datalist><input id="rp_issuedBy" class="reg-input" list="registrationIssuers" placeholder="Select or enter a new issuing officer"><small class="reg-hint">Enter the current issuing officer's complete name if they are not listed.</small></div>
                   <div><label class="reg-label">Armory / Issuing Unit</label><input type="text" id="rp_armory" class="reg-input" placeholder="Enter armory / unit"></div>
                 </div>
               </div>
@@ -1576,7 +1576,7 @@
               <style>.par-equipment-item{display:grid!important;grid-template-columns:auto 1fr auto;align-items:center;gap:9px}.par-equipment-item:before{display:none!important}.par-equipment-check{width:17px;height:17px;accent-color:#d4a017}.par-equipment-remove,.par-equipment-add{border:1px solid #465164;background:transparent;color:#b8c2cf;border-radius:6px;padding:7px 10px;cursor:pointer}.par-equipment-add{color:#e2b632;border-color:#7b651f;margin-top:10px}body.light-mode .par-process-card{background:#fff!important;border-color:#d7dee8!important}body.light-mode .par-process-title{color:#1e293b!important}body.light-mode .par-package-summary,body.light-mode .par-equipment-item,body.light-mode .par-cost-box{background:#f8fafc!important;border-color:#d7dee8!important}body.light-mode .par-package-summary strong,body.light-mode .par-cost-box strong{color:#1e293b!important}body.light-mode .par-equipment-remove,body.light-mode .par-equipment-add{background:#fff!important;color:#475569!important;border-color:#cbd5e1!important}body.light-mode #rp_parPersonnel{color:#334155!important}body.light-mode #rp_parPreview{border:1px solid #d7dee8}</style>
               <div class="par-process-stack">
                 <section class="par-process-card"><h3 class="par-process-title">Personnel Information</h3><div id="rp_parPersonnel" style="font-size:.82rem;color:#d6dde7;"></div></section>
-                <section class="par-process-card"><h3 class="par-process-title">PAR Information</h3><div class="par-process-grid"><div><label class="reg-label">PAR Number</label><input class="reg-input" value="Generated upon submission" readonly></div><div><label class="reg-label">Date Issued *</label><input id="rp_parIssuedDate" type="date" class="reg-input"></div><div><label class="reg-label">Valid Until</label><input id="rp_parValidUntil" type="date" class="reg-input"></div><div><label class="reg-label">Issued By *</label><select id="rp_parIssuedBy" class="reg-input"><option value="">Select issuing officer</option><option>MS ROSEMARIE O VILBAR</option><option>MS EVANGELINE M SINGUEO, Ph.D.</option></select></div><div><label class="reg-label">Approved By *</label><input id="rp_parApprovedBy" class="reg-input" placeholder="Enter complete name"></div></div></section>
+                <section class="par-process-card"><h3 class="par-process-title">PAR Information</h3><div class="par-process-grid"><div><label class="reg-label">PAR Number</label><input class="reg-input" value="Generated upon submission" readonly></div><div><label class="reg-label">Date Issued *</label><input id="rp_parIssuedDate" type="date" class="reg-input"></div><div><label class="reg-label">Valid Until</label><input id="rp_parValidUntil" type="date" class="reg-input"></div><div><label class="reg-label">Issued By *</label><input id="rp_parIssuedBy" class="reg-input" list="registrationIssuers" placeholder="Select or enter a new issuing officer"><small class="reg-hint">Enter the current issuing officer's complete name if they are not listed.</small></div><div><label class="reg-label">Approved By *</label><input id="rp_parApprovedBy" class="reg-input" placeholder="Enter complete name"></div></div></section>
               </div>
               <div id="rp_err4" style="color:#fc8181;font-size:.8rem;margin-bottom:8px;display:none;"></div><div style="display:flex;justify-content:space-between;"><button type="button" onclick="rpPrev(4)" class="par-btn">Back</button><button type="button" onclick="rpNext(4)" class="par-btn par-btn-gold">Next: Review & Submit</button></div>
             </div>
@@ -1677,7 +1677,7 @@
           <div class="reg-section-title">Firearm Details</div>
           <div class="reg-field-grid">
             <div><label class="reg-label">Nomenclature of Pistol <span style="color:#ef4444;">*</span></label><input name="pistolNomenclature" type="text" class="reg-input" placeholder="9mm Glock17" required /></div>
-            <div><label class="reg-label">Pistol Type <span style="color:#ef4444;">*</span></label><select name="pistolType" class="reg-input" required><option value="" disabled selected>Select pistol type</option><option>Pistol</option><option>Revolver</option></select></div>
+            <div><label class="reg-label">Pistol Type <span style="color:#ef4444;">*</span></label><input name="pistolType" class="reg-input" value="Pistol" readonly required></div>
             <div><label class="reg-label">Pistol Serial # <span style="color:#ef4444;">*</span></label><input name="pistolSerialNumber" type="text" class="reg-input" placeholder="GK-12345" required /></div>
             <div><label class="reg-label">Qty Ammo (rds)</label><input name="qtyAmmo" type="number" min="0" class="reg-input" placeholder="68" /></div>
           </div>
@@ -3806,7 +3806,7 @@
             document.getElementById('rp_photo').value = '';
             document.getElementById('rp_photoSource').textContent = '';
             ['rp_lastName','rp_firstName','rp_middleName','rp_afpSerial','rp_email','rp_contact','rp_pistolSerial','rp_ammo','rp_issuedBy','rp_armory','rp_remarks','rp_afosMos','rp_branch','rp_otherCitizenship'].forEach(function(id){var el=document.getElementById(id);if(el)el.value='';});
-            ['rp_rank','rp_unit','rp_pistolNomenclature','rp_pistolType','rp_civil','rp_gender','rp_citizenship','rp_dob','rp_dateIssued'].forEach(function(id){var el=document.getElementById(id);if(el)el.value='';});
+            ['rp_rank','rp_unit','rp_pistolNomenclature','rp_civil','rp_gender','rp_citizenship','rp_dob','rp_dateIssued'].forEach(function(id){var el=document.getElementById(id);if(el)el.value='';});
             document.getElementById('rp_citizenship').value='Filipino';rpToggleOtherCitizenship();
             ['rp_parIssuedBy','rp_parApprovedBy','rp_parValidUntil'].forEach(function(id){document.getElementById(id).value='';});
             window._rpNavigate('dashboard');
@@ -3865,15 +3865,25 @@
         video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 1280 } },
         audio: false
       });
+      if (modal.style.display === 'none') {
+        rpStopCameraStream();
+        return;
+      }
       var video = document.getElementById('rp_cameraVideo');
       video.srcObject = rpCameraStream;
       await video.play();
       status.textContent = 'Center the face and shoulders inside the guide.';
       captureBtn.disabled = false;
     } catch (error) {
-      status.textContent = error.name === 'NotAllowedError'
-        ? 'Camera permission was denied. Allow camera access or attach a photo instead.'
-        : 'The camera could not be opened. Attach a photo instead.';
+      rpStopCameraStream();
+      var cameraErrors = {
+        NotAllowedError: 'Camera access is blocked. Check site permission and your device camera privacy settings, then try again.',
+        SecurityError: 'Camera access is blocked by browser or site security settings.',
+        NotFoundError: 'No camera was found. Connect a camera or attach a photo instead.',
+        NotReadableError: 'The camera is unavailable or being used by another app. Close other camera apps and try again.',
+        OverconstrainedError: 'The camera does not support the requested settings. Attach a photo instead.'
+      };
+      status.textContent = cameraErrors[error.name] || 'The camera could not be opened. Try again or attach a photo instead.';
       status.style.color = '#fc8181';
     }
   }
