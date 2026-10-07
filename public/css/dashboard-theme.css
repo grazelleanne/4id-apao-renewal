@@ -41,6 +41,10 @@
   .app-dashboard #renewalTbody td {
     border-bottom:1px solid var(--ui-border)!important;
   }
+  .app-dashboard :is(#page-personnel,#page-ics,#page-par,#page-renewal,#page-report,#page-archive)
+  table.aligned-list-table tbody td {
+    border-bottom:1px solid var(--ui-border)!important;
+  }
   .app-dashboard table.personnel-table { table-layout:fixed; min-width:960px; }
   .app-dashboard table.personnel-table :is(th,td) { white-space:normal; overflow-wrap:anywhere; text-align:left; }
   .app-dashboard table.personnel-table :is(th,td):nth-child(1) { width:8%; }
@@ -92,6 +96,22 @@
   body.app-dashboard #refreshArchiveBtn:hover { background:var(--ui-active)!important; color:var(--ui-brand)!important; }
   body.app-dashboard #refreshArchiveBtn:focus-visible { outline:2px solid var(--ui-brand); outline-offset:3px; }
   body.app-dashboard .rpcsp-document .rpcsp-title { color:#111!important; letter-spacing:normal; }
+  /* Paper previews keep black ink on white paper in either dashboard theme. */
+  body.app-dashboard .par-receipt,
+  body.app-dashboard .par-receipt :is(h1,h2,h3,p,span,div,td,th,label,strong) {
+    color:#111!important;
+  }
+  body.app-dashboard .par-receipt { background:#fff!important; }
+  body.app-dashboard .par-receipt table { border-collapse:collapse!important; border-spacing:0; }
+  body.app-dashboard .par-receipt :is(td,th) {
+    background:#fff!important; border-color:#333!important;
+    letter-spacing:normal;
+  }
+  body.app-dashboard .par-receipt :is(input,textarea,select) {
+    background:#fff!important; color:#111!important; box-shadow:none;
+  }
+  body.app-dashboard .ics-paper,
+  body.app-dashboard .ics-paper :is(h1,h2,h3,p,span,td,th,label) { color:#111!important; }
   body.app-dashboard.light-mode :is(#generateReportBtn,#exportReportBtn,#exportBtn,#exportExcelBtn,#exportRpcspBtn,#staffExportRpcspBtn) {
     background:#e4f2e9!important; color:#197544!important;
     border:1px solid #b8d9c4!important; box-shadow:none; border-radius:9px;
@@ -109,17 +129,17 @@
   .app-dashboard :is(.stat-card,.metric-card) { border:1px solid var(--ui-border); padding:22px; }
   .app-dashboard :is(.stat-card,.metric-card):hover { box-shadow:0 6px 22px rgba(13,39,24,.09); }
   .app-dashboard .stat-num { font-variant-numeric:tabular-nums; letter-spacing:-.04em; }
-  .app-dashboard table:not(.cl-table):not(.rpcsp-table):not(.ics-main-table):not(.ics-meta):not(.ics-signatures) { border-collapse:separate; border-spacing:0; }
-  .app-dashboard table:not(.cl-table):not(.rpcsp-table):not(.ics-main-table):not(.ics-meta):not(.ics-signatures) thead tr,
-  .app-dashboard table:not(.cl-table):not(.rpcsp-table):not(.ics-main-table):not(.ics-meta):not(.ics-signatures) th {
+  .app-dashboard table:not(.par-receipt table):not(.cl-table):not(.rpcsp-table):not(.ics-main-table):not(.ics-meta):not(.ics-signatures) { border-collapse:separate; border-spacing:0; }
+  .app-dashboard table:not(.par-receipt table):not(.cl-table):not(.rpcsp-table):not(.ics-main-table):not(.ics-meta):not(.ics-signatures) thead tr,
+  .app-dashboard table:not(.par-receipt table):not(.cl-table):not(.rpcsp-table):not(.ics-main-table):not(.ics-meta):not(.ics-signatures) th {
     background:var(--ui-panel-soft)!important; color:var(--ui-muted)!important;
     border-color:var(--ui-border)!important; font-size:.7rem; font-weight:700;
     letter-spacing:.055em; padding-top:15px; padding-bottom:15px;
   }
-  .app-dashboard table:not(.cl-table):not(.rpcsp-table):not(.ics-main-table):not(.ics-meta):not(.ics-signatures) td {
+  .app-dashboard table:not(.par-receipt table):not(.cl-table):not(.rpcsp-table):not(.ics-main-table):not(.ics-meta):not(.ics-signatures) td {
     border-color:var(--ui-border)!important; padding-top:14px; padding-bottom:14px; vertical-align:middle;
   }
-  .app-dashboard table:not(.cl-table):not(.rpcsp-table):not(.ics-main-table):not(.ics-meta):not(.ics-signatures) tbody tr:hover td { background:var(--ui-panel-soft); }
+  .app-dashboard table:not(.par-receipt table):not(.cl-table):not(.rpcsp-table):not(.ics-main-table):not(.ics-meta):not(.ics-signatures) tbody tr:hover td { background:var(--ui-panel-soft); }
   .app-dashboard :is(.tbl,.cl-table) td { color:var(--ui-text); }
   .app-dashboard :is(input:not([type="checkbox"]):not([type="radio"]),select,textarea) {
     background:var(--ui-panel-soft)!important; color:var(--ui-text)!important;
@@ -179,6 +199,6 @@
     .app-dashboard .admin-account-trigger span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
     .app-dashboard :is(.stat-card,.metric-card) { padding:16px; border-radius:12px; }
     .app-dashboard main > header { margin-bottom:18px; gap:12px; }
-    .app-dashboard table:not(.cl-table):not(.rpcsp-table):not(.ics-main-table):not(.ics-meta):not(.ics-signatures) td { padding-top:12px; padding-bottom:12px; }
+    .app-dashboard table:not(.par-receipt table):not(.cl-table):not(.rpcsp-table):not(.ics-main-table):not(.ics-meta):not(.ics-signatures) td { padding-top:12px; padding-bottom:12px; }
   }
 }

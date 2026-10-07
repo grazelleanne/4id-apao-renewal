@@ -10,7 +10,7 @@
       table.dataset.listLayout !== 'pagination' &&
       !table.matches('.rpcsp-table') &&
       table.querySelector('thead') && table.querySelector('tbody[id]') &&
-      !table.closest('[role="dialog"], .modal-box, .modal-bg, .rpcsp-preview-section, .rpcsp-preview-shell, .rpcsp-document, .rpcsp-paper, .ics-paper, #viewChecklist, #page-registration')
+      !table.closest('[role="dialog"], .modal-box, .modal-bg, .par-receipt, .rpcsp-preview-section, .rpcsp-preview-shell, .rpcsp-document, .rpcsp-paper, .ics-paper, #viewChecklist, #page-registration')
     );
     let visibleLists = 0;
     let controlsFit = true;

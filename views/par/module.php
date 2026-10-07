@@ -1290,7 +1290,7 @@
 
     tbody.innerHTML = pageData.map(function (r, i) {
       var name = (r.firstName || '') + ' ' + (r.lastName || '');
-      var photo = r.photo ? (r.photo.startsWith('data:') ? r.photo : 'data:image/jpeg;base64,' + r.photo) : "<?php echo e(asset('images/logo.png')); ?>";
+      var photo = r.photo ? (/^(data:image\/|https?:\/\/|\/)/i.test(r.photo) ? r.photo : 'data:image/jpeg;base64,' + r.photo) : "<?php echo e(asset('images/logo.png')); ?>";
       return '<tr class="border-b border-[#1a2025] hover:bg-[#1a2025] transition-colors">'
         + '<td class="py-3 px-3 force-light-text">' + (start + i + 1) + '</td>'
         + '<td class="py-3 px-3">'

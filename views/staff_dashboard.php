@@ -3036,7 +3036,7 @@
         document.getElementById('pd_serial').textContent = r.afpSerialNumber || '—';
         document.getElementById('pd_unit').textContent = r.unit || '—';
         var img = document.getElementById('pd_photo'), fb = document.getElementById('pd_photoFallback');
-        if (r.photo) { img.src = r.photo.startsWith('data:') ? r.photo : 'data:image/jpeg;base64,' + r.photo; img.style.display='block'; fb.style.display='none'; }
+        if (r.photo) { img.src = /^(data:image\/|https?:\/\/|\/)/i.test(r.photo) ? r.photo : 'data:image/jpeg;base64,' + r.photo; img.style.display='block'; fb.style.display='none'; }
         else { img.style.display='none'; fb.style.display='block'; }
 
         var dr = daysRemaining(r.dateOfValidity);
@@ -3350,7 +3350,7 @@
     var paperPhoto = document.getElementById('previewPaperPhoto');
     var sidePhoto = document.getElementById('icsPhotoSidePreview');
     var personnelPhoto = p.photo && p.photo.trim() !== ''
-      ? (p.photo.startsWith('data:') ? p.photo : 'data:image/jpeg;base64,' + p.photo)
+      ? (/^(data:image\/|https?:\/\/|\/)/i.test(p.photo) ? p.photo : 'data:image/jpeg;base64,' + p.photo)
       : "<?php echo e(asset('images/logo.png')); ?>";
     if (paperPhoto) paperPhoto.src = personnelPhoto;
     if (sidePhoto) sidePhoto.src = personnelPhoto;
