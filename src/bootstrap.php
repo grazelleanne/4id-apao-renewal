@@ -200,11 +200,12 @@ function require_user(array $roles = [], bool $allowTemporaryPassword = false): 
         }
         page_error('Access denied.', 403);
     }
-    if (!$allowTemporaryPassword && $user['role'] === 'staff' && $user['must_change_password']) {
+    if (!$allowTemporaryPassword && $user['must_change_password']) {
+        $passwordRedirect = $user['role'] === 'staff' ? '/staff/first-password' : '/admin/first-password';
         if (request_expects_json()) {
-            json_response(['success' => false, 'message' => 'Create your new password before accessing the system.', 'redirect' => '/staff/first-password'], 403);
+            json_response(['success' => false, 'message' => 'Create your new password before accessing the system.', 'redirect' => $passwordRedirect], 403);
         }
-        redirect('/staff/first-password');
+        redirect($passwordRedirect);
     }
     // Read requests must not serialize dashboard, notification and detail queries
     // behind the same session-file lock.

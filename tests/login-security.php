@@ -25,6 +25,7 @@ function json_response(array $payload, int $status = 200): never { throw new Log
 function login_error(string $message, int $status): never { throw new LoginResponse(['success' => false, 'message' => $message], $status); }
 function audit(array $user, string $action, string $subject): void {}
 function brevo_send_transactional_email(string $email, string $name, string $subject, string $html): string {
+    if (!empty($GLOBALS['mailFails'])) throw new RuntimeException('Mail unavailable');
     preg_match('/<strong>(\d{6})<\/strong>/', $html, $match);
     $GLOBALS['sentCode'] = $match[1];
     return 'test-message';
@@ -56,12 +57,16 @@ function credentials(string $password = 'Example1!'): void {
 }
 credentials();
 $result = response('login');
-check($result->status === 200 && isset($_SESSION['user']) && isset($result->payload['redirect']), 'Correct credentials must authenticate directly.');
-check($sentCode === null && !isset($result->payload['otpRequired']), 'Login must not send or request email codes.');
-check($result->payload['redirect'] === '/staff/dashboard', 'Existing staff must retain their normal login flow.');
-$testUser['must_change_password'] = 1;
-credentials();
-check(response('login')->payload['redirect'] === '/staff/first-password', 'New staff must create their password before dashboard access.');
+check($result->status === 200 && isset($_SESSION['user']) && !isset($result->payload['otpRequired']), 'Login must authenticate without OTP.');
+check($sentCode === null, 'Login must not send email codes.');
+check($result->payload['redirect'] === '/staff/dashboard', 'Existing staff must reach their dashboard.');
+foreach (['staff','admin','super_admin'] as $role) {
+    $testUser['role'] = $role;
+    $testUser['must_change_password'] = 1;
+    credentials();
+    check(response('login')->payload['redirect'] === ($role === 'staff' ? '/staff/first-password' : '/admin/first-password'), 'Temporary passwords must retain their change gate.');
+}
+$testUser['role'] = 'staff';
 $testUser['must_change_password'] = 0;
 $attemptState = ['remaining' => 5, 'retryAfter' => 0];
 for ($attempt = 0; $attempt < 5; $attempt++) {

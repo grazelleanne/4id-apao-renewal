@@ -131,6 +131,9 @@
       .register-modal-close:hover{color:#e5eaf2;}
       .reg-input{width:100%;background:#111827;color:#e5eaf2;border:1px solid #2e3748;border-radius:7px;padding:0.5rem 0.7rem;font-size:0.85rem;outline:none;box-sizing:border-box;transition:border-color 0.18s;font-family:inherit;}
       .reg-input:focus{border-color:#3ec6ff;}
+      #rp_issuedBy_add,#rp_parIssuedBy_add{position:absolute;top:100%;right:0;width:100%;z-index:80;padding:14px;box-sizing:border-box;background:var(--ui-panel,#242424);border:1px solid var(--ui-border,#363f4c);border-radius:9px;box-shadow:0 10px 28px rgba(0,0,0,.2);}
+      #rp_issuedBy_add .reg-btn,#rp_parIssuedBy_add .reg-btn{padding:7px 12px;border-radius:6px;border:1px solid var(--ui-border,#363f4c);background:var(--ui-panel-soft,#303030);color:var(--ui-text,#e5eaf2);font:inherit;font-size:.8rem;cursor:pointer;}
+      #rp_issuedBy_add .reg-btn-next,#rp_parIssuedBy_add .reg-btn-next{background:var(--ui-brand,#55cc8d);color:#10221a;border-color:transparent;}
       .reg-label{display:block;font-size:0.72rem;font-weight:700;color:#64748b;margin-bottom:0.28rem;text-transform:uppercase;letter-spacing:0.05em;}
       .reg-section{background:#0d1420;border:1px solid #1e2d42;border-radius:9px;padding:1rem;margin-bottom:1rem;}
       .reg-section-title{font-size:0.7rem;font-weight:700;color:#3ec6ff;text-transform:uppercase;letter-spacing:0.09em;margin-bottom:0.7rem;}
@@ -1534,7 +1537,7 @@
                   <div><label class="reg-label">Pistol Serial Number <span style="color:#ef4444;">*</span></label><input type="text" id="rp_pistolSerial" class="reg-input" placeholder="Enter pistol serial number"></div>
                   <div><label class="reg-label">Quantity of Ammo Issued <span style="color:#ef4444;">*</span></label><input type="number" id="rp_ammo" class="reg-input" placeholder="Enter quantity" min="0" step="1" oninput="if (this.value !== '' && Number(this.value) < 0) this.value = 0;"></div>
                   <div><label class="reg-label">Date Issued</label><input type="date" id="rp_dateIssued" class="reg-input"></div>
-                  <div><label class="reg-label">Issued By <span style="color:#ef4444;">*</span></label><datalist id="registrationIssuers"><option value="MS ROSEMARIE O VILBAR"></option><option value="MS EVANGELINE M SINGUEO, Ph.D."></option></datalist><input id="rp_issuedBy" class="reg-input" list="registrationIssuers" placeholder="Select or enter a new issuing officer"><small class="reg-hint">Enter the current issuing officer's complete name if they are not listed.</small></div>
+                  <div><label class="reg-label">Issued By <span style="color:#ef4444;">*</span></label><select id="rp_issuedBy" class="reg-input" onchange="rpIssuerChanged(this)"><option value="">Select issuing officer</option><option>MS ROSEMARIE O VILBAR</option><option>MS EVANGELINE M SINGUEO, Ph.D.</option><option value="__add_name__">Add name...</option></select><div id="rp_issuedBy_add" style="display:none;margin-top:8px"><label class="reg-label" for="rp_issuedBy_name">New issuing officer name</label><input id="rp_issuedBy_name" class="reg-input" maxlength="255" placeholder="Enter complete name"><div style="display:flex;gap:8px;margin-top:8px"><button type="button" class="reg-btn reg-btn-next" onclick="rpAddIssuer('rp_issuedBy')">Add name</button><button type="button" class="reg-btn reg-btn-prev" onclick="rpCancelIssuer('rp_issuedBy')">Cancel</button></div><small id="rp_issuedBy_error" role="alert" style="color:#ef4444"></small></div></div>
                   <div><label class="reg-label">Armory / Issuing Unit</label><input type="text" id="rp_armory" class="reg-input" placeholder="Enter armory / unit"></div>
                 </div>
               </div>
@@ -1576,7 +1579,7 @@
               <style>.par-equipment-item{display:grid!important;grid-template-columns:auto 1fr auto;align-items:center;gap:9px}.par-equipment-item:before{display:none!important}.par-equipment-check{width:17px;height:17px;accent-color:#d4a017}.par-equipment-remove,.par-equipment-add{border:1px solid #465164;background:transparent;color:#b8c2cf;border-radius:6px;padding:7px 10px;cursor:pointer}.par-equipment-add{color:#e2b632;border-color:#7b651f;margin-top:10px}body.light-mode .par-process-card{background:#fff!important;border-color:#d7dee8!important}body.light-mode .par-process-title{color:#1e293b!important}body.light-mode .par-package-summary,body.light-mode .par-equipment-item,body.light-mode .par-cost-box{background:#f8fafc!important;border-color:#d7dee8!important}body.light-mode .par-package-summary strong,body.light-mode .par-cost-box strong{color:#1e293b!important}body.light-mode .par-equipment-remove,body.light-mode .par-equipment-add{background:#fff!important;color:#475569!important;border-color:#cbd5e1!important}body.light-mode #rp_parPersonnel{color:#334155!important}body.light-mode #rp_parPreview{border:1px solid #d7dee8}</style>
               <div class="par-process-stack">
                 <section class="par-process-card"><h3 class="par-process-title">Personnel Information</h3><div id="rp_parPersonnel" style="font-size:.82rem;color:#d6dde7;"></div></section>
-                <section class="par-process-card"><h3 class="par-process-title">PAR Information</h3><div class="par-process-grid"><div><label class="reg-label">PAR Number</label><input class="reg-input" value="Generated upon submission" readonly></div><div><label class="reg-label">Date Issued *</label><input id="rp_parIssuedDate" type="date" class="reg-input"></div><div><label class="reg-label">Valid Until</label><input id="rp_parValidUntil" type="date" class="reg-input"></div><div><label class="reg-label">Issued By *</label><input id="rp_parIssuedBy" class="reg-input" list="registrationIssuers" placeholder="Select or enter a new issuing officer"><small class="reg-hint">Enter the current issuing officer's complete name if they are not listed.</small></div><div><label class="reg-label">Approved By *</label><input id="rp_parApprovedBy" class="reg-input" placeholder="Enter complete name"></div></div></section>
+                <section class="par-process-card"><h3 class="par-process-title">PAR Information</h3><div class="par-process-grid"><div><label class="reg-label">PAR Number</label><input class="reg-input" value="Generated upon submission" readonly></div><div><label class="reg-label">Date Issued *</label><input id="rp_parIssuedDate" type="date" class="reg-input"></div><div><label class="reg-label">Valid Until</label><input id="rp_parValidUntil" type="date" class="reg-input"></div><div><label class="reg-label">Issued By *</label><select id="rp_parIssuedBy" class="reg-input" onchange="rpIssuerChanged(this)"><option value="">Select issuing officer</option><option>MS ROSEMARIE O VILBAR</option><option>MS EVANGELINE M SINGUEO, Ph.D.</option><option value="__add_name__">Add name...</option></select><div id="rp_parIssuedBy_add" style="display:none;margin-top:8px"><label class="reg-label" for="rp_parIssuedBy_name">New issuing officer name</label><input id="rp_parIssuedBy_name" class="reg-input" maxlength="255" placeholder="Enter complete name"><div style="display:flex;gap:8px;margin-top:8px"><button type="button" class="reg-btn reg-btn-next" onclick="rpAddIssuer('rp_parIssuedBy')">Add name</button><button type="button" class="reg-btn reg-btn-prev" onclick="rpCancelIssuer('rp_parIssuedBy')">Cancel</button></div><small id="rp_parIssuedBy_error" role="alert" style="color:#ef4444"></small></div></div><div><label class="reg-label">Approved By *</label><input id="rp_parApprovedBy" class="reg-input" placeholder="Enter complete name"></div></div></section>
               </div>
               <div id="rp_err4" style="color:#fc8181;font-size:.8rem;margin-bottom:8px;display:none;"></div><div style="display:flex;justify-content:space-between;"><button type="button" onclick="rpPrev(4)" class="par-btn">Back</button><button type="button" onclick="rpNext(4)" class="par-btn par-btn-gold">Next: Review & Submit</button></div>
             </div>
@@ -3842,6 +3845,45 @@
       };
       reader.readAsDataURL(input.files[0]);
     }
+  }
+
+  function rpIssuerChanged(select) {
+    select.parentElement.style.position = 'relative';
+    var adding = select.value === '__add_name__';
+    document.getElementById(select.id + '_add').style.display = adding ? 'block' : 'none';
+    if (adding) {
+      // Keep the saved issuer empty until the new name is confirmed.
+      select.value = '';
+      document.getElementById(select.id + '_error').textContent = '';
+      document.getElementById(select.id + '_name').focus();
+    }
+  }
+
+  function rpCancelIssuer(id) {
+    document.getElementById(id + '_add').style.display = 'none';
+    document.getElementById(id + '_name').value = '';
+    document.getElementById(id + '_error').textContent = '';
+  }
+
+  function rpAddIssuer(id) {
+    var name = document.getElementById(id + '_name').value.trim();
+    if (!name) {
+      document.getElementById(id + '_error').textContent = 'Enter the issuing officer\'s complete name.';
+      return;
+    }
+    ['rp_issuedBy', 'rp_parIssuedBy'].forEach(function(fieldId) {
+      var select = document.getElementById(fieldId);
+      var existing = Array.from(select.options).find(function(option) {
+        return option.value !== '__add_name__' && option.text.toLowerCase() === name.toLowerCase();
+      });
+      if (!existing) {
+        existing = new Option(name, name);
+        select.add(existing, select.options[select.options.length - 1]);
+      }
+      if (fieldId === id) select.value = existing.value;
+    });
+    rpCancelIssuer(id);
+    document.getElementById(id).focus();
   }
 
   async function rpOpenCamera() {

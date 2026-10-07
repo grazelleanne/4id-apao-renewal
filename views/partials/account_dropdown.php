@@ -5,6 +5,7 @@
   $passwordUrl = $passwordUrl ?? route($hasAdminProfile ? 'admin.profile.password' : 'staff.profile.password');
 ?>
 <style>
+  .admin-password-wrap{position:relative;width:100%}.admin-profile-field .admin-password-wrap input{padding-right:44px!important}.admin-password-eye{position:absolute;right:5px;top:50%;transform:translateY(-50%);display:flex;align-items:center;justify-content:center;width:34px;height:34px;padding:0;background:transparent;border:0;border-radius:5px;color:#94a3b8;cursor:pointer}.admin-password-eye:hover{color:var(--ui-brand,#55cc8d)}.admin-password-eye:focus-visible{outline:2px solid var(--ui-brand,#55cc8d);outline-offset:1px}body.light-mode .admin-password-eye{color:#607567}
   .admin-account{position:relative;flex-shrink:0}.admin-account-toggle{display:flex;align-items:center;gap:6px;background:transparent;border:0;color:#e5eaf2;font:inherit;font-size:.875rem;cursor:pointer;padding:7px 9px;border-radius:7px}.admin-account-toggle:hover,.admin-account-toggle:focus-visible{background:#2b313b;outline:2px solid transparent}.admin-account-chevron{transition:transform .18s}.admin-account-toggle[aria-expanded="true"] .admin-account-chevron{transform:rotate(180deg)}
   .admin-account-menu{display:none;position:absolute;right:0;top:calc(100% + 8px);width:245px;background:#23272f;border:1px solid #363b48;border-radius:10px;box-shadow:0 14px 34px rgba(0,0,0,.4);z-index:600;overflow:hidden;color:#e5eaf2}.admin-account-menu.open{display:block}.admin-account-summary{padding:13px 15px;border-bottom:1px solid #363b48}.admin-account-name{font-size:.82rem;font-weight:700;overflow-wrap:anywhere}.admin-account-email{font-size:.7rem;color:#94a3b8;margin-top:3px;overflow-wrap:anywhere}.admin-account-item{display:flex;width:100%;gap:9px;align-items:center;padding:10px 14px;border:0;background:transparent;color:#dbe3ee;font-size:.78rem;text-align:left;cursor:pointer}.admin-account-item:hover,.admin-account-item:focus-visible{background:#2b313b;outline:none}.admin-account-logout{color:#fca5a5}
   .admin-profile-overlay{display:none;position:fixed;inset:0;background:rgba(8,12,18,.76);z-index:1000;align-items:center;justify-content:center;padding:18px}.admin-profile-overlay.open{display:flex}.admin-profile-dialog{width:min(660px,100%);max-height:92vh;overflow-y:auto;background:#23272f;color:#e5eaf2;border:1px solid #3a4350;border-radius:12px;box-shadow:0 20px 55px rgba(0,0,0,.5);padding:22px;position:relative}.admin-profile-title{font-size:1.1rem;font-weight:800;margin:0 35px 18px 0}.admin-profile-close{position:absolute;right:14px;top:10px;border:0;background:transparent;color:#94a3b8;font-size:1.8rem;cursor:pointer}.admin-profile-section+ .admin-profile-section{border-top:1px solid #363b48;margin-top:22px;padding-top:20px}.admin-profile-section h3{font-size:.84rem;text-transform:uppercase;letter-spacing:.06em;font-weight:800;margin:0 0 13px}.admin-profile-grid{display:grid;grid-template-columns:1fr 1fr;gap:13px}.admin-profile-field{display:flex;flex-direction:column;gap:5px}.admin-profile-field.full{grid-column:1/-1}.admin-profile-field label{font-size:.73rem;font-weight:700;color:#cbd5e1}.admin-profile-field input{width:100%;background:#1a2025!important;color:#e5eaf2!important;border:1px solid #3b4553!important;border-radius:6px!important;padding:9px 10px!important;font-size:.82rem!important;margin:0!important}.admin-profile-field input:focus{outline:none;border-color:#3ec6ff!important;box-shadow:0 0 0 2px rgba(62,198,255,.15)}.admin-profile-help{font-size:.68rem;color:#94a3b8;line-height:1.45}.admin-profile-errors{min-height:18px;font-size:.7rem;color:#fca5a5;margin-top:8px}.admin-profile-status{display:none;padding:9px 11px;border-radius:6px;font-size:.74rem;margin-bottom:14px}.admin-profile-status.success{display:block;background:#064e3b;color:#d1fae5;border:1px solid #059669}.admin-profile-status.error{display:block;background:#7f1d1d;color:#fee2e2;border:1px solid #ef4444}.admin-profile-actions{display:flex;gap:9px;margin-top:14px}.admin-profile-save,.admin-profile-cancel{border:0;border-radius:6px;padding:9px 13px;font-size:.76rem;font-weight:800;cursor:pointer}.admin-profile-save{background:#13d670;color:#10221a}.admin-profile-save:hover{background:#12b15c}.admin-profile-save:disabled{opacity:.55;cursor:wait}.admin-profile-cancel{background:#343c48;color:#e5eaf2}
@@ -91,6 +92,7 @@
   </div>
 </div>
 
+<script src="/js/action-otp.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function () {
   const account = document.getElementById('adminAccount');
@@ -102,6 +104,32 @@ document.addEventListener('DOMContentLoaded', function () {
   const status = document.getElementById('adminProfileStatus');
   const csrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
   const newPassword = document.getElementById('adminPasswordNew');
+  const passwordToggles = [];
+  overlay.querySelectorAll('input[type="password"]').forEach(input => {
+    const wrap = document.createElement('div');
+    wrap.className = 'admin-password-wrap';
+    input.before(wrap);
+    wrap.appendChild(input);
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'admin-password-eye';
+    button.setAttribute('aria-controls', input.id);
+    button.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/><path class="password-eye-slash" d="M3 3l18 18"/></svg>';
+    const label = input.closest('.admin-profile-field').querySelector('label').childNodes[0].textContent.trim();
+    function setVisible(visible) {
+      input.type = visible ? 'text' : 'password';
+      button.setAttribute('aria-label', (visible ? 'Hide ' : 'Show ') + label.toLowerCase());
+      button.setAttribute('aria-pressed', String(visible));
+      button.title = button.getAttribute('aria-label');
+      button.querySelector('.password-eye-slash').style.display = visible ? 'none' : '';
+    }
+    setVisible(false);
+    button.addEventListener('click', () => setVisible(input.type === 'password'));
+    wrap.appendChild(button);
+    passwordToggles.push(setVisible);
+  });
+  function hidePasswords() { passwordToggles.forEach(setVisible => setVisible(false)); }
+  passwordForm.addEventListener('reset', hidePasswords);
   function updatePasswordStrength() {
     const value = newPassword.value;
     const rules = [value.length >= 8 && value.length <= 1024, /[A-Z]/.test(value), /[a-z]/.test(value), /[0-9]/.test(value), /[^A-Za-z0-9]/.test(value)];
@@ -123,7 +151,7 @@ document.addEventListener('DOMContentLoaded', function () {
     overlay.classList.toggle('open', open); overlay.setAttribute('aria-hidden', String(!open));
     document.body.style.overflow = open ? 'hidden' : '';
     if (open) { status.className = 'admin-profile-status'; status.textContent = ''; document.getElementById('adminProfileName').focus(); }
-    else toggle.focus();
+    else { hidePasswords(); toggle.focus(); }
   }
   function messages(data) {
     if (data && data.errors) return Object.values(data.errors).flat().join(' ');
@@ -135,7 +163,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const original = button.textContent;
     button.disabled = true; button.textContent = 'Saving...'; errorBox.textContent = '';
     try {
-      const response = await fetch(url, { method: 'PUT', headers: {'Accept':'application/json','X-CSRF-TOKEN':csrf}, body: new FormData(form) });
+      const response = await actionOtpFetch(url, { method: 'PUT', headers: {'Accept':'application/json','Content-Type':'application/json','X-CSRF-TOKEN':csrf}, body: JSON.stringify(Object.fromEntries(new FormData(form))) });
       const data = await response.json().catch(() => ({}));
       if (!response.ok || !data.success) throw data;
       showStatus(data.message, 'success');

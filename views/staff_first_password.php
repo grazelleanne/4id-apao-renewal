@@ -18,7 +18,7 @@
 <main>
   <h1>Create your new password</h1>
   <p>Welcome, <?= h($user->name) ?>. Replace the temporary password supplied by your administrator before accessing the dashboard.</p>
-  <form id="firstPasswordForm" method="post" action="/staff/first-password">
+  <form id="firstPasswordForm" method="post" action="<?= $user->role === 'staff' ? '/staff/first-password' : '/admin/first-password' ?>">
     <?= csrf_field() ?>
     <label for="newPassword">New password</label>
     <input id="newPassword" name="password" type="password" minlength="8" maxlength="1024" autocomplete="new-password" required>
@@ -32,6 +32,7 @@
   </form>
   <form method="post" action="/logout"><?= csrf_field() ?><button type="submit" class="logout">Sign out</button></form>
 </main>
+<script src="/js/action-otp.js"></script>
 <script>
   const form = document.getElementById('firstPasswordForm');
   const password = document.getElementById('newPassword');
@@ -55,7 +56,7 @@
     button.disabled = true;
     button.textContent = 'Saving...';
     try {
-      const response = await fetch(form.action, {method:'POST', headers:{'Accept':'application/json'}, body:new FormData(form), signal:AbortSignal.timeout(20000)});
+      const response = await actionOtpFetch(form.action, {method:'POST', headers:{'Accept':'application/json'}, body:new FormData(form)});
       const data = await response.json();
       if (!response.ok || !data.success) throw new Error(data.message || 'Unable to save password. Please try again.');
       window.location.replace(data.redirect);

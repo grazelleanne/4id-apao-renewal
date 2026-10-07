@@ -3,15 +3,27 @@ declare(strict_types=1);
 
 require dirname(__DIR__) . '/src/bootstrap.php';
 require dirname(__DIR__) . '/src/PdfReport.php';
+require dirname(__DIR__) . '/src/ActionOtp.php';
+require dirname(__DIR__) . '/src/Profile.php';
 $path = rtrim((string) parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH), '/') ?: '/';
 $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 
 try {
-    if ($path === '/staff/first-password' && in_array($method, ['GET', 'POST'], true)) {
+    if (in_array($path, ['/admin/profile','/staff/profile'], true) && $method === 'PUT') {
+        require_post(['PUT']);
+        $user = require_user($path === '/staff/profile' ? ['staff'] : ['admin','super_admin']);
+        profile_update($user);
+    }
+    if (in_array($path, ['/admin/profile/password','/staff/profile/password'], true) && $method === 'PUT') {
+        require_post(['PUT']);
+        $user = require_user($path === '/staff/profile/password' ? ['staff'] : ['admin','super_admin']);
+        profile_change_password($user);
+    }
+    if (in_array($path, ['/staff/first-password', '/admin/first-password'], true) && in_array($method, ['GET', 'POST'], true)) {
         if ($method === 'POST') require_post();
-        $user = require_user(['staff'], true);
+        $user = require_user($path === '/staff/first-password' ? ['staff'] : ['super_admin','admin'], true);
         if ($method === 'POST') staff_first_password($user);
-        if (!$user['must_change_password']) redirect('/staff/dashboard');
+        if (!$user['must_change_password']) redirect($user['role'] === 'staff' ? '/staff/dashboard' : '/admin/dashboard');
         echo render_view('staff_first_password', ['user' => (object) $user]);
         exit;
     }
@@ -222,7 +234,7 @@ function login(): never
     $captcha = is_string($captcha) ? $captcha : '';
     $ip = (string) ($_SERVER['REMOTE_ADDR'] ?? 'unknown');
     $key = 'login:' . $email . '|' . $ip;
-    unset($_SESSION['login_otp']);
+    unset($_SESSION['login_otp'], $_SESSION['action_otp']);
     if (login_attempts($key)['retryAfter'] > 0) {
         login_error('Five failed attempts. Wait 3 minutes before trying again.', 429);
     }
@@ -256,14 +268,15 @@ function login(): never
     json_response([
         'success' => true,
         'message' => 'Welcome back, ' . $user['name'] . '!',
-        'redirect' => $user['role'] === 'staff'
-            ? (!empty($user['must_change_password']) ? '/staff/first-password' : '/staff/dashboard') : '/admin/dashboard',
+        'redirect' => !empty($user['must_change_password'])
+            ? ($user['role'] === 'staff' ? '/staff/first-password' : '/admin/first-password')
+            : ($user['role'] === 'staff' ? '/staff/dashboard' : '/admin/dashboard'),
     ]);
 }
 
 function staff_first_password(array $user): never
 {
-    if ($user['role'] !== 'staff' || empty($user['must_change_password'])) {
+    if (!in_array($user['role'], ['staff','admin','super_admin'], true) || empty($user['must_change_password'])) {
         json_response(['success' => false, 'message' => 'Your first-login password has already been set.'], 409);
     }
     if (!rate_limit('first-password:' . $user['id'], 10, 300)) {
@@ -276,6 +289,13 @@ function staff_first_password(array $user): never
         json_response(['success' => false, 'message' => 'Use at least 8 characters with uppercase, lowercase, a number and a symbol. Both passwords must match.'], 422);
     }
     $pdo = db();
+    $temporaryPassword = $pdo->prepare('SELECT password FROM users WHERE id=:id');
+    $temporaryPassword->execute(['id' => $user['id']]);
+    $temporaryHash = $temporaryPassword->fetchColumn();
+    if (!is_string($temporaryHash) || password_verify($password, $temporaryHash)) {
+        json_response(['success' => false, 'message' => 'Choose a password different from your temporary password.'], 422);
+    }
+    require_action_otp($user, 'first-password', $input);
     $pdo->beginTransaction();
     try {
         $query = $pdo->prepare('SELECT password,must_change_password,is_active,session_version FROM users WHERE id=:id FOR UPDATE');
@@ -301,7 +321,7 @@ function staff_first_password(array $user): never
     session_regenerate_id(true);
     $_SESSION['user'] = array_replace($user, ['must_change_password' => false, 'session_version' => (int) $user['session_version'] + 1]);
     $_SESSION['_last_activity'] = time();
-    json_response(['success' => true, 'redirect' => '/staff/dashboard']);
+    json_response(['success' => true, 'redirect' => $user['role'] === 'staff' ? '/staff/dashboard' : '/admin/dashboard']);
 }
 
 function login_failed(string $key, string $message, int $status): never
@@ -694,6 +714,14 @@ function brevo_send_transactional_email(string $recipientEmail, string $recipien
 
     if (!is_string($response) || $curlError !== '' || $status < 200 || $status >= 300) {
         error_log('[APAO Brevo] HTTP ' . $status . ($curlError !== '' ? ': ' . $curlError : ''));
+        if (is_string($response)) {
+            $failure = json_decode($response, true);
+            if (is_array($failure) && is_string($failure['message'] ?? null)) {
+                $reason = str_replace($apiKey, '[redacted]', $failure['message']);
+                $reason = preg_replace('/xkeysib-[A-Za-z0-9_-]+/', '[redacted]', $reason);
+                error_log('[APAO Brevo] Reason: ' . substr(str_replace(["\r", "\n"], ' ', $reason), 0, 500));
+            }
+        }
         throw new RuntimeException('Brevo rejected the email request.');
     }
     $decoded = json_decode($response, true);
@@ -750,7 +778,9 @@ function staff_notify_personnel(int $itemNumber, array $user): never
         error_log('[APAO Brevo] ' . $error->getMessage());
         json_response([
             'success' => false,
-            'error' => 'The email could not be sent. Check the Brevo API key and verified sender in Render.',
+            'error' => !function_exists('curl_init')
+                ? 'Email sending requires the PHP cURL extension. Enable cURL in php.ini and restart the PHP server.'
+                : 'The email could not be sent. Check the server mail configuration and PHP error log.',
         ], 502);
     }
 
@@ -981,6 +1011,7 @@ function users_store(array $admin): never
     if (!password_is_strong($password)) {
         json_response(['success' => false, 'message' => 'Use 8–1024 characters with uppercase, lowercase, a number, and a symbol.'], 422);
     }
+    require_action_otp($admin, 'create-user', $input);
     $pdo = db();
     $pdo->beginTransaction();
     try {
@@ -988,7 +1019,7 @@ function users_store(array $admin): never
             VALUES (:name,:email,:password,:role,:active,1,:firstPassword,NOW(),NOW())')->execute([
                 'name' => $name, 'email' => $email, 'password' => password_hash($password, PASSWORD_DEFAULT),
                 'role' => $role, 'active' => $status === 'Active' ? 1 : 0,
-                'firstPassword' => $role === 'staff' ? 1 : 0,
+                'firstPassword' => 1,
             ]);
         audit($admin, 'user_created', $email);
         $pdo->commit();

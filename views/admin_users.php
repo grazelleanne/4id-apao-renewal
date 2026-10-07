@@ -354,7 +354,7 @@
           </div>
           <div class="pw-strength-bar-wrap"><div class="pw-strength-bar" id="modalStrengthBar"></div></div>
           <div class="pw-strength-text" id="modalStrengthText"></div>
-          <div class="field-help">New staff must replace this temporary password on their first login before accessing the dashboard.</div>
+          <div class="field-help">New Staff and Admin accounts must replace this temporary password with email verification before accessing the dashboard.</div>
         </div>
 
         <div class="mb-1">
@@ -364,6 +364,7 @@
         </div>
 
         <div class="security-note">For security, passwords are never displayed after the account is created. Share the initial password through an approved office channel.</div>
+        <div id="createUserError" role="alert" style="color:#ef4444;margin-top:10px" hidden></div>
 
         <div class="modal-actions">
           <button type="submit" class="save-btn">Create User</button>
@@ -541,7 +542,7 @@ async function secureFetch(url, options = {}) {
     'X-CSRF-TOKEN': CSRF,
     ...(options.headers || {})
   };
-  const res = await fetch(url, options);
+  const res = await actionOtpFetch(url, options);
   const json = await parseJsonSafely(res);
   if (!res.ok || !json.success) {
     throw new Error(json.message || (json.errors ? Object.values(json.errors).flat()[0] : 'Request failed.'));
@@ -715,6 +716,11 @@ document.addEventListener('DOMContentLoaded', function () {
 
   userForm.addEventListener('submit', async function(e){
     e.preventDefault();
+    const errorBox = document.getElementById('createUserError');
+    errorBox.hidden = true;
+    errorBox.textContent = '';
+    const submitButton = userForm.querySelector('button[type="submit"]');
+    function creationError(message) { errorBox.textContent = message; errorBox.hidden = false; }
     const payload={
       username:document.getElementById('userEmail').value.trim(),
       fullName:document.getElementById('userFullName').value.trim(),
@@ -723,12 +729,17 @@ document.addEventListener('DOMContentLoaded', function () {
       status:'Active',
       adminPassword:document.getElementById('createAdminPassword').value
     };
-    if(!payload.username||!payload.fullName||!payload.password||!payload.adminPassword){showToast('Complete all required fields.','error');return;}
-    if(!isStrongPassword(payload.password)){showToast('Use a password with at least 8 characters, uppercase, lowercase, number, and symbol.','error');return;}
+    if(!payload.username||!payload.fullName||!payload.password||!payload.adminPassword){creationError('Complete all required fields.');return;}
+    if(!isStrongPassword(payload.password)){creationError('Use a password with at least 8 characters, uppercase, lowercase, number, and symbol.');return;}
+    submitButton.disabled = true;
+    submitButton.textContent = 'Creating...';
     try{
       await secureFetch(ROUTES.usersStore,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
-      closeAddModal(); await loadUsers(); showToast('User account created and recorded in the Audit Log.');
-    }catch(err){showToast(err.message,'error');}
+      closeAddModal();
+      showToast('Account created. The new user must sign in, then verify their password change by email.');
+      await loadUsers();
+    }catch(err){creationError(err.message);}
+    finally { submitButton.disabled = false; submitButton.textContent = 'Create User'; }
   });
 
   // ===== EDIT USER =====
