@@ -994,6 +994,11 @@ function users_store(array $admin): never
         $pdo->commit();
     } catch (Throwable $error) {
         if ($pdo->inTransaction()) $pdo->rollBack();
+        if ($error instanceof PDOException && $error->getCode() === '42S22'
+            && str_contains($error->getMessage(), 'must_change_password')) {
+            error_log('[APAO PHP] Account creation requires database/add_staff_first_login_password.sql.');
+            json_response(['success' => false, 'message' => 'The first-login database update has not been applied. Run add_staff_first_login_password.sql in Adminer, then retry.'], 503);
+        }
         if ($error instanceof PDOException && (int) ($error->errorInfo[1] ?? 0) === 1062) {
             json_response(['success' => false, 'message' => 'An account with this email already exists.'], 409);
         }

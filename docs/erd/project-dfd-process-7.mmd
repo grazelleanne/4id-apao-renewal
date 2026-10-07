@@ -1,0 +1,11 @@
+%%{init: {"theme":"base","themeVariables":{"background":"#000000","primaryColor":"#000000","primaryTextColor":"#ffffff","primaryBorderColor":"#ffffff","lineColor":"#ffffff","textColor":"#ffffff","edgeLabelBackground":"#000000"},"flowchart":{"nodeSpacing":100,"rankSpacing":160,"htmlLabels":false,"curve":"stepAfter"}}}%%
+flowchart LR
+    actor6(["Administrator / System processes"])
+    process6(("7.0 Record and review audit activity"))
+    store6_0[["D - audit_logs"]]
+    actor6 -->|"Audit filters or system action details"| process6
+    process6 -->|"Filtered audit records and exports"| actor6
+    process6 -->|"System activity entries"| store6_0
+    store6_0 -->|"Audit records"| process6
+    classDef default fill:#000000,stroke:#ffffff,color:#ffffff;
+    linkStyle default stroke:#ffffff,color:#ffffff;

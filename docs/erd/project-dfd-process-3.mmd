@@ -1,0 +1,17 @@
+%%{init: {"theme":"base","themeVariables":{"background":"#000000","primaryColor":"#000000","primaryTextColor":"#ffffff","primaryBorderColor":"#ffffff","lineColor":"#ffffff","textColor":"#ffffff","edgeLabelBackground":"#000000"},"flowchart":{"nodeSpacing":100,"rankSpacing":160,"htmlLabels":false,"curve":"stepAfter"}}}%%
+flowchart LR
+    actor2(["Staff / Administrator"])
+    process2(("3.0 Inspect and record renewal"))
+    store2_0[["D - inspections"]]
+    store2_1[["D - personnel"]]
+    store2_2[["D - renewal_history"]]
+    actor2 -->|"Inspection request, findings and approval details"| process2
+    process2 -->|"Inspection details and renewal status"| actor2
+    process2 -->|"Inspection request and findings"| store2_0
+    store2_0 -->|"Inspection records"| process2
+    process2 -->|"Validity and approval updates"| store2_1
+    store2_1 -->|"Personnel and firearm details"| process2
+    process2 -->|"Renewal history entries"| store2_2
+    store2_2 -->|"Renewal history"| process2
+    classDef default fill:#000000,stroke:#ffffff,color:#ffffff;
+    linkStyle default stroke:#ffffff,color:#ffffff;

@@ -1,0 +1,53 @@
+%%{init: {"theme":"base","themeVariables":{"background":"#000000","primaryColor":"#000000","primaryTextColor":"#ffffff","primaryBorderColor":"#ffffff","lineColor":"#ffffff","textColor":"#ffffff","edgeLabelBackground":"#000000"},"flowchart":{"curve":"stepAfter","nodeSpacing":120,"rankSpacing":140,"padding":24,"htmlLabels":false}}}%%
+flowchart TB
+    start(["Start"])
+    login["Enter email and password"]
+    valid{"Active account and valid credentials?"}
+    error["Show login error / temporary lock after repeated failures"]
+    role{"Staff account?"}
+    first{"First login requires password change?"}
+    password["Create and confirm a new strong password"]
+    staff["Staff dashboard"]
+    admin["Admin dashboard"]
+    register["Register personnel and firearm details"]
+    submit["Submit inspection request"]
+    review["Admin reviews and saves inspection"]
+    approve{"Mark approved / ready for renewal?"}
+    draft["Keep inspection pending for review"]
+    renew["Update validity and record renewal history"]
+    notify["Notify staff about renewal"]
+    receipt["Manage property acknowledgement receipts"]
+    report["View / export reports and inspection PDF"]
+    logout["Sign out"]
+    end(["End"])
+    accounts["Manage accounts / create new staff with temporary password"]
+    personnel["Manage personnel / archive and restore"]
+    audit["Filter audit logs and export records"]
+    start --> login
+    login --> valid
+    valid -->|"No"| error
+    error -->|"Retry"| login
+    valid -->|"Yes"| role
+    role -->|"Yes"| first
+    role -->|"No"| admin
+    first -->|"Yes"| password
+    password -->|"Password updated"| staff
+    first -->|"No"| staff
+    staff --> register
+    register --> submit
+    submit --> review
+    review --> approve
+    approve -->|"No"| draft
+    draft -->|"Review later"| review
+    approve -->|"Yes"| renew
+    renew --> notify
+    notify --> receipt
+    receipt --> report
+    report --> logout
+    logout --> end
+    admin --> accounts
+    admin --> personnel
+    admin --> audit
+    admin -->|"Inspection management"| review
+    classDef default fill:#000000,stroke:#ffffff,color:#ffffff,stroke-width:1px;
+    linkStyle default stroke:#ffffff,color:#ffffff;

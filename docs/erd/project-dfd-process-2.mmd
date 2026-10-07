@@ -1,0 +1,11 @@
+%%{init: {"theme":"base","themeVariables":{"background":"#000000","primaryColor":"#000000","primaryTextColor":"#ffffff","primaryBorderColor":"#ffffff","lineColor":"#ffffff","textColor":"#ffffff","edgeLabelBackground":"#000000"},"flowchart":{"nodeSpacing":100,"rankSpacing":160,"htmlLabels":false,"curve":"stepAfter"}}}%%
+flowchart LR
+    actor1(["Staff / Administrator"])
+    process1(("2.0 Manage personnel"))
+    store1_0[["D - personnel"]]
+    actor1 -->|"Personnel and firearm details; archive or restore request"| process1
+    process1 -->|"Personnel records and save result"| actor1
+    process1 -->|"New or updated personnel records"| store1_0
+    store1_0 -->|"Personnel and firearm records"| process1
+    classDef default fill:#000000,stroke:#ffffff,color:#ffffff;
+    linkStyle default stroke:#ffffff,color:#ffffff;

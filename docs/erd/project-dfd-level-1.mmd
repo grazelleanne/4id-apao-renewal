@@ -1,0 +1,76 @@
+%%{init: {"theme":"base","themeVariables":{"background":"#000000","primaryColor":"#000000","primaryTextColor":"#ffffff","primaryBorderColor":"#ffffff","lineColor":"#ffffff","textColor":"#ffffff","edgeLabelBackground":"#000000"},"flowchart":{"nodeSpacing":100,"rankSpacing":160,"htmlLabels":false,"curve":"stepAfter"}}}%%
+flowchart LR
+    staff(["Staff"])
+    admin(["Administrator"])
+    process0(("1.0 Authenticate and manage accounts"))
+    data1[["D1 - users"]]
+    process1(("2.0 Manage personnel"))
+    data2[["D2 - personnel"]]
+    process2(("3.0 Inspect and record renewal"))
+    data3[["D3 - inspections"]]
+    data4[["D4 - renewal_history"]]
+    process3(("4.0 Manage property receipts"))
+    data5[["D5 - property_acknowledgement_receipts"]]
+    process4(("5.0 Manage notifications"))
+    data6[["D6 - notifications"]]
+    process5(("6.0 Generate reports"))
+    data7[["D7 - ics_settings"]]
+    process6(("7.0 Record and review audit activity"))
+    data8[["D8 - audit_logs"]]
+    staff -->|"Credentials or new password"| process0
+    process0 -->|"Authentication result and account details"| staff
+    admin -->|"Credentials, new password or account changes"| process0
+    process0 -->|"Authentication result and account details"| admin
+    process0 -->|"Account and password updates"| data1
+    data1 -->|"Account credentials and permissions"| process0
+    staff -->|"Personnel and firearm registration details"| process1
+    process1 -->|"Personnel records and save result"| staff
+    admin -->|"Personnel and firearm details; archive or restore request"| process1
+    process1 -->|"Personnel records and save result"| admin
+    process1 -->|"New or updated personnel records"| data2
+    data2 -->|"Personnel and firearm records"| process1
+    staff -->|"Inspection submission request"| process2
+    process2 -->|"Inspection details and renewal status"| staff
+    admin -->|"Inspection request, findings and approval details"| process2
+    process2 -->|"Inspection details and renewal status"| admin
+    process2 -->|"Inspection request and findings"| data3
+    data3 -->|"Inspection records"| process2
+    process2 -->|"Validity and approval updates"| data2
+    data2 -->|"Personnel and firearm details"| process2
+    process2 -->|"Renewal history entries"| data4
+    data4 -->|"Renewal history"| process2
+    staff -->|"Receipt, equipment and signature details"| process3
+    process3 -->|"Receipt records and printable receipt"| staff
+    admin -->|"Receipt, equipment and signature details"| process3
+    process3 -->|"Receipt records and printable receipt"| admin
+    process3 -->|"Receipt and replacement records"| data5
+    data5 -->|"Receipt records"| process3
+    data2 -->|"Recipient and issuing officer details"| process3
+    staff -->|"Notification request or read acknowledgement"| process4
+    process4 -->|"Notification messages and unread counts"| staff
+    admin -->|"Notification request or read acknowledgement"| process4
+    process4 -->|"Notification messages and unread counts"| admin
+    process4 -->|"Notification messages and read flags"| data6
+    data6 -->|"Notification records"| process4
+    data2 -->|"Personnel name and contact details"| process4
+    staff -->|"Report filters or export request"| process5
+    process5 -->|"Personnel reports, RPCSP, inspection PDFs"| staff
+    admin -->|"Report filters or export request"| process5
+    process5 -->|"Personnel reports, RPCSP, inspection PDFs"| admin
+    data2 -->|"Personnel, firearm and validity records"| process5
+    data3 -->|"Inspection findings and signatures"| process5
+    data7 -->|"Office and document settings"| process5
+    admin -->|"Audit filters and export request"| process6
+    process6 -->|"Filtered audit records and exports"| admin
+    process6 -->|"System activity entries"| data8
+    data8 -->|"Audit records"| process6
+    process1 -->|"Personnel registration notification data"| process4
+    process2 -->|"Inspection submission and renewal notification data"| process4
+    process0 -->|"User identity, action and target details"| process6
+    process1 -->|"User identity, action and target details"| process6
+    process2 -->|"User identity, action and target details"| process6
+    process3 -->|"User identity, action and target details"| process6
+    process4 -->|"User identity, action and target details"| process6
+    process5 -->|"User identity, action and target details"| process6
+    classDef default fill:#000000,stroke:#ffffff,color:#ffffff;
+    linkStyle default stroke:#ffffff,color:#ffffff;

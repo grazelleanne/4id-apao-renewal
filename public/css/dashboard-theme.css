@@ -1,9 +1,9 @@
 /* Application screens only. Printed forms keep their document styles. */
 @media screen {
   .app-dashboard {
-    --ui-page:#1a2025; --ui-panel:#23272f; --ui-panel-soft:#2b313b;
+    --ui-page:#181818; --ui-panel:#242424; --ui-panel-soft:#303030;
     --ui-text:#e5eaf2; --ui-muted:#a6b1c0; --ui-border:#363f4c;
-    --ui-brand:#55cc8d; --ui-active:#2b3b35;
+    --ui-brand:#55cc8d; --ui-active:#363636;
     background:var(--ui-page)!important; color:var(--ui-text);
     font-family:'Inter',system-ui,sans-serif; -webkit-font-smoothing:antialiased;
   }
@@ -16,6 +16,8 @@
   .app-dashboard main[class~="bg-[#1a2025]"] { background:var(--ui-page)!important; }
   .app-dashboard main { min-width:0; height:100dvh; overflow-y:auto; }
   .app-dashboard main.list-module-frozen { overflow-y:hidden; }
+  .app-dashboard main.app-main { background:var(--ui-page)!important; }
+  body.app-dashboard.light-mode main.app-main { --ui-page:#f1f5fa; }
   .app-dashboard main > header {
     position:sticky; top:-1px; z-index:40; background:var(--ui-page);
   }

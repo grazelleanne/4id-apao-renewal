@@ -1,0 +1,14 @@
+%%{init: {"theme":"base","themeVariables":{"background":"#000000","primaryColor":"#000000","primaryTextColor":"#ffffff","primaryBorderColor":"#ffffff","lineColor":"#ffffff","textColor":"#ffffff","edgeLabelBackground":"#000000"},"flowchart":{"nodeSpacing":100,"rankSpacing":160,"htmlLabels":false,"curve":"stepAfter"}}}%%
+flowchart LR
+    actor5(["Staff / Administrator"])
+    process5(("6.0 Generate reports"))
+    store5_0[["D - personnel"]]
+    store5_1[["D - inspections"]]
+    store5_2[["D - ics_settings"]]
+    actor5 -->|"Report filters or export request"| process5
+    process5 -->|"Personnel reports, RPCSP, inspection PDFs"| actor5
+    store5_0 -->|"Personnel, firearm and validity records"| process5
+    store5_1 -->|"Inspection findings and signatures"| process5
+    store5_2 -->|"Office and document settings"| process5
+    classDef default fill:#000000,stroke:#ffffff,color:#ffffff;
+    linkStyle default stroke:#ffffff,color:#ffffff;

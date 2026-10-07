@@ -128,7 +128,7 @@
     .modal-close-btn{position:absolute;right:0.75rem;top:0.75rem;border:none;background:none;color:#b0bac7;font-size:1.35rem;cursor:pointer;}
   </style>
   <link rel="stylesheet" href="/css/typography.css">
-  <link rel="stylesheet" href="/css/dashboard-theme.css">
+  <link rel="stylesheet" href="/css/dashboard-theme.css?v=<?php echo filemtime(dirname(__DIR__) . '/public/css/dashboard-theme.css'); ?>">
   <script src="/js/dashboard-lists.js" defer></script>
 </head>
 <body class="app-dashboard light-mode min-h-screen font-inter main-bg bg-[#1a2025]">

@@ -1,0 +1,21 @@
+%%{init: {"theme":"base","themeVariables":{"background":"#000000","primaryColor":"#000000","primaryTextColor":"#ffffff","primaryBorderColor":"#ffffff","lineColor":"#ffffff","textColor":"#ffffff","edgeLabelBackground":"#000000"},"flowchart":{"curve":"stepAfter","nodeSpacing":120,"rankSpacing":140,"padding":24,"htmlLabels":false}}}%%
+flowchart TB
+    staff["Staff dashboard"]
+    register["Register personnel and firearm details"]
+    submit["Submit inspection request"]
+    review["Admin reviews and saves inspection"]
+    notify["Notify staff about renewal"]
+    receipt["Manage property acknowledgement receipts"]
+    report["View / export reports and inspection PDF"]
+    logout["Sign out"]
+    end(["End"])
+    staff --> register
+    register --> submit
+    submit --> review
+    review -->|"When ready"| notify
+    notify --> receipt
+    receipt --> report
+    report --> logout
+    logout --> end
+    classDef default fill:#000000,stroke:#ffffff,color:#ffffff;
+    linkStyle default stroke:#ffffff,color:#ffffff;

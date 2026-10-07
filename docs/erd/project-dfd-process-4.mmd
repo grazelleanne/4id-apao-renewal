@@ -1,0 +1,13 @@
+%%{init: {"theme":"base","themeVariables":{"background":"#000000","primaryColor":"#000000","primaryTextColor":"#ffffff","primaryBorderColor":"#ffffff","lineColor":"#ffffff","textColor":"#ffffff","edgeLabelBackground":"#000000"},"flowchart":{"nodeSpacing":100,"rankSpacing":160,"htmlLabels":false,"curve":"stepAfter"}}}%%
+flowchart LR
+    actor3(["Staff / Administrator"])
+    process3(("4.0 Manage property receipts"))
+    store3_0[["D - property_acknowledgement_receipts"]]
+    store3_1[["D - personnel"]]
+    actor3 -->|"Receipt, equipment and signature details"| process3
+    process3 -->|"Receipt records and printable receipt"| actor3
+    process3 -->|"Receipt and replacement records"| store3_0
+    store3_0 -->|"Receipt records"| process3
+    store3_1 -->|"Recipient and issuing officer details"| process3
+    classDef default fill:#000000,stroke:#ffffff,color:#ffffff;
+    linkStyle default stroke:#ffffff,color:#ffffff;

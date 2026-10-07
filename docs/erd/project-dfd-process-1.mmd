@@ -1,0 +1,11 @@
+%%{init: {"theme":"base","themeVariables":{"background":"#000000","primaryColor":"#000000","primaryTextColor":"#ffffff","primaryBorderColor":"#ffffff","lineColor":"#ffffff","textColor":"#ffffff","edgeLabelBackground":"#000000"},"flowchart":{"nodeSpacing":100,"rankSpacing":160,"htmlLabels":false,"curve":"stepAfter"}}}%%
+flowchart LR
+    actor0(["Staff / Administrator"])
+    process0(("1.0 Authenticate and manage accounts"))
+    store0_0[["D - users"]]
+    actor0 -->|"Credentials, new password or account changes"| process0
+    process0 -->|"Authentication result and account details"| actor0
+    process0 -->|"Account and password updates"| store0_0
+    store0_0 -->|"Account credentials and permissions"| process0
+    classDef default fill:#000000,stroke:#ffffff,color:#ffffff;
+    linkStyle default stroke:#ffffff,color:#ffffff;

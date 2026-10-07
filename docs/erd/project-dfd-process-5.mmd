@@ -1,0 +1,13 @@
+%%{init: {"theme":"base","themeVariables":{"background":"#000000","primaryColor":"#000000","primaryTextColor":"#ffffff","primaryBorderColor":"#ffffff","lineColor":"#ffffff","textColor":"#ffffff","edgeLabelBackground":"#000000"},"flowchart":{"nodeSpacing":100,"rankSpacing":160,"htmlLabels":false,"curve":"stepAfter"}}}%%
+flowchart LR
+    actor4(["Staff / Administrator"])
+    process4(("5.0 Manage notifications"))
+    store4_0[["D - notifications"]]
+    store4_1[["D - personnel"]]
+    actor4 -->|"Notification request or read acknowledgement"| process4
+    process4 -->|"Notification messages and unread counts"| actor4
+    process4 -->|"Notification messages and read flags"| store4_0
+    store4_0 -->|"Notification records"| process4
+    store4_1 -->|"Personnel name and contact details"| process4
+    classDef default fill:#000000,stroke:#ffffff,color:#ffffff;
+    linkStyle default stroke:#ffffff,color:#ffffff;

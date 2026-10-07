@@ -1,0 +1,25 @@
+%%{init: {"theme":"base","themeVariables":{"background":"#000000","primaryColor":"#000000","primaryTextColor":"#ffffff","primaryBorderColor":"#ffffff","lineColor":"#ffffff","textColor":"#ffffff","edgeLabelBackground":"#000000"},"flowchart":{"curve":"stepAfter","nodeSpacing":120,"rankSpacing":140,"padding":24,"htmlLabels":false}}}%%
+flowchart TB
+    admin["Admin dashboard"]
+    accounts["Manage accounts / create new staff with temporary password"]
+    personnel["Manage personnel / archive and restore"]
+    audit["Filter audit logs and export records"]
+    review["Admin reviews and saves inspection"]
+    approve{"Mark approved / ready for renewal?"}
+    draft["Keep inspection pending for review"]
+    renew["Update validity and record renewal history"]
+    notify["Notify staff about renewal"]
+    report["View / export reports and inspection PDF"]
+    logout["Sign out"]
+    admin --> accounts
+    admin --> personnel
+    admin --> audit
+    admin --> review
+    review --> approve
+    approve -->|"No"| draft
+    approve -->|"Yes"| renew
+    renew --> notify
+    notify --> report
+    report --> logout
+    classDef default fill:#000000,stroke:#ffffff,color:#ffffff;
+    linkStyle default stroke:#ffffff,color:#ffffff;

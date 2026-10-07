@@ -159,7 +159,7 @@
     .export-btn:hover{background:#154d32;}
   </style>
   <link rel="stylesheet" href="/css/typography.css">
-  <link rel="stylesheet" href="/css/dashboard-theme.css">
+  <link rel="stylesheet" href="/css/dashboard-theme.css?v=<?php echo filemtime(dirname(__DIR__) . '/public/css/dashboard-theme.css'); ?>">
   <script src="/js/dashboard-lists.js" defer></script>
 </head>
 <body class="app-dashboard light-mode min-h-screen font-inter main-bg bg-[#1a2025]">

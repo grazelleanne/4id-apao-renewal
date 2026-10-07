@@ -1,0 +1,192 @@
+{
+  "tables": [
+    {
+      "name": "users",
+      "columns": 13
+    },
+    {
+      "name": "personnel",
+      "columns": 33
+    },
+    {
+      "name": "inspections",
+      "columns": 64
+    },
+    {
+      "name": "renewal_history",
+      "columns": 9
+    },
+    {
+      "name": "renewal_transactions",
+      "columns": 14
+    },
+    {
+      "name": "property_acknowledgement_receipts",
+      "columns": 29
+    },
+    {
+      "name": "notifications",
+      "columns": 10
+    },
+    {
+      "name": "password_resets_otp",
+      "columns": 4
+    },
+    {
+      "name": "audit_logs",
+      "columns": 15
+    },
+    {
+      "name": "ics_settings",
+      "columns": 13
+    },
+    {
+      "name": "personnel_data_conflicts",
+      "columns": 8
+    }
+  ],
+  "enforcedRelationships": [
+    {
+      "parent": "personnel",
+      "child": "inspections",
+      "field": "personnel_id",
+      "targetField": "id",
+      "optional": false,
+      "childOne": false,
+      "enforced": true
+    },
+    {
+      "parent": "personnel",
+      "child": "renewal_transactions",
+      "field": "personnel_id",
+      "targetField": "id",
+      "optional": false,
+      "childOne": false,
+      "enforced": true
+    },
+    {
+      "parent": "personnel",
+      "child": "property_acknowledgement_receipts",
+      "field": "personnel_id",
+      "targetField": "id",
+      "optional": false,
+      "childOne": false,
+      "enforced": true
+    },
+    {
+      "parent": "property_acknowledgement_receipts",
+      "child": "property_acknowledgement_receipts",
+      "field": "previous_par_id",
+      "targetField": "id",
+      "optional": true,
+      "childOne": false,
+      "enforced": true
+    },
+    {
+      "parent": "personnel",
+      "child": "property_acknowledgement_receipts",
+      "field": "issued_by_personnel_id",
+      "targetField": "id",
+      "optional": true,
+      "childOne": false,
+      "enforced": true
+    },
+    {
+      "parent": "personnel",
+      "child": "property_acknowledgement_receipts",
+      "field": "approved_by_personnel_id",
+      "targetField": "id",
+      "optional": true,
+      "childOne": false,
+      "enforced": true
+    },
+    {
+      "parent": "users",
+      "child": "property_acknowledgement_receipts",
+      "field": "created_by",
+      "targetField": "id",
+      "optional": true,
+      "childOne": false,
+      "enforced": true
+    },
+    {
+      "parent": "users",
+      "child": "property_acknowledgement_receipts",
+      "field": "updated_by",
+      "targetField": "id",
+      "optional": true,
+      "childOne": false,
+      "enforced": true
+    },
+    {
+      "parent": "users",
+      "child": "audit_logs",
+      "field": "user_id",
+      "targetField": "id",
+      "optional": true,
+      "childOne": false,
+      "enforced": true
+    },
+    {
+      "parent": "personnel",
+      "child": "personnel_data_conflicts",
+      "field": "personnel_id",
+      "targetField": "id",
+      "optional": false,
+      "childOne": false,
+      "enforced": true
+    }
+  ],
+  "logicalReferences": [
+    {
+      "parent": "users",
+      "child": "inspections",
+      "field": "inspected_by_user_id",
+      "targetField": "id",
+      "optional": true,
+      "enforced": false
+    },
+    {
+      "parent": "users",
+      "child": "renewal_transactions",
+      "field": "processed_by_user_id",
+      "targetField": "id",
+      "optional": true,
+      "enforced": false
+    },
+    {
+      "parent": "personnel",
+      "child": "notifications",
+      "field": "personnel_id",
+      "targetField": "id",
+      "optional": true,
+      "enforced": false
+    },
+    {
+      "parent": "personnel",
+      "child": "renewal_history",
+      "field": "item_number",
+      "targetField": "item_number",
+      "optional": true,
+      "enforced": false
+    },
+    {
+      "parent": "renewal_history",
+      "child": "renewal_transactions",
+      "field": "source_history_id",
+      "targetField": "id",
+      "childOne": true,
+      "optional": true,
+      "enforced": false
+    },
+    {
+      "parent": "users",
+      "child": "password_resets_otp",
+      "field": "email",
+      "targetField": "email",
+      "childOne": true,
+      "optional": true,
+      "enforced": false
+    }
+  ]
+}

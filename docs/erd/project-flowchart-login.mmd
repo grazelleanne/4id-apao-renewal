@@ -1,0 +1,22 @@
+%%{init: {"theme":"base","themeVariables":{"background":"#000000","primaryColor":"#000000","primaryTextColor":"#ffffff","primaryBorderColor":"#ffffff","lineColor":"#ffffff","textColor":"#ffffff","edgeLabelBackground":"#000000"},"flowchart":{"curve":"stepAfter","nodeSpacing":120,"rankSpacing":140,"padding":24,"htmlLabels":false}}}%%
+flowchart TB
+    start(["Start"])
+    login["Enter email and password"]
+    valid{"Active account and valid credentials?"}
+    error["Login failed. Retry from login page."]
+    role{"Staff account?"}
+    admin["Admin dashboard (page 3)"]
+    first{"First login requires password change?"}
+    password["Create and confirm a new strong password"]
+    staff["Staff dashboard (page 2)"]
+    start --> login
+    login --> valid
+    valid -->|"No"| error
+    valid -->|"Yes"| role
+    role -->|"Yes"| first
+    role -->|"No"| admin
+    first -->|"Yes"| password
+    password -->|"Password updated"| staff
+    first -->|"No"| staff
+    classDef default fill:#000000,stroke:#ffffff,color:#ffffff;
+    linkStyle default stroke:#ffffff,color:#ffffff;

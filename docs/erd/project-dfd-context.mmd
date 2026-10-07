@@ -1,0 +1,11 @@
+%%{init: {"theme":"base","themeVariables":{"background":"#000000","primaryColor":"#000000","primaryTextColor":"#ffffff","primaryBorderColor":"#ffffff","lineColor":"#ffffff","textColor":"#ffffff","edgeLabelBackground":"#000000"},"flowchart":{"nodeSpacing":100,"rankSpacing":160,"htmlLabels":false,"curve":"stepAfter"}}}%%
+flowchart LR
+    staff(["Staff"])
+    system(("0 - APAO Renewal System"))
+    admin(["Administrator"])
+    staff -->|"Credentials, personnel, inspections, receipts, report requests"| system
+    system -->|"Access result, personnel records, notifications, reports"| staff
+    admin -->|"Credentials, account changes, approvals, filters"| system
+    system -->|"Account and personnel records, inspection results, reports, audit logs"| admin
+    classDef default fill:#000000,stroke:#ffffff,color:#ffffff;
+    linkStyle default stroke:#ffffff,color:#ffffff;
