@@ -8,9 +8,12 @@
     queued = false;
     const tables = [...main.querySelectorAll('table')].filter(table =>
       table.dataset.listLayout !== 'pagination' &&
+      !table.matches('.rpcsp-table') &&
       table.querySelector('thead') && table.querySelector('tbody[id]') &&
-      !table.closest('[role="dialog"], .modal-box, .modal-bg, .rpcsp-preview-section, .rpcsp-paper, .ics-paper, #viewChecklist, #page-registration')
+      !table.closest('[role="dialog"], .modal-box, .modal-bg, .rpcsp-preview-section, .rpcsp-preview-shell, .rpcsp-document, .rpcsp-paper, .ics-paper, #viewChecklist, #page-registration')
     );
+    let visibleLists = 0;
+    let controlsFit = true;
     for (const table of tables) {
       let scroller = table.parentElement;
       if (!scroller.classList.contains('list-scroll-region')) {
@@ -26,6 +29,7 @@
         table.classList.add('aligned-list-table');
       }
       if (!table.getClientRects().length) continue;
+      visibleLists++;
       // Reserve space for the card's record count and pagination below the table.
       let footer = 8;
       for (let container = scroller; container && container !== main; container = container.parentElement) {
@@ -42,9 +46,16 @@
       }
       const top = scroller.getBoundingClientRect().top;
       const available = main.getBoundingClientRect().bottom - Math.max(top, 100) - footer;
+      if (available < 180) controlsFit = false;
       const height = Math.max(180, available);
       const value = `${Math.round(height)}px`;
       if (scroller.style.maxHeight !== value) scroller.style.maxHeight = value;
+    }
+    // Freeze the outer module only when all controls and footer fit. Long forms,
+    // document previews and small screens keep their normal accessible page scroll.
+    const freeze = visibleLists === 1 && controlsFit && main.scrollHeight <= main.clientHeight + 2;
+    if (main.classList.contains('list-module-frozen') !== freeze) {
+      main.classList.toggle('list-module-frozen', freeze);
     }
   }
   function schedule() {

@@ -314,8 +314,8 @@
 
         </div>
       </div>
-      <div class="overflow-x-auto paginated-list-region">
-        <table class="w-full text-xs text-left personnel-table aligned-list-table" data-list-layout="pagination">
+      <div class="overflow-x-auto">
+        <table class="w-full text-xs text-left personnel-table aligned-list-table">
           <thead>
             <tr>
               <th class="py-2 px-2">Item #</th>
