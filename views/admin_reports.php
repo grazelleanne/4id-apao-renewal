@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <script src="/js/dashboard-state.js"></script>
+  <script src="/js/dashboard-state.js?v=<?php echo substr(hash_file('sha256', dirname(__DIR__) . '/public/js/dashboard-state.js'), 0, 12); ?>"></script>
   <style>.dashboard-restoring #sidebar,.dashboard-restoring #sidebar *{transition:none!important}.dashboard-restoring #sidebar.sidebar-collapsed #sb-icon-menu{display:block!important}.dashboard-restoring #sidebar.sidebar-collapsed #sb-icon-close{display:none!important}</style>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -182,8 +182,8 @@
 
   </style>
   <link rel="stylesheet" href="/css/typography.css">
-  <link rel="stylesheet" href="/css/dashboard-theme.css?v=<?php echo filemtime(dirname(__DIR__) . '/public/css/dashboard-theme.css'); ?>">
-  <script src="/js/dashboard-lists.js" defer></script>
+  <link rel="stylesheet" href="/css/dashboard-theme.css?v=<?php echo substr(hash_file('sha256', dirname(__DIR__) . '/public/css/dashboard-theme.css'), 0, 12); ?>">
+  <script src="/js/dashboard-lists.js?v=<?php echo substr(hash_file('sha256', dirname(__DIR__) . '/public/js/dashboard-lists.js'), 0, 12); ?>" defer></script>
 </head>
 <body class="app-dashboard light-mode min-h-screen font-inter main-bg bg-[#1a2025]">
 <div class="flex min-h-screen">

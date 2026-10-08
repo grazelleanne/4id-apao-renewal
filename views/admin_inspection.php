@@ -1,8 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <script src="/js/dashboard-state.js"></script>
-  <script defer src="/js/inspection-notify.js"></script>
+  <script src="/js/dashboard-state.js?v=<?php echo substr(hash_file('sha256', dirname(__DIR__) . '/public/js/dashboard-state.js'), 0, 12); ?>"></script>
   <style>.dashboard-restoring #sidebar,.dashboard-restoring #sidebar *{transition:none!important}.dashboard-restoring #sidebar.sidebar-collapsed #sb-icon-menu{display:block!important}.dashboard-restoring #sidebar.sidebar-collapsed #sb-icon-close{display:none!important}</style>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -268,8 +267,8 @@ body.light-mode .btn-save-under{background:#ede9fe;color:#6d28d9;border-color:#c
 
 </style>
   <link rel="stylesheet" href="/css/typography.css">
-  <link rel="stylesheet" href="/css/dashboard-theme.css?v=<?php echo filemtime(dirname(__DIR__) . '/public/css/dashboard-theme.css'); ?>">
-  <script src="/js/dashboard-lists.js" defer></script>
+  <link rel="stylesheet" href="/css/dashboard-theme.css?v=<?php echo substr(hash_file('sha256', dirname(__DIR__) . '/public/css/dashboard-theme.css'), 0, 12); ?>">
+  <script src="/js/dashboard-lists.js?v=<?php echo substr(hash_file('sha256', dirname(__DIR__) . '/public/js/dashboard-lists.js'), 0, 12); ?>" defer></script>
 <script src="/js/ui-dialog.js" defer></script>
 </head>
 <body class="app-dashboard light-mode min-h-screen font-inter app-body">
@@ -1237,7 +1236,8 @@ body.light-mode .btn-save-under{background:#ede9fe;color:#6d28d9;border-color:#c
     }
 
     // ── Notify Staff Modal ──
-    function openNotifyModal(p) {
+    async function openNotifyModal(p) {
+      if (document.getElementById('sendRenewalNotifyBtn').disabled) return;
       notifyItem = p;
       document.getElementById('notifyPersonnelName').textContent =
         `${p.lastName} ${p.rank}, ${p.firstName}${p.middleName?' '+p.middleName.charAt(0)+'.':''}`;
@@ -1247,7 +1247,7 @@ body.light-mode .btn-save-under{background:#ede9fe;color:#6d28d9;border-color:#c
         `Please process the ICS renewal for ${p.lastName} ${p.rank}, ${p.firstName} (AFP Serial: ${p.afpSerialNumber||'N/A'}). Firearm has been cleared for renewal.`;
       document.getElementById('notifyError').classList.add('hidden');
       document.getElementById('notifySuccess').classList.add('hidden');
-      document.getElementById('notifyModal').classList.add('open');
+      await sendNotify();
     }
     function closeNotifyModal() {
       document.getElementById('notifyModal').classList.remove('open');
@@ -1275,9 +1275,11 @@ body.light-mode .btn-save-under{background:#ede9fe;color:#6d28d9;border-color:#c
           await showUiDialog({title:'Staff Notified',message:'Staff have been notified. This personnel has been removed from Ready for Renewal.'});
         } else {
           errEl.textContent = data.error || 'Failed to send renewal.'; errEl.classList.remove('hidden');
+          await showUiDialog({title:'Unable to notify staff',message:errEl.textContent});
         }
       } catch(e) {
         errEl.textContent='Network error. Please try again.'; errEl.classList.remove('hidden');
+        await showUiDialog({title:'Unable to notify staff',message:errEl.textContent});
       } finally { button.disabled = false; }
     }
     document.getElementById('notifyModal').addEventListener('click',function(e){if(e.target===this)closeNotifyModal();});
