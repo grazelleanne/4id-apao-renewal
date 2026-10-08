@@ -461,7 +461,8 @@ function personnel_rows(bool $archived = false, ?int $itemNumber = null): array
                 (OCTET_LENGTH(p.photo) > 0) AS has_photo,
                 (OCTET_LENGTH(p.signature) > 0) AS has_signature,
                 i.status AS inspection_status, i.remarks AS inspection_remarks,
-                i.date_registered AS inspection_date_registered,
+                COALESCE(NULLIF(CAST(i.date_registered AS CHAR),\'0000-00-00\'),
+                         DATE(p.created_at),DATE(i.created_at)) AS inspection_date_registered,
                 i.updated_at AS inspection_updated_at
          FROM personnel p
          LEFT JOIN inspections i ON i.id = (
