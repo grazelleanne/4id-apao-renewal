@@ -1543,7 +1543,7 @@
                   <div><label class="reg-label">Pistol Type <span style="color:#ef4444;">*</span></label><input id="rp_pistolType" class="reg-input" value="Pistol" readonly></div>
                   <div><label class="reg-label">Pistol Serial Number <span style="color:#ef4444;">*</span></label><input type="text" id="rp_pistolSerial" class="reg-input" placeholder="Enter pistol serial number"></div>
                   <div><label class="reg-label">Quantity of Ammo Issued <span style="color:#ef4444;">*</span></label><input type="number" id="rp_ammo" class="reg-input" placeholder="Enter quantity" min="0" step="1" oninput="if (this.value !== '' && Number(this.value) < 0) this.value = 0;"></div>
-                  <div><label class="reg-label">Date Issued</label><input type="date" id="rp_dateIssued" class="reg-input"></div>
+                  <div><label class="reg-label">Date Issued</label><input type="date" id="rp_dateIssued" class="reg-input" value="<?php echo e(now()->toDateString()); ?>" max="<?php echo e(now()->toDateString()); ?>"></div>
                   <div><label class="reg-label">Issued By <span style="color:#ef4444;">*</span></label><select id="rp_issuedBy" class="reg-input" onchange="rpIssuerChanged(this)"><option value="">Select issuing officer</option><option>MS ROSEMARIE O VILBAR</option><option>MS EVANGELINE M SINGUEO, Ph.D.</option><option value="__add_name__">Add name...</option></select><div id="rp_issuedBy_add" style="display:none;margin-top:8px"><label class="reg-label" for="rp_issuedBy_name">New issuing officer name</label><input id="rp_issuedBy_name" class="reg-input" maxlength="255" placeholder="Enter complete name"><div style="display:flex;gap:8px;margin-top:8px"><button type="button" class="reg-btn reg-btn-next" onclick="rpAddIssuer('rp_issuedBy')">Add name</button><button type="button" class="reg-btn reg-btn-prev" onclick="rpCancelIssuer('rp_issuedBy')">Cancel</button></div><small id="rp_issuedBy_error" role="alert" style="color:#ef4444"></small></div></div>
                   <div><label class="reg-label">Armory / Issuing Unit</label><input type="text" id="rp_armory" class="reg-input" placeholder="Enter armory / unit"></div>
                 </div>
@@ -3647,6 +3647,12 @@
       errEl.style.display = 'none';
       rpSetStep(2);
     } else if (step === 2) {
+      var issueDateInput = document.getElementById('rp_dateIssued');
+      if (!issueDateInput.checkValidity()) {
+        issueDateInput.reportValidity();
+        issueDateInput.focus();
+        return;
+      }
       var fields2 = [
         {id:'rp_pistolNomenclature', label:'Nomenclature of Pistol'},
         {id:'rp_pistolType',         label:'Pistol Type'},
@@ -3802,6 +3808,7 @@
       pistolType:         document.getElementById('rp_pistolType').value,
       pistolSerialNumber: document.getElementById('rp_pistolSerial').value,
       issuedBy:           document.getElementById('rp_issuedBy').value,
+      dateIssued:         document.getElementById('rp_dateIssued').value,
       qtyAmmo:            ammoQuantity,
     photo:              rpPhotoBase64 || null,
       signature:          rpSignatureBase64 || null,
@@ -3828,7 +3835,8 @@
             document.getElementById('rp_photo').value = '';
             document.getElementById('rp_photoSource').textContent = '';
             ['rp_lastName','rp_firstName','rp_middleName','rp_afpSerial','rp_email','rp_contact','rp_pistolSerial','rp_ammo','rp_issuedBy','rp_armory','rp_remarks','rp_afosMos','rp_branch','rp_otherCitizenship'].forEach(function(id){var el=document.getElementById(id);if(el)el.value='';});
-            ['rp_rank','rp_unit','rp_pistolNomenclature','rp_civil','rp_gender','rp_citizenship','rp_dob','rp_dateIssued'].forEach(function(id){var el=document.getElementById(id);if(el)el.value='';});
+            ['rp_rank','rp_unit','rp_pistolNomenclature','rp_civil','rp_gender','rp_citizenship','rp_dob'].forEach(function(id){var el=document.getElementById(id);if(el)el.value='';});
+            document.getElementById('rp_dateIssued').value = document.getElementById('rp_dateIssued').max;
             document.getElementById('rp_citizenship').value='Filipino';rpToggleOtherCitizenship();
             ['rp_parIssuedBy','rp_parApprovedBy','rp_parValidUntil'].forEach(function(id){document.getElementById(id).value='';});
             window._rpNavigate('dashboard');

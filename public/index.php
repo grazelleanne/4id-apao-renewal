@@ -850,6 +850,13 @@ function personnel_store(array $user): never
         $errors['contactNumber'] = ['Enter a valid contact number.'];
     }
     $birthDate = personnel_text($input, 'dateOfBirth', 10);
+    $issueDate = personnel_text($input, 'dateIssued', 20);
+    if ($issueDate !== '') {
+        $parsedIssueDate = DateTimeImmutable::createFromFormat('!Y-m-d', $issueDate);
+        if (!$parsedIssueDate || $parsedIssueDate->format('Y-m-d') !== $issueDate || $parsedIssueDate > new DateTimeImmutable('today')) {
+            $errors['dateIssued'] = ['Date issued must be a valid date on or before today.'];
+        }
+    }
     $parsedDate = DateTimeImmutable::createFromFormat('!Y-m-d', $birthDate);
     if (!$parsedDate || $parsedDate->format('Y-m-d') !== $birthDate || $parsedDate > new DateTimeImmutable('today')) {
         $errors['dateOfBirth'] = ['Enter a valid date of birth that is not in the future.'];
