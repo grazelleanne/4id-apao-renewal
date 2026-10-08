@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <script src="/js/dashboard-state.js"></script>
+  <style>.dashboard-restoring #sidebar,.dashboard-restoring #sidebar *{transition:none!important}.dashboard-restoring #sidebar.sidebar-collapsed #sb-icon-menu{display:block!important}.dashboard-restoring #sidebar.sidebar-collapsed #sb-icon-close{display:none!important}</style>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="stylesheet" href="/css/mobile-dashboard.css">
@@ -167,6 +169,7 @@
 
   <!-- SIDEBAR -->
   <aside id="sidebar">
+    <script>restoreDashboardState();</script>
     <div class="sb-top">
       <div class="sb-logo">
         <img src="<?php echo e(asset('images/logo.png')); ?>" alt="Logo" onerror="this.src=''">

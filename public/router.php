@@ -9,7 +9,7 @@ if (preg_match('#(?:^|/)\.|\.(?:env|sql|log|ini|bak|pem|key)$#i', $decodedPath)
     exit;
 }
 $root = realpath(__DIR__);
-$file = is_string($path) ? realpath(__DIR__ . $path) : false;
+$file = is_string($path) ? realpath(__DIR__ . $decodedPath) : false;
 if ($root !== false && $file !== false && str_starts_with($file, $root . DIRECTORY_SEPARATOR) && is_file($file)) {
     return false;
 }

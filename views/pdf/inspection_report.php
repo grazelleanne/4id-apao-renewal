@@ -94,14 +94,15 @@ $dateToday = $formatDate($inspection['inspected_at'] ?? null, date('d F Y'));
 $dateApproved = $formatDate($inspection['inspected_at'] ?? null, '-');
 $nextRenewalDate = trim((string) ($p['date_of_validity'] ?? ''))
     ?: trim((string) ($inspection['next_renewal_date'] ?? ''));
-if ($nextRenewalDate === '' && !$hasUnserviceable && !$hasRepair && !empty($p['date_of_birth'])) {
+// Serviceable report previews also show the birthday-based renewal date before final approval.
+if (!$hasUnserviceable && !$hasRepair && !empty($p['date_of_birth'])) {
     try {
         $approvalDate = ($p['date_approved'] ?? '') ?: (($inspection['inspected_at'] ?? '') ?: date('Y-m-d'));
         if ($approvalDate !== '') {
             $nextRenewalDate = birthday_renewal_validity((string) $p['date_of_birth'], new DateTimeImmutable($approvalDate));
         }
     } catch (Exception $error) {
-        $nextRenewalDate = '';
+        // Keep the recorded validity when legacy birthday data cannot be calculated.
     }
 }
 $nextRenewal = $formatDate($nextRenewalDate ?: null, '-');

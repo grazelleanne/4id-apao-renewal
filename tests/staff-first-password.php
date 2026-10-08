@@ -5,6 +5,7 @@ require dirname(__DIR__) . '/src/ActionOtp.php';
 function brevo_send_transactional_email(string $email, string $name, string $subject, string $html): string {
     preg_match('/<strong>(\d{6})<\/strong>/', $html, $match);
     $GLOBALS['sentCode'] = $match[1];
+    $GLOBALS['mailRecipient'] = $email;
     return 'test';
 }
 final class PasswordResponse extends RuntimeException {
@@ -109,6 +110,7 @@ foreach (['admin', 'staff'] as $role) {
     $input = ['username' => 'new@example.com', 'fullName' => 'New Account', 'role' => $role,
         'status' => 'Active', 'password' => 'Temporary1!', 'adminPassword' => 'Personal2!'];
     expect(fn() => users_store($record), 201);
+    if ($mailRecipient !== 'new@example.com') throw new RuntimeException('Creation OTP must go to the new Staff or Admin email.');
     if ($createdUser['firstPassword'] !== 1 || !password_verify('Temporary1!', $createdUser['password'])) throw new RuntimeException('New account did not receive a temporary hashed password.');
 }
 $input['adminPassword'] = 'wrong';

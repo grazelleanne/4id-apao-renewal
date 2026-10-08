@@ -5,10 +5,15 @@ require dirname(__DIR__) . '/src/bootstrap.php';
 require dirname(__DIR__) . '/src/PdfReport.php';
 require dirname(__DIR__) . '/src/ActionOtp.php';
 require dirname(__DIR__) . '/src/Profile.php';
+require dirname(__DIR__) . '/src/UserManagement.php';
 $path = rtrim((string) parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH), '/') ?: '/';
 $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 
 try {
+    if ($path === '/admin/users/update' && $method === 'PUT') {
+        require_post(['PUT']);
+        users_update(require_user(['admin','super_admin']));
+    }
     if (in_array($path, ['/admin/profile','/staff/profile'], true) && $method === 'PUT') {
         require_post(['PUT']);
         $user = require_user($path === '/staff/profile' ? ['staff'] : ['admin','super_admin']);
@@ -881,7 +886,7 @@ function personnel_store(array $user): never
              VALUES
              (:item,NULL,:last_name,:first_name,:middle_name,:rank,:afp_serial,:afos_mos,:branch,:email,
               :contact,:issued_by,:birth_date,:citizenship,:civil_status,:pistol_name,:pistol_serial,
-              :pistol_type,:ammo,:unit,\'pending\',\'active\',\'inspection\',0,:photo,:signature,NOW(),NOW())'
+              :pistol_type,:ammo,:unit,\'new\',\'active\',\'inspection\',0,:photo,:signature,NOW(),NOW())'
         );
         $insert->execute([
             'item' => $itemNumber,
@@ -1104,6 +1109,11 @@ function audit_data(): never
 function inspection_data(): never
 {
     $rows = personnel_rows();
+    $notifiedItems = array_fill_keys(db()->query("SELECT DISTINCT i.item_number FROM inspections i
+        JOIN notifications n ON n.personnel_id=i.personnel_id AND n.type='renewal_ready'
+        AND n.created_at >= COALESCE(i.updated_at,i.created_at)
+        WHERE i.id=(SELECT MAX(latest.id) FROM inspections latest WHERE latest.item_number=i.item_number)
+        AND i.status='approved'")->fetchAll(PDO::FETCH_COLUMN), true);
     $pending = 0;
     $under = 0;
     $approved = 0;
@@ -1111,12 +1121,21 @@ function inspection_data(): never
         $row['dateRegistered'] = $row['inspectionDateRegistered'] ?? null;
         $status = strtolower(trim((string) ($row['inspectionStatus'] ?? '')));
         $icsStatus = strtolower(trim((string) ($row['icsStatus'] ?? '')));
+        // Staff must submit a new registration before it enters the admin queue.
+        if (in_array($icsStatus, ['', 'inspection'], true) && !in_array($status, ['under', 'approved'], true)) {
+            $row['inspectionStatus'] = 'unsubmitted';
+            continue;
+        }
         if (($row['approvedStatus'] ?? '') === 'expired' && ($icsStatus !== 'under' || $status === 'approved')) {
             $row['inspectionStatus'] = 'expired';
         } elseif ($status === 'pending' && $icsStatus === 'under') {
             $pending++;
             $row['inspectionStatus'] = 'pending';
         } elseif ($status === 'approved' || $icsStatus === 'ready') {
+            if (isset($notifiedItems[$row['itemNumber']])) {
+                $row['inspectionStatus'] = 'notified';
+                continue;
+            }
             $approved++;
             $row['inspectionStatus'] = 'approved';
         } elseif ($status === 'under' || $icsStatus === 'under') {
@@ -1130,7 +1149,7 @@ function inspection_data(): never
         }
     }
     unset($row);
-    $rows = array_values(array_filter($rows, static fn (array $row): bool => !in_array($row['inspectionStatus'], ['renewed', 'expired'], true)));
+    $rows = array_values(array_filter($rows, static fn (array $row): bool => !in_array($row['inspectionStatus'], ['renewed', 'expired', 'notified', 'unsubmitted'], true)));
     json_response(['success' => true, 'data' => $rows, 'pending' => $pending, 'under' => $under, 'approved' => $approved]);
 }
 
@@ -1183,7 +1202,7 @@ function ics_send_for_inspection(int $itemNumber, array $user): never
 
         $alreadySent = $currentStatus === 'under';
         if (!$alreadySent) {
-            $pdo->prepare('UPDATE personnel SET ics_status=\'under\',updated_at=NOW() WHERE id=:id')
+            $pdo->prepare('UPDATE personnel SET ics_status=\'under\',approved_status=CASE WHEN approved_status=\'new\' THEN \'pending\' ELSE approved_status END,updated_at=NOW() WHERE id=:id')
                 ->execute(['id' => $personnel['id']]);
 
             $inspectionQuery = $pdo->prepare(

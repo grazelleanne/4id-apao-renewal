@@ -85,11 +85,13 @@
   /* ===== HUB ===== */
   .par-hub-header h1{font-size:1.7rem;font-weight:800;letter-spacing:.01em;}
   .par-hub-header p{margin:2px 0 0;}
-  .par-hub-card{border-radius:14px;overflow:hidden;cursor:pointer;transition:transform .15s,box-shadow .15s;}
+  .par-hub-card{display:flex;flex-direction:column;height:100%;border-radius:14px;overflow:hidden;cursor:pointer;transition:transform .15s,box-shadow .15s;}
   .par-hub-card:hover{transform:translateY(-2px);box-shadow:0 14px 30px rgba(0,0,0,.35);}
   .par-hub-card-green{background:#e7f6ec;}
   .par-hub-card-amber{background:#fdf3d8;}
-  .par-hub-card-body{display:flex;gap:16px;padding:22px 22px 16px;align-items:flex-start;}
+  .par-hub-card-body{display:flex;flex:1;gap:16px;padding:22px 22px 16px;align-items:flex-start;}
+  .par-hub-card-body > div:last-child{display:flex;flex-direction:column;align-items:flex-start;flex:1;height:100%;}
+  .par-hub-card-body .par-hub-btn{margin-top:auto;}
   .par-hub-icon{width:56px;height:56px;border-radius:12px;background:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 2px 6px rgba(0,0,0,.1);}
   .par-hub-title{font-size:1.15rem;font-weight:800;letter-spacing:.02em;margin:2px 0 6px;}
   .par-hub-desc{font-size:.82rem;color:#3f4a43;margin:0 0 14px;line-height:1.5;max-width:380px;}
@@ -98,7 +100,7 @@
   .par-hub-btn-green:hover{background:#166534;}
   .par-hub-btn-amber{background:#b8860f;}
   .par-hub-btn-amber:hover{background:#9c700c;}
-  .par-hub-footer{display:flex;align-items:center;gap:8px;padding:11px 22px;font-size:.78rem;font-weight:700;}
+  .par-hub-footer{display:flex;align-items:center;gap:8px;margin-top:auto;min-height:46px;box-sizing:border-box;padding:11px 22px;font-size:.78rem;font-weight:700;}
   .par-hub-footer-green{background:#cdeed9;color:#15803d;}
   .par-hub-footer-amber{background:#faeab8;color:#8a6108;}
 
@@ -841,7 +843,7 @@
           <button type="button" onclick="parBackFromDoc()" id="par_cancelBtn" style="background:transparent;border:1px solid #2a2d35;color:#64748b;border-radius:8px;padding:10px 22px;font-size:.85rem;font-weight:600;cursor:pointer;">Cancel</button>
           <button type="button" id="par_confirmBtn" onclick="parConfirmSend()" style="background:#1a9e4d;color:#fff;border:none;border-radius:8px;padding:10px 22px;font-size:.85rem;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:7px;">
             <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
-            <span id="par_confirmBtnLabel">Confirm &amp; Send for Inspection</span>
+            <span id="par_confirmBtnLabel">Confirm</span>
           </button>
         </div>
       </div>
@@ -1815,7 +1817,7 @@
     var editableIds = ['par_dateIssued', 'par_issuedBy', 'par_approvedBy', 'par_remarks'];
 
     var cfg = {
-      issue:   { title: 'Process Property Acknowledgement Receipt (PAR)', sub: 'Review the automatically assigned equipment package and complete the necessary information before generating the PAR.', btn: 'Confirm & Send for Inspection', color: '#1a9e4d', show: true, cancel: 'Cancel' },
+      issue:   { title: 'Process Property Acknowledgement Receipt (PAR)', sub: 'Review the automatically assigned equipment package and complete the necessary information before generating the PAR.', btn: 'Confirm', color: '#1a9e4d', show: true, cancel: 'Cancel' },
       view:    { title: 'View Property Acknowledgement Receipt (PAR)', sub: 'Reference copy of the issued PAR. Use Print PAR to reprint.', btn: '', color: '', show: false, cancel: 'Close' },
       update:  { title: 'Update Property Acknowledgement Receipt (PAR)', sub: 'Edit the details of this issued PAR record.', btn: 'Save Changes', color: '#0ea5e9', show: true, cancel: 'Cancel' },
       replace: { title: 'Replace / Reissue Property Acknowledgement Receipt (PAR)', sub: 'This will generate a new PAR number for this personnel.', btn: 'Confirm Replacement', color: '#a855f7', show: true, cancel: 'Cancel' }
@@ -1860,7 +1862,7 @@
     var qtyAmmo = Number(r.qtyAmmo) || 0;
     var ammoCost = qtyAmmo * AMMO_UNIT_COST;
     var total = pkg.unitCost + ammoCost;
-    var tax = total * TAX_RATE;
+    var tax = Math.round(total * TAX_RATE * 100) / 100;
     var net = total - tax;
 
     setText('par_name', fullName || '—');
@@ -1956,7 +1958,7 @@
     var qtyAmmo = Number(r.qtyAmmo) || 0;
     var ammoCost = qtyAmmo * AMMO_UNIT_COST;
     var total = pkg.unitCost + ammoCost;
-    var tax = total * TAX_RATE;
+    var tax = Math.round(total * TAX_RATE * 100) / 100;
     var net = total - tax;
 
     var issuedBy = document.getElementById('par_issuedBy').value.trim();

@@ -301,6 +301,11 @@ function birthday_renewal_validity(string $birthday, ?DateTimeImmutable $renewed
 function renewal_status_for_personnel(array $personnel, ?DateTimeImmutable $today = null): string
 {
     $today ??= new DateTimeImmutable('today');
+    if (strtolower(trim((string) ($personnel['approved_status'] ?? ''))) === 'new'
+        && strtolower(trim((string) ($personnel['inspection_status'] ?? ''))) !== 'approved'
+        && strtolower(trim((string) ($personnel['ics_status'] ?? ''))) !== 'ready') {
+        return 'new';
+    }
     $validity = $personnel['date_of_validity'] ?? null;
     if (is_string($validity) && trim($validity) !== '') {
         $date = DateTimeImmutable::createFromFormat('!Y-m-d', substr($validity, 0, 10));

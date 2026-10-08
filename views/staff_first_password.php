@@ -6,6 +6,7 @@
   <title>Create Your Password | APAO</title>
   <link rel="stylesheet" href="/css/typography.css">
   <style>
+    .password-field{position:relative}.password-field input{padding-right:48px}.password-eye{position:absolute;right:6px;top:50%;transform:translateY(-50%);padding:8px;display:flex;align-items:center;background:transparent;color:#607567}.password-eye:hover{color:#197544}.password-eye:focus-visible{outline:2px solid #197544;outline-offset:2px}
     *{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;padding:24px;background:#eef5f0;color:#1d3025;font-family:Inter,system-ui,sans-serif}
     main{width:100%;max-width:460px;padding:32px;background:white;border:1px solid #dce7df;border-radius:20px;box-shadow:0 12px 40px #153c2510}
     h1{font-size:25px;margin:0 0 12px}p{font-size:14px;line-height:1.6;color:#607567}label{display:block;font-size:14px;font-weight:600;margin:18px 0 8px}
@@ -21,12 +22,17 @@
   <form id="firstPasswordForm" method="post" action="<?= $user->role === 'staff' ? '/staff/first-password' : '/admin/first-password' ?>">
     <?= csrf_field() ?>
     <label for="newPassword">New password</label>
-    <input id="newPassword" name="password" type="password" minlength="8" maxlength="1024" autocomplete="new-password" required>
+    <div class="password-field">
+      <input id="newPassword" name="password" type="password" minlength="8" maxlength="1024" autocomplete="new-password" required>
+      <button type="button" class="password-eye" aria-controls="newPassword" aria-label="Show new password" aria-pressed="false"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/><path class="eye-slash" d="M3 3l18 18"/></svg></button>
+    </div>
     <div class="meter" aria-hidden="true"><div id="strengthFill"></div></div>
     <div id="strength" aria-live="polite">Use 8+ characters, uppercase, lowercase, a number and a symbol.</div>
     <label for="confirmPassword">Confirm new password</label>
-    <input id="confirmPassword" name="password_confirmation" type="password" minlength="8" maxlength="1024" autocomplete="new-password" required>
-    <label class="show"><input id="showPasswords" type="checkbox">Show passwords</label>
+    <div class="password-field">
+      <input id="confirmPassword" name="password_confirmation" type="password" minlength="8" maxlength="1024" autocomplete="new-password" required>
+      <button type="button" class="password-eye" aria-controls="confirmPassword" aria-label="Show confirmation password" aria-pressed="false"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/><path class="eye-slash" d="M3 3l18 18"/></svg></button>
+    </div>
     <p id="error" role="alert" hidden></p>
     <button id="savePassword" class="submit" type="submit">Save password and continue</button>
   </form>
@@ -44,8 +50,16 @@
     document.getElementById('strengthFill').style.background = score === 5 ? '#197544' : '#dc5d50';
     document.getElementById('strength').textContent = score === 5 ? 'Strong password' : 'Weak password — use 8+ characters, uppercase, lowercase, a number and a symbol.';
   });
-  document.getElementById('showPasswords').addEventListener('change', event => {
-    password.type = confirm.type = event.target.checked ? 'text' : 'password';
+  document.querySelectorAll('.password-eye').forEach(button => {
+    const input = document.getElementById(button.getAttribute('aria-controls'));
+    const label = input.id === 'newPassword' ? 'new password' : 'confirmation password';
+    button.addEventListener('click', () => {
+      const visible = input.type === 'password';
+      input.type = visible ? 'text' : 'password';
+      button.setAttribute('aria-pressed', String(visible));
+      button.setAttribute('aria-label', (visible ? 'Hide ' : 'Show ') + label);
+      button.querySelector('.eye-slash').style.display = visible ? 'none' : '';
+    });
   });
   form.addEventListener('submit', async event => {
     event.preventDefault();

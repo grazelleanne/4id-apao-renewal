@@ -82,7 +82,8 @@ audit events, output escaping, security headers, and private/no-store responses.
 ## Checks
 
 ```powershell
-php tests/smoke.php
+Get-ChildItem tests -Filter '*.php' | Where-Object { $_.Name -ne 'report-ui-fixture.php' } | ForEach-Object { php $_.FullName; if ($LASTEXITCODE -ne 0) { throw "Failed: $($_.Name)" } }
+node tests/admin-report-ui.cjs
 ```
 
 ## UI templates
@@ -90,8 +91,19 @@ php tests/smoke.php
 All templates are framework-free PHP files under `views/`. The application
 does not use Laravel, Blade, Composer, or a template compilation step.
 
-The full interface is present and its read-only dashboards use the vanilla
-database. Some advanced write workflows still need their Laravel controller
-logic ported: personnel editing/archive actions, inspection processing, PAR
-issuance/replacement, password-reset email, notifications updates, scheduled
-jobs, and the original branded/signature PDF generation.
+Implemented server workflows include personnel creation/edit/archive/restore,
+inspection approval and staff notifications, profile updates, account creation,
+account activation/deactivation, and administrator password resets. Login uses
+password and CAPTCHA; password changes and account creation require email OTP.
+New accounts and administrator-reset passwords require a personal password
+before dashboard access. OTP delivery requires a working Brevo configuration.
+
+Known incomplete workflows: the Forgot Password page calls recovery endpoints
+that are not implemented; PAR issuance/replacement changes are currently saved
+in browser localStorage rather than persisted through a server API. Scheduled
+jobs and some original branded/signature PDF features are also not fully ported.
+Do not describe these as completed or verified database-backed features.
+
+The automated checks use mocks for most database and mail operations. Passing
+checks do not replace testing against MySQL, live Brevo delivery, or browser
+camera permissions on the deployed site.

@@ -1,6 +1,8 @@
   <!DOCTYPE html>
   <html lang="en">
   <head>
+  <script src="/js/dashboard-state.js"></script>
+  <style>.dashboard-restoring #sidebar,.dashboard-restoring #sidebar *{transition:none!important}.dashboard-restoring #sidebar.sidebar-collapsed #sb-icon-menu{display:block!important}.dashboard-restoring #sidebar.sidebar-collapsed #sb-icon-close{display:none!important}</style>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="stylesheet" href="/css/mobile-dashboard.css">
@@ -416,6 +418,10 @@
       .ics-main-table{width:100%;border-collapse:collapse;table-layout:fixed;margin-top:0.35rem;}
       .ics-main-table th,.ics-main-table td{border:1px solid #1f2938;font-size:0.76rem;color:#101826;padding:0.2rem 0.28rem;vertical-align:top;}
       .ics-main-table th{background:#f1f6fb;font-weight:800;text-align:center;vertical-align:middle;}
+      .ics-inventory-photo{display:block;width:100%;max-width:180px;height:190px;object-fit:contain;margin:0 auto;background:white;}
+      .ics-main-table tbody td{border-top:0;border-bottom:0;}
+      .ics-main-table tbody tr:last-child td{border-bottom:1px solid #1f2938;}
+      .ics-paper-grid{background-image:none;}
       .ics-signatures{width:100%;margin-top:0.6rem;border-collapse:collapse;table-layout:fixed;}
       .ics-signatures td{border:1px solid #1f2938;min-height:128px;height:128px;vertical-align:top;padding:0.24rem 0.32rem;color:#101826;font-size:0.74rem;}
       .ics-sign-wrap{height:100%;display:flex;flex-direction:column;justify-content:space-between;}
@@ -644,6 +650,7 @@
 
     
     <aside id="sidebar">
+    <script>restoreDashboardState();</script>
       <div class="sb-top">
         <div class="sb-logo">
           <img src="<?php echo e(asset('images/logo.png')); ?>" alt="Logo" onerror="this.src=''">
@@ -992,7 +999,7 @@
                     <tr><td class="label">Unit:</td><td class="value" id="previewUnit">8IB, 4ID, PA</td><td class="label">Serial No:</td><td class="value" id="previewSerial">AFP023947</td></tr>
                   </table>
                   <table class="ics-main-table">
-                    <colgroup><col style="width:8%"><col style="width:7%"><col style="width:13%"><col style="width:13%"><col style="width:26%"><col style="width:17%"><col style="width:16%"></colgroup>
+                    <colgroup><col style="width:7%"><col style="width:6%"><col style="width:12%"><col style="width:12%"><col style="width:28%"><col style="width:26%"><col style="width:9%"></colgroup>
                     <thead>
                       <tr><th rowspan="2">Quantity</th><th rowspan="2">Unit</th><th colspan="2">Amount</th><th rowspan="2">Description</th><th rowspan="2">Inventory Item No.</th><th rowspan="2">Estimated Useful Life</th></tr>
                       <tr><th>Unit Cost</th><th>Total Cost</th></tr>
@@ -1000,33 +1007,32 @@
                     <tbody>
     <tr>
       <td class="text-center" contenteditable="true">1</td>
-      <td class="text-center" contenteditable="true">eu</td>
-      <td class="text-center" id="previewFirearmUnitCost" contenteditable="true">P 16,450.00</td>
-      <td class="text-center" id="previewFirearmTotal" contenteditable="true">P 16,450.00</td>
+      <td class="text-center" contenteditable="true">ea</td>
+      <td class="text-center" id="previewFirearmUnitCost" contenteditable="true">P 20,000.00</td>
+      <td class="text-center" id="previewFirearmTotal" contenteditable="true">P 20,000.00</td>
       <td>
         <span id="previewFirearm" contenteditable="true">9mm Glock17</span><br>
+        <span id="previewFirearmModel" contenteditable="true"></span><br>
         FASN: <strong id="previewSerialDesc" contenteditable="true">AFP023947</strong><br>
-        Custodian: <strong id="previewRankName" contenteditable="true">CPT Juan D. Cruz</strong>
+        accessories:
       </td>
-      <td class="text-center" id="previewInventoryItem" contenteditable="true">AFP023947</td>
-      <td class="text-center" contenteditable="true">5 yrs</td>
+      <td class="text-center" rowspan="9"><div style="font-weight:700;margin-top:8px;">FA STENCIL:</div><div id="previewInventoryItem" contenteditable="true"></div></td>
+      <td class="text-center" rowspan="9" contenteditable="true"></td>
     </tr>
-    <tr><td contenteditable="true">&nbsp;</td><td contenteditable="true"></td><td contenteditable="true"></td><td contenteditable="true"></td><td contenteditable="true">Back Straps</td><td contenteditable="true"></td><td contenteditable="true"></td></tr>
-    <tr><td contenteditable="true">&nbsp;</td><td contenteditable="true"></td><td contenteditable="true"></td><td contenteditable="true"></td><td contenteditable="true">Magazine (17 rds Cap)</td><td contenteditable="true"></td><td contenteditable="true"></td></tr>
-    <tr><td contenteditable="true">&nbsp;</td><td contenteditable="true"></td><td contenteditable="true"></td><td contenteditable="true"></td><td contenteditable="true">Cleaning Kit</td><td contenteditable="true"></td><td contenteditable="true"></td></tr>
-    <tr><td contenteditable="true">&nbsp;</td><td contenteditable="true"></td><td contenteditable="true"></td><td contenteditable="true"></td><td contenteditable="true">Speed Loader</td><td contenteditable="true"></td><td contenteditable="true"></td></tr>
-    <tr><td contenteditable="true">&nbsp;</td><td contenteditable="true"></td><td contenteditable="true"></td><td contenteditable="true"></td><td contenteditable="true">User's Manual</td><td contenteditable="true"></td><td contenteditable="true"></td></tr>
-    <tr><td contenteditable="true">&nbsp;</td><td contenteditable="true"></td><td contenteditable="true"></td><td contenteditable="true"></td><td contenteditable="true">Gun Case</td><td contenteditable="true"></td><td contenteditable="true"></td></tr>
-    <tr><td contenteditable="true">&nbsp;</td><td contenteditable="true"></td><td contenteditable="true"></td><td contenteditable="true"></td><td contenteditable="true">Magazine Pouch (3 mag capacity)</td><td contenteditable="true"></td><td contenteditable="true"></td></tr>
+    <tr><td contenteditable="true">3</td><td contenteditable="true">Pcs</td><td></td><td></td><td contenteditable="true">Mag Assy (13 rds cap)</td></tr>
+    <tr><td contenteditable="true">1</td><td contenteditable="true">Pcs</td><td></td><td></td><td contenteditable="true">Cleaning Kit</td></tr>
+    <tr><td contenteditable="true">1</td><td contenteditable="true">Set</td><td></td><td></td><td contenteditable="true">Speed Loader</td></tr>
+    <tr><td contenteditable="true">1</td><td contenteditable="true">Pc</td><td></td><td></td><td contenteditable="true">User's Manual</td></tr>
+    <tr><td contenteditable="true">1</td><td contenteditable="true">Pc</td><td></td><td></td><td contenteditable="true">Gun Case</td></tr>
+    <tr><td contenteditable="true">1</td><td contenteditable="true">Pc</td><td></td><td></td><td contenteditable="true">Drop Leg Holster w/ two (2) extra magazine pouches</td></tr>
     <tr>
       <td class="text-center" id="previewAmmo" contenteditable="true">68</td>
       <td class="text-center" contenteditable="true">rds</td>
-      <td class="text-center" id="previewAmmoUnitCost" contenteditable="true">P 15.07</td>
-      <td class="text-center" id="previewAmmoTotal" contenteditable="true">P 1,024.76</td>
+      <td class="text-center" id="previewAmmoUnitCost" contenteditable="true">P 21.75</td>
+      <td class="text-center" id="previewAmmoTotal" contenteditable="true"></td>
       <td id="previewAmmoDescription" contenteditable="true">Ctg, 9mm, Ball</td>
-      <td contenteditable="true"></td>
-      <td contenteditable="true"></td>
     </tr>
+    <tr><td colspan="3" style="text-align:right;font-weight:700;">TOTAL =</td><td id="previewIcsTotal" style="font-weight:700;"></td><td></td></tr>
   </tbody>
                   </table>
                   <table class="ics-signatures">
@@ -1048,6 +1054,7 @@
                 <label class="ics-label">Unit <input id="unitField" class="ics-mini-input" type="text" placeholder="8IB, 4ID, PA" /></label>
                 <label class="ics-label">Firearm / Pistol <input id="icsFirearmField" class="ics-mini-input" type="text" placeholder="9mm Glock17" /></label>
                 <label class="ics-label">AFP Serial # <input id="icsSerialField" class="ics-mini-input" type="text" placeholder="AFP023947" /></label>
+                <label class="ics-label">Pistol Serial # <input id="icsPistolSerialField" class="ics-mini-input" type="text" /></label>
                 <label class="ics-label">Ammo Qty (rds) <input id="icsAmmoField" class="ics-mini-input" type="number" min="0" placeholder="68" /></label>
                 <label class="ics-label">Received By <input id="receivedByField" class="ics-mini-input" type="text" placeholder="John Doe" /></label>
                 <label class="ics-label">Issued By <input id="issuedByField" class="ics-mini-input" type="text" value="MS ROSEMARIE O VILBAR" placeholder="MS ROSEMARIE O VILBAR" /></label>
@@ -1103,7 +1110,7 @@
           <span style="font-size:0.85rem;font-weight:700;color:#f6e05e;">Within Renewal Period</span>
         </div>
         <p id="renewal-sum-within" style="font-size:1.9rem;font-weight:800;color:#e5eaf2;margin:0;"><?php echo e($staffRenewalCounts->get('within', 0)); ?></p>
-        <p style="font-size:0.7rem;color:#5c4a1a;margin:2px 0 0;">Expiring within 60 days</p>
+        <p style="font-size:0.7rem;color:#5c4a1a;margin:2px 0 0;">Due for renewal within 60 days</p>
       </button>
       <button onclick="renewalSetTab('expired')" class="text-left rounded-xl p-4 border" style="background:#2d0a0a;border-color:#5c1a1a;">
         <div class="flex items-center gap-3 mb-1">
@@ -1488,7 +1495,7 @@
       <div id="page-registration" class="page-section">
         <div class="mb-4">
           <h1 class="text-2xl font-bold force-light-text">New Personnel Registration</h1>
-          <p class="text-sm mt-1" style="color:#64748b;">Register a new personnel and firearm record. After submission, the record will have a status of Pending Inspection</p>
+          <p class="text-sm mt-1" style="color:#64748b;">Register a new personnel and firearm record. After submission, the personnel status will be New and the record will be For Inspection</p>
         </div>
         <div style="display:flex;align-items:center;justify-content:center;gap:0;margin-bottom:28px;">
           <div id="regStep1" style="display:flex;flex-direction:column;align-items:center;gap:5px;"><div id="regCircle1" class="reg-step-circle is-active" style="width:34px;height:34px;border-radius:50%;border:2px solid #d4a017;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.82rem;color:#d4a017;background:#1e2128;">1</div><div id="regLabel1" style="font-size:.7rem;color:#d4a017;font-weight:600;white-space:nowrap;">Personal Information</div></div>
@@ -1607,7 +1614,7 @@
           <div style="width:260px;flex-shrink:0;position:sticky;top:20px;">
             <div class="bg-[#23272f] rounded-xl border border-[#2a2d35] p-5">
               <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;"><span style="font-weight:700;font-size:.82rem;color:#e5eaf2;">REGISTRATION STATUS</span></div>
-              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;"><span style="font-size:.75rem;color:#64748b;">Status after submission</span><span style="background:#d4a017;color:#13151a;border-radius:6px;font-weight:700;font-size:.75rem;padding:4px 10px;">Pending Inspection</span></div>
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;"><span style="font-size:.75rem;color:#64748b;">Status after submission</span><span style="background:#d4a017;color:#13151a;border-radius:6px;font-weight:700;font-size:.75rem;padding:4px 10px;">New - For Inspection</span></div>
               <p style="font-size:.75rem;color:#64748b;line-height:1.6;">The record will be submitted for admin inspection.</p>
             </div>
           </div>
@@ -3346,9 +3353,10 @@
     set('unitField',          p.unit || '');
     set('icsFirearmField',    p.pistolNomenclature || '');
     set('icsSerialField',     p.afpSerialNumber || '');
+    set('icsPistolSerialField', p.pistolSerialNumber || '');
     set('icsAmmoField',       p.qtyAmmo != null ? String(p.qtyAmmo) : '');
     set('receivedByField',    ln.toUpperCase() + ', ' + fn.toUpperCase());
-    set('issuedByField',      'MS ROSEMARIE O VILBAR');
+    set('issuedByField',      p.issuedBy || 'MS ROSEMARIE O VILBAR');
 
     var paperPhoto = document.getElementById('previewPaperPhoto');
     var sidePhoto = document.getElementById('icsPhotoSidePreview');
@@ -3360,7 +3368,7 @@
 
     // ── Auto-load personnel's own signature from registration (base64) ──
     applySig('custodian', personnelSignatureSrc(p.signature));
-    applySig('issuing', ICS_DEFAULT_ISSUER_SIGNATURE);
+    applySig('issuing', issuerSignature(p.issuedBy || ICS_DEFAULT_ISSUER));
 
     var crumb = document.getElementById('ics-doc-crumb');
     if (crumb) crumb.textContent = '→ ICS for ' + ln + ', ' + fn + ' (' + (p.afpSerialNumber || '') + ')';
@@ -3377,7 +3385,9 @@
         if (!paper) return;
         const printWindow = window.open('', '_blank', 'width=900,height=1100');
         if (!printWindow) { window.print(); return; }
-        const pageStyles = document.querySelector('style')?.innerHTML || '';
+        const pageStyles = Array.from(document.querySelectorAll('style')).map(style => style.textContent).join('\n');
+        const printPaper = paper.cloneNode(true);
+        printPaper.querySelectorAll('img').forEach(img => { if (img.getAttribute('src')) img.src = new URL(img.getAttribute('src'), document.baseURI).href; });
         printWindow.document.open();
         printWindow.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Inventory Custodian Slip</title><style>
           ${pageStyles}
@@ -3385,8 +3395,12 @@
           html,body{margin:0!important;padding:0!important;background:#fff!important;}
           .ics-paper{width:210mm!important;max-width:210mm!important;min-height:0!important;height:auto!important;margin:0!important;border:0!important;border-radius:0!important;box-shadow:none!important;overflow:visible!important;}
           .ics-paper-grid{width:210mm!important;min-height:0!important;padding:10mm!important;background-image:none!important;box-sizing:border-box!important;}
+          body{font-family:Arial,sans-serif;color:#101826;}
+          .ics-paper,.ics-paper *{visibility:visible!important;color:#101826!important;}
+          .ics-logo{width:70px!important;height:70px!important;}
+          .ics-paper{break-inside:avoid;}
         </style>  
-</head><body>${paper.outerHTML}</body></html>`);
+</head><body>${printPaper.outerHTML}</body></html>`);
         printWindow.document.close();
         const images = Array.from(printWindow.document.images);
         Promise.all(images.map(img => img.complete ? Promise.resolve() : new Promise(resolve => { img.onload = resolve; img.onerror = resolve; })))
@@ -3409,12 +3423,14 @@
         setTimeout(function(){ t.style.opacity='0'; t.style.transition='opacity 0.35s'; setTimeout(function(){ t.remove(); },350); }, 3000);
       }
 
-      const ICS_KEY="staff_ics_details_v1", PHOTO_KEY="staff_ics_photo_v1", FIREARM_COST=16450, AMMO_COST=15.07;
+      const ICS_KEY="staff_ics_details_v1", PHOTO_KEY="staff_ics_photo_v1", FIREARM_COST=20000, AMMO_COST=21.75;
       const PLACEHOLDER="<?php echo e(asset('images/logo.png')); ?>";
       const ICS_DEFAULT_ISSUER="MS ROSEMARIE O VILBAR";
-      const ICS_DEFAULT_ISSUER_SIGNATURE=<?php echo json_encode(asset('images/ROSEMARIE VILBAR.png'), 15, 512) ?>;
+      const ICS_DEFAULT_ISSUER_SIGNATURE=<?php echo json_encode('data:image/png;base64,' . base64_encode(file_get_contents(public_path('images/ROSEMARIE VILBAR.png'))), 15, 512) ?>;
+      const ICS_SINGUEO_SIGNATURE=<?php echo json_encode('data:image/png;base64,' . base64_encode(file_get_contents(public_path('images/SINGUEO EVAGELINE.png'))), 15, 512) ?>;
+      function issuerSignature(name){return /singueo/i.test(name||'') ? ICS_SINGUEO_SIGNATURE : /vilbar/i.test(name||'') ? ICS_DEFAULT_ISSUER_SIGNATURE : null;}
       const defaults={icsNo:"ICS-0001",icsValidity:"",rank:"CPT",personnelName:"Juan D. Cruz",unit:"8IB, 4ID, PA",firearm:"9mm Glock17",serial:"AFP023947",ammo:"68",receivedBy:"John Doe",issuedBy:ICS_DEFAULT_ISSUER};
-      const fieldMap={icsNo:"icsNoField",icsValidity:"icsValidityField",rank:"rankField",personnelName:"personnelNameField",unit:"unitField",firearm:"icsFirearmField",serial:"icsSerialField",ammo:"icsAmmoField",receivedBy:"receivedByField",issuedBy:"issuedByField"};
+      const fieldMap={icsNo:"icsNoField",icsValidity:"icsValidityField",rank:"rankField",personnelName:"personnelNameField",unit:"unitField",firearm:"icsFirearmField",serial:"icsSerialField",pistolSerial:"icsPistolSerialField",ammo:"icsAmmoField",receivedBy:"receivedByField",issuedBy:"issuedByField"};
       function fmtDate(val){if(!val)return"";const d=new Date(val);if(isNaN(d))return val;const mo=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];return`${String(d.getDate()).padStart(2,"0")}/${mo[d.getMonth()]}/${d.getFullYear()}`;}
       function todayStr(){const d=new Date();return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;}
       function setText(id,v){const el=document.getElementById(id);if(el)el.textContent=v||"";}
@@ -3430,14 +3446,16 @@
         setText("previewUnit",d.unit||"");
         setText("previewSerial",serial);
         setText("previewFirearm",d.firearm||"");
-        setText("previewSerialDesc",serial||"—");
-        setText("previewInventoryItem",serial||"—");
+        setText("previewFirearmModel",/\.45|cal\s*45/i.test(d.firearm||"")?"M1911HC, (RIA)":"");
+        setText("previewSerialDesc",d.pistolSerial||"—");
+        setText("previewInventoryItem",d.pistolSerial||"—");
         setText("previewRankName",`${rank} ${name}`.trim()||"—");
         setText("previewFirearmUnitCost",money(FIREARM_COST));
         setText("previewFirearmTotal",money(FIREARM_COST));
         setText("previewAmmo",String(ammoQty));
         setText("previewAmmoUnitCost",money(AMMO_COST));
         setText("previewAmmoTotal",money(ammoTotal));
+        setText("previewIcsTotal",money(FIREARM_COST+ammoTotal));
         setText("previewAmmoDescription",/\.45|cal\s*45/i.test(d.firearm||"")?"Ctg, Cal .45, Ball":"Ctg, 9mm, Ball");
         setText("previewReceivedBy",(d.receivedBy||"").toUpperCase()||"—");
         setText("previewIssuedBy",(d.issuedBy||"").toUpperCase()||"—");
@@ -3466,7 +3484,8 @@
       const ICS_SIG_C_KEY="staff_ics_sig_custodian_v1",ICS_SIG_I_KEY="staff_ics_sig_issuing_v1";
       function applySig(side,src){const isC=side==="custodian";const previewImg=document.getElementById(isC?"custodianSigPreview":"issuingSigPreview");const placeholder=document.getElementById(isC?"custodianSigPlaceholder":"issuingSigPlaceholder");const paperWrap=document.getElementById(isC?"previewCustodianSigWrap":"previewIssuingSigWrap");const paperImg=document.getElementById(isC?"previewCustodianSig":"previewIssuingSig");const key=isC?ICS_SIG_C_KEY:ICS_SIG_I_KEY;if(src){if(previewImg){previewImg.src=src;previewImg.style.display="block";}if(placeholder)placeholder.style.display="none";if(paperWrap)paperWrap.style.display="flex";if(paperImg)paperImg.src=src;try{localStorage.setItem(key,src);}catch(e){}}else{if(previewImg){previewImg.src="";previewImg.style.display="none";}if(placeholder)placeholder.style.display="inline";if(paperWrap)paperWrap.style.display="none";if(paperImg)paperImg.src="";try{localStorage.removeItem(key);}catch(e){}}}
       // Custodian signature is now loaded per-personnel in icsOpenDoc() — not from a global key
-      try{const s=localStorage.getItem(ICS_SIG_I_KEY);applySig("issuing",s||ICS_DEFAULT_ISSUER_SIGNATURE);}catch(e){applySig("issuing",ICS_DEFAULT_ISSUER_SIGNATURE);}
+      try{const s=localStorage.getItem(ICS_SIG_I_KEY);applySig("issuing",s?.startsWith('data:image/') ? s : issuerSignature(icsData.issuedBy));}catch(e){applySig("issuing",issuerSignature(icsData.issuedBy));}
+      document.getElementById('issuedByField')?.addEventListener('input',()=>applySig('issuing',issuerSignature(document.getElementById('issuedByField').value)));
       function wireSignature(side){const isC=side==="custodian";const inputEl=document.getElementById(isC?"custodianSigInput":"issuingSigInput");const uploadBtn=document.getElementById(isC?"uploadCustodianSigBtn":"uploadIssuingSigBtn");const clearBtn=document.getElementById(isC?"clearCustodianSigBtn":"clearIssuingSigBtn");uploadBtn?.addEventListener("click",()=>inputEl?.click());clearBtn?.addEventListener("click",()=>{applySig(side,null);if(inputEl)inputEl.value="";});inputEl?.addEventListener("change",function(){const file=this.files?.[0];if(!file||!file.type.startsWith("image/"))return;const reader=new FileReader();reader.onload=ev=>applySig(side,ev.target.result);reader.readAsDataURL(file);});}
       wireSignature("custodian");wireSignature("issuing");
 

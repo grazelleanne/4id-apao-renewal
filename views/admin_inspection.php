@@ -1,6 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <script src="/js/dashboard-state.js"></script>
+  <script defer src="/js/inspection-notify.js"></script>
+  <style>.dashboard-restoring #sidebar,.dashboard-restoring #sidebar *{transition:none!important}.dashboard-restoring #sidebar.sidebar-collapsed #sb-icon-menu{display:block!important}.dashboard-restoring #sidebar.sidebar-collapsed #sb-icon-close{display:none!important}</style>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="stylesheet" href="/css/mobile-dashboard.css">
@@ -267,10 +270,12 @@ body.light-mode .btn-save-under{background:#ede9fe;color:#6d28d9;border-color:#c
   <link rel="stylesheet" href="/css/typography.css">
   <link rel="stylesheet" href="/css/dashboard-theme.css?v=<?php echo filemtime(dirname(__DIR__) . '/public/css/dashboard-theme.css'); ?>">
   <script src="/js/dashboard-lists.js" defer></script>
+<script src="/js/ui-dialog.js" defer></script>
 </head>
 <body class="app-dashboard light-mode min-h-screen font-inter app-body">
 <div class="flex min-h-screen">
 <aside id="sidebar">
+    <script>restoreDashboardState();</script>
   <div class="sb-top">
     <div class="sb-logo">
       <img src="<?php echo e(asset('images/logo.png')); ?>" alt="Logo" onerror="this.src=''">
@@ -615,7 +620,7 @@ body.light-mode .btn-save-under{background:#ede9fe;color:#6d28d9;border-color:#c
       <div id="notifySuccess" class="hidden text-green-400 text-xs mb-3 p-2 rounded bg-green-400/10 border border-green-400/20"></div>
 
       <div class="flex gap-3">
-        <button onclick="sendNotify()" class="btn-renew flex-1 text-center">
+        <button id="sendRenewalNotifyBtn" onclick="sendNotify()" class="btn-renew flex-1 text-center">
           Send for Renewal
         </button>
         <button onclick="closeNotifyModal()" class="btn-print flex-1 justify-center">Cancel</button>
@@ -1249,11 +1254,14 @@ body.light-mode .btn-save-under{background:#ede9fe;color:#6d28d9;border-color:#c
       notifyItem = null;
     }
     async function sendNotify() {
+      const button = document.getElementById('sendRenewalNotifyBtn');
+      if (button.disabled) return;
       const errEl = document.getElementById('notifyError');
       const sucEl = document.getElementById('notifySuccess');
       errEl.classList.add('hidden'); sucEl.classList.add('hidden');
       const msg = document.getElementById('notifyMessage').value.trim();
       if (!msg) { errEl.textContent='Please enter a message.'; errEl.classList.remove('hidden'); return; }
+      button.disabled = true;
       try {
         const res  = await fetch('/admin/inspection/notify-staff', {
           method:'POST',
@@ -1262,14 +1270,15 @@ body.light-mode .btn-save-under{background:#ede9fe;color:#6d28d9;border-color:#c
         });
         const data = await res.json();
         if (data.success) {
-          sucEl.textContent='Staff notified successfully ✓'; sucEl.classList.remove('hidden');
-          setTimeout(()=>{ closeNotifyModal(); loadData(); }, 1800);
+          closeNotifyModal();
+          await loadData();
+          await showUiDialog({title:'Staff Notified',message:'Staff have been notified. This personnel has been removed from Ready for Renewal.'});
         } else {
           errEl.textContent = data.error || 'Failed to send renewal.'; errEl.classList.remove('hidden');
         }
       } catch(e) {
         errEl.textContent='Network error. Please try again.'; errEl.classList.remove('hidden');
-      }
+      } finally { button.disabled = false; }
     }
     document.getElementById('notifyModal').addEventListener('click',function(e){if(e.target===this)closeNotifyModal();});
 

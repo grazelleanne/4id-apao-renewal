@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <script src="/js/dashboard-state.js"></script>
+  <style>.dashboard-restoring #sidebar,.dashboard-restoring #sidebar *{transition:none!important}.dashboard-restoring #sidebar.sidebar-collapsed #sb-icon-menu{display:block!important}.dashboard-restoring #sidebar.sidebar-collapsed #sb-icon-close{display:none!important}</style>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="stylesheet" href="/css/mobile-dashboard.css">
@@ -201,11 +203,13 @@
   <link rel="stylesheet" href="/css/typography.css">
   <link rel="stylesheet" href="/css/dashboard-theme.css?v=<?php echo filemtime(dirname(__DIR__) . '/public/css/dashboard-theme.css'); ?>">
   <script src="/js/dashboard-lists.js" defer></script>
+<script src="/js/ui-dialog.js" defer></script>
 </head>
 <body class="app-dashboard light-mode min-h-screen font-inter main-bg bg-[#1a2025]">
 <div class="flex min-h-screen">
 
   <aside id="sidebar">
+    <script>restoreDashboardState();</script>
     <div class="sb-top">
       <div class="sb-logo">
         <img src="<?php echo e(asset('images/logo.png')); ?>" alt="Logo" onerror="this.src=''">
@@ -725,16 +729,16 @@ const validityDisplay = row.dateOfValidity
         const selected = pageRows[idx];
         if (!selected) return;
         const displayName = `${selected.firstName || ""} ${selected.lastName || ""}`.trim() || `Item #${selected.itemNumber}`;
-        if (!confirm(`Archive ${displayName}? They will be moved to Archive Data.`)) return;
+        if (!await showUiDialog({title:'Archive Personnel?',message:`Archive ${displayName}? They will be moved to Archive Data.`,confirmText:'Archive',cancelText:'Cancel',danger:true})) return;
         const actualIndex = personnel.findIndex(p => p.itemNumber === selected.itemNumber);
         if (actualIndex === -1) return;
         try {
           this.disabled = true;
           const res  = await fetch(ROUTES.personnelDelete(selected.itemNumber), { method:'DELETE', headers:{ 'X-CSRF-TOKEN':CSRF, 'Accept':'application/json' }, signal:AbortSignal.timeout(20000) });
           const json = await res.json();
-          if (json.success) { personnel.splice(actualIndex, 1); renderPersonnelTable(); }
-          else alert(json.message || json.error || 'Archive failed.');
-        } catch (e) { alert('Archive failed. Please try again.'); }
+          if (json.success) { personnel.splice(actualIndex, 1); renderPersonnelTable(); await showUiDialog({title:'Personnel Archived',message:`${displayName} has been moved to Archive Data.`}); }
+          else await showUiDialog({title:'Archive Failed',message:json.message || json.error || 'Archive failed.'});
+        } catch (e) { await showUiDialog({title:'Archive Failed',message:'Archive failed. Please try again.'}); }
         finally { this.disabled = false; }
       })
     );

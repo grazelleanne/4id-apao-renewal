@@ -43,9 +43,9 @@ function attempt(array $user, string $action, array $input): ?OtpResponse {
     return null;
 }
 $user = ['id' => 1, 'session_version' => 2, 'email' => 'admin@example.com', 'name' => 'Admin'];
-$input = ['password' => 'Temporary1!', 'role' => 'admin'];
+$input = ['password' => 'Temporary1!', 'role' => 'admin', 'username' => 'newuser@example.com', 'fullName' => 'New User'];
 check(attempt($user, 'create-user', $input)->payload['otpRequired'], 'Creation must request verification first.');
-check($recipient === $user['email'] && !str_contains(json_encode($_SESSION), 'Temporary1!'), 'Send to acting admin and never store the password.');
+check($recipient === 'newuser@example.com' && !str_contains(json_encode($_SESSION), 'Temporary1!'), 'Send creation OTP to the new user and never store the password.');
 attempt($user, 'create-user', $input);
 check($sent === 1, 'Repeated submission must reuse the pending challenge.');
 check(attempt($user, 'profile-password', $input + ['otp_code' => $code])->status === 422, 'Codes must not authorize another operation.');

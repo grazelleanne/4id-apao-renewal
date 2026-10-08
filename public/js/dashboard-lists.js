@@ -12,8 +12,6 @@
       table.querySelector('thead') && table.querySelector('tbody[id]') &&
       !table.closest('[role="dialog"], .modal-box, .modal-bg, .par-receipt, .rpcsp-preview-section, .rpcsp-preview-shell, .rpcsp-document, .rpcsp-paper, .ics-paper, #viewChecklist, #page-registration')
     );
-    let visibleLists = 0;
-    let controlsFit = true;
     for (const table of tables) {
       let scroller = table.parentElement;
       if (!scroller.classList.contains('list-scroll-region')) {
@@ -29,7 +27,6 @@
         table.classList.add('aligned-list-table');
       }
       if (!table.getClientRects().length) continue;
-      visibleLists++;
       // Reserve space for the card's record count and pagination below the table.
       let footer = 8;
       for (let container = scroller; container && container !== main; container = container.parentElement) {
@@ -44,19 +41,15 @@
         const ownStyle = getComputedStyle(container);
         footer += (parseFloat(ownStyle.marginBottom) || 0);
       }
-      const top = scroller.getBoundingClientRect().top;
+      // Use the table's position in the content, not its moving viewport position.
+      // This keeps its height stable while the user scrolls the module.
+      const top = scroller.getBoundingClientRect().top + main.scrollTop;
       const available = main.getBoundingClientRect().bottom - Math.max(top, 100) - footer;
-      if (available < 180) controlsFit = false;
-      const height = Math.max(180, available);
+      const height = Math.max(180, Math.min(available, main.clientHeight * 0.6));
       const value = `${Math.round(height)}px`;
       if (scroller.style.maxHeight !== value) scroller.style.maxHeight = value;
     }
-    // Freeze the outer module only when all controls and footer fit. Long forms,
-    // document previews and small screens keep their normal accessible page scroll.
-    const freeze = visibleLists === 1 && controlsFit && main.scrollHeight <= main.clientHeight + 2;
-    if (main.classList.contains('list-module-frozen') !== freeze) {
-      main.classList.toggle('list-module-frozen', freeze);
-    }
+    main.classList.remove('list-module-frozen');
   }
   function schedule() {
     if (!queued) { queued = true; requestAnimationFrame(refresh); }

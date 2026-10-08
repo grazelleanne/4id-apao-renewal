@@ -13,6 +13,11 @@ if (renewal_status_for_personnel(['date_of_validity' => '2026-10-03'], $statusTo
     || renewal_status_for_personnel(['approved_status' => 'pending'], $statusToday) !== 'pending') {
     throw new RuntimeException('Personnel renewal status calculation failed.');
 }
+foreach (['2026-10-03', '2026-11-01', '2027-10-04', null] as $validity) {
+    if (renewal_status_for_personnel(['approved_status' => 'new', 'inspection_status' => 'under', 'ics_status' => 'under', 'date_of_validity' => $validity], $statusToday) !== 'new') {
+        throw new RuntimeException('New personnel must remain New until inspection approval.');
+    }
+}
 $method = new ReflectionMethod(PdfReport::class, 'build');
 $pdf = $method->invoke(null, ['Test', 'Hello (PHP)']);
 if (!str_starts_with($pdf, "%PDF-1.4\n") || !str_ends_with($pdf, '%%EOF')
@@ -125,7 +130,7 @@ if (!str_contains($legacyReport, '12 March 2028') || !str_contains($legacyReport
     throw new RuntimeException('Approved report must fill missing renewal date and pistol type from recorded data.');
 }
 $renewedReport = render_view('pdf.inspection_report', [
-    'p' => ['date_of_validity' => '2028-03-12', 'date_of_birth' => '1990-03-12'],
+    'p' => ['date_of_validity' => '2027-10-06', 'date_of_birth' => '1990-03-12'],
     'inspection' => ['status' => 'approved', 'next_renewal_date' => '', 'inspected_at' => '2026-10-06'],
 ]);
 if (!str_contains($renewedReport, '12 March 2028')) {

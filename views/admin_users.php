@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <script src="/js/dashboard-state.js"></script>
+  <style>.dashboard-restoring #sidebar,.dashboard-restoring #sidebar *{transition:none!important}.dashboard-restoring #sidebar.sidebar-collapsed #sb-icon-menu{display:block!important}.dashboard-restoring #sidebar.sidebar-collapsed #sb-icon-close{display:none!important}</style>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="stylesheet" href="/css/mobile-dashboard.css">
@@ -181,6 +183,7 @@
 
   <!-- SIDEBAR -->
   <aside id="sidebar">
+    <script>restoreDashboardState();</script>
     <div class="sb-top">
       <div class="sb-logo">
         <img src="<?php echo e(asset('images/logo.png')); ?>" alt="Logo" onerror="this.src=''">
@@ -354,7 +357,7 @@
           </div>
           <div class="pw-strength-bar-wrap"><div class="pw-strength-bar" id="modalStrengthBar"></div></div>
           <div class="pw-strength-text" id="modalStrengthText"></div>
-          <div class="field-help">New Staff and Admin accounts must replace this temporary password with email verification before accessing the dashboard.</div>
+          <div class="field-help">Account-creation OTP is sent to this new user's email. They must also replace the temporary password after signing in.</div>
         </div>
 
         <div class="mb-1">
@@ -421,12 +424,13 @@
       <form id="statusConfirmForm" class="modal-content" style="width:440px;">
         <button type="button" class="modal-close" id="closeStatusModalBtn">&times;</button>
         <h3 id="statusConfirmTitle" class="text-lg font-bold mb-2">Confirm Account Status</h3>
-        <p id="statusConfirmMessage" class="text-sm text-gray-300 mb-3"></p>
+        <p id="statusConfirmMessage" class="text-sm mb-3" style="color:var(--ui-muted,#a6b1c0)"></p>
         <div class="mb-1">
           <label for="statusAdminPassword" class="block mb-1 text-sm font-semibold">Your Admin Password</label>
           <input id="statusAdminPassword" type="password" required autocomplete="current-password" placeholder="Enter administrator password" />
         </div>
         <div class="security-note">This action is checked again on the server. You cannot deactivate your own account or remove the last active administrator.</div>
+        <div id="statusConfirmError" role="alert" style="color:#ef4444;margin-top:10px" hidden></div>
         <div class="modal-actions">
           <button id="statusConfirmBtn" type="submit" class="warning-btn">Confirm</button>
           <button type="button" class="cancel-btn" id="cancelStatusBtn">Cancel</button>
@@ -776,14 +780,18 @@ document.addEventListener('DOMContentLoaded', function () {
 
   // ===== STATUS CONFIRMATION =====
   const statusModal=document.getElementById('statusConfirmModal');
-  function closeStatus(){statusModal.style.display='none';document.getElementById('statusConfirmForm').reset();pendingStatusUser=null;pendingStatusValue=null;}
+  function closeStatus(){statusModal.style.display='none';document.getElementById('statusConfirmForm').reset();document.getElementById('statusConfirmError').hidden=true;pendingStatusUser=null;pendingStatusValue=null;renderUsersTable();}
   document.getElementById('closeStatusModalBtn').addEventListener('click',closeStatus); document.getElementById('cancelStatusBtn').addEventListener('click',closeStatus);
   statusModal.addEventListener('mousedown',e=>{if(e.target===statusModal)closeStatus();});
   document.getElementById('statusConfirmForm').addEventListener('submit',async function(e){
     e.preventDefault(); if(!pendingStatusUser)return;
     const adminPassword=document.getElementById('statusAdminPassword').value;if(!adminPassword){showToast('Enter your admin password.','error');return;}
     const u=pendingStatusUser;
-    try{await secureFetch(ROUTES.usersUpdate,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:u.username,fullName:u.fullName,role:normalizeRole(u.role),status:pendingStatusValue,adminPassword})});closeStatus();await loadUsers();showToast(`Account ${pendingStatusValue.toLowerCase()} successfully.`);}catch(err){closeStatus();await loadUsers();showToast(err.message,'error');}
+    const statusValue=pendingStatusValue;
+    const errorBox=document.getElementById('statusConfirmError');errorBox.hidden=true;
+    const button=document.getElementById('statusConfirmBtn');button.disabled=true;
+    try{await secureFetch(ROUTES.usersUpdate,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:u.username,fullName:u.fullName,role:normalizeRole(u.role),status:statusValue,adminPassword})});u.status=statusValue;closeStatus();await loadUsers();showToast(`Account ${statusValue.toLowerCase()} successfully.`);}catch(err){errorBox.textContent=err.message;errorBox.hidden=false;}
+    finally{button.disabled=false;}
   });
 
   // ===== RESET PASSWORD =====
@@ -808,7 +816,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const newPassword=document.getElementById('resetNewPassword').value; const confirm=document.getElementById('resetConfirmPassword').value; const adminPassword=document.getElementById('resetAdminPassword').value;
     if(newPassword!==confirm){showToast('New passwords do not match.','error');return;}
     if(!isStrongPassword(newPassword)){showToast('New password must be at least 8 characters with uppercase, lowercase, number, and symbol.','error');return;}
-    try{await secureFetch(ROUTES.usersUpdate,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:u.username,fullName:u.fullName,role:normalizeRole(u.role),status:u.status,newPassword,adminPassword})});closeReset();showToast('Password reset successfully.');}catch(err){showToast(err.message,'error');}
+    try{await secureFetch(ROUTES.usersUpdate,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:u.username,fullName:u.fullName,role:normalizeRole(u.role),status:u.status,newPassword,newPasswordConfirmation:confirm,adminPassword})});closeReset();showToast('Temporary password set. The user must replace it on their next login.');}catch(err){showToast(err.message,'error');}
   });
 });
 
@@ -836,6 +844,8 @@ window.requestStatusChange=function(index,newStatus){
   if(isCurrentUser(u)){showToast('You cannot change the status of your own administrator account.','error');renderUsersTable();return;}
   if(newStatus==='Inactive'&&isLastActiveAdmin(u)){showToast('You cannot deactivate the last active administrator account.','error');renderUsersTable();return;}
   pendingStatusUser=u;pendingStatusValue=newStatus;
+  // Display the saved state until the server confirms the requested change.
+  renderUsersTable();
   document.getElementById('statusConfirmTitle').textContent=newStatus==='Active'?'Reactivate User?':'Deactivate User?';
   document.getElementById('statusConfirmMessage').textContent=newStatus==='Active'?`${u.fullName} will be allowed to sign in again.`:`${u.fullName} will be blocked from signing in until reactivated.`;
   document.getElementById('statusConfirmBtn').className=newStatus==='Active'?'save-btn':'danger-btn';
