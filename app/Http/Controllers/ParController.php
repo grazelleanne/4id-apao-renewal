@@ -42,15 +42,32 @@ final class ParController extends ActionController
             'approvedBy'=>'required|string|max:255','issuedBySignature'=>'nullable|string|max:1000000',
             'approvedBySignature'=>'nullable|string|max:1000000','remarks'=>'nullable|string|max:500']);
         foreach (['issuedBySignature','approvedBySignature'] as $field) {
-            if (!empty($data[$field]) && !preg_match('/^data:image\/(png|jpeg);base64,[A-Za-z0-9+\/=]+$/',$data[$field]))
-                return response()->json(['message'=>'Provide a valid signature image.'],422);
+            try {
+                $signature=\App\Services\InspectionService::inspection_signature($data,$field);
+                if ($signature && str_starts_with($signature,'/images/')) {
+                    $path=public_path(ltrim($signature,'/'));
+                    $mime=getimagesize($path)['mime'] ?? null;
+                    if (!in_array($mime,['image/png','image/jpeg','image/webp'],true)) {
+                        throw new \InvalidArgumentException('Provide a valid signature image.');
+                    }
+                    $signature='data:'.$mime.';base64,'.base64_encode(file_get_contents($path));
+                }
+                $data[$field]=$signature;
+            } catch (\InvalidArgumentException $exception) {
+                return response()->json(['message'=>$exception->getMessage()],422);
+            }
         }
         $record=DB::transaction(function() use($data,$item) {
             $p=Personnel::where('item_number',$item)->whereNull('archived_at')->lockForUpdate()->firstOrFail();
             $previous=Receipt::where('personnel_id',$p->id)->latest('id')->lockForUpdate()->first();
             if ($data['mode']==='issue' && $previous) abort(409,'A PAR already exists. Refresh and use Update.');
             if ($data['mode']!=='issue' && !$previous) abort(409,'Issue a PAR before updating or replacing it.');
-            if ($data['mode']==='issue' && strtolower((string)$p->ics_status)!=='ready') abort(409,'Inspection approval is required before PAR issuance.');
+            $latestInspection=DB::table('inspections')->where('personnel_id',$p->id)->orderByDesc('id')->lockForUpdate()->first();
+            if ($data['mode']==='issue' && (strtolower((string)($latestInspection->status ?? ''))!=='approved'
+                || strtolower((string)$p->ics_status)!=='ready'
+                || in_array(renewal_status_for_personnel($p->toArray()),['within','expired'],true))) {
+                abort(409,'A current inspection approval is required before PAR issuance.');
+            }
             $duplicate=Receipt::where('par_number',$data['parNumber']);
             if ($data['mode']==='update') $duplicate->where('id','!=',$previous->id);
             if ($duplicate->exists()) abort(409,'That PAR number is already in use.');

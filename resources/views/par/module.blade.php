@@ -72,6 +72,7 @@
   .par-kebab-btn:hover{background:#1a2025;color:#e5eaf2;}
   .par-kebab-menu{position:absolute;right:0;top:calc(100% + 4px);background:#23272f;border:1px solid #363b48;border-radius:8px;min-width:190px;box-shadow:0 12px 28px rgba(0,0,0,.45);z-index:80;overflow:hidden;display:none;}
   .par-kebab-menu.open{display:block;}
+  .par-kebab-menu[popover]{position:fixed;inset:auto;margin:0;padding:4px 0;max-width:calc(100vw - 16px);max-height:calc(100vh - 16px);overflow-y:auto;}
   .par-kebab-item{padding:9px 13px;font-size:.76rem;color:#cbd5e0;cursor:pointer;display:flex;align-items:center;gap:8px;}
   .par-kebab-item:hover{background:#1a2025;}
   .par-kebab-item.danger{color:#fc8181;}
@@ -942,13 +943,21 @@
 
             <footer>
               <div class="footer-badges">
-                <img src="<?php echo e(asset('images/footer/pgs.png')); ?>" alt="PGS" onerror="this.style.display='none';this.nextElementSibling.style.display='inline-flex';"><span class="badge-fallback" style="display:none;">PGS</span>
-                <img src="<?php echo e(asset('images/footer/seal.png')); ?>" alt="" onerror="this.style.display='none';">
-                <img src="<?php echo e(asset('images/footer/ac.png')); ?>" alt="AC" onerror="this.style.display='none';this.nextElementSibling.style.display='inline-flex';"><span class="badge-fallback" style="display:none;">AC</span>
+                <?php if (is_file(public_path('images/footer/pgs.png'))): ?>
+                  <img src="<?php echo e(asset('images/footer/pgs.png')); ?>" alt="PGS">
+                <?php else: ?><span class="badge-fallback">PGS</span><?php endif; ?>
+                <?php if (is_file(public_path('images/footer/seal.png'))): ?>
+                  <img src="<?php echo e(asset('images/footer/seal.png')); ?>" alt="">
+                <?php endif; ?>
+                <?php if (is_file(public_path('images/footer/ac.png'))): ?>
+                  <img src="<?php echo e(asset('images/footer/ac.png')); ?>" alt="AC">
+                <?php else: ?><span class="badge-fallback">AC</span><?php endif; ?>
               </div>
               <strong>HONOR.PATRIOTISM. DUTY.</strong>
               <div class="footer-badges footer-badges-right">
-                <img src="<?php echo e(asset('images/footer/atr.png')); ?>" alt="atr" onerror="this.style.display='none';this.nextElementSibling.style.display='inline-flex';"><span class="badge-fallback" style="display:none;">atr</span>
+                <?php if (is_file(public_path('images/footer/atr.png'))): ?>
+                  <img src="<?php echo e(asset('images/footer/atr.png')); ?>" alt="atr">
+                <?php else: ?><span class="badge-fallback">atr</span><?php endif; ?>
                 <span>ISO 9001:2015<br>CERTIFIED</span>
               </div>
             </footer>
@@ -990,8 +999,8 @@
   var parCurrentItem  = null;  // record currently open in the shared doc view
   var parDocMode      = 'issue'; // 'issue' | 'view' | 'update' | 'replace'
   var parDocReturnTo  = 'issuance'; // 'issuance' | 'management'
-  var PAR_DEFAULT_ISSUED_SIGNATURE = <?php echo json_encode(asset('images/ROSEMARIE VILBAR.png'), 15, 512) ?>;
-  var PAR_DEFAULT_APPROVED_SIGNATURE = <?php echo json_encode(asset('images/SINGUEO EVAGELINE.png'), 15, 512) ?>;
+  var PAR_DEFAULT_ISSUED_SIGNATURE = <?php echo json_encode('data:image/png;base64,'.base64_encode(file_get_contents(public_path('images/ROSEMARIE VILBAR.png'))), 15, 512) ?>;
+  var PAR_DEFAULT_APPROVED_SIGNATURE = <?php echo json_encode('data:image/png;base64,'.base64_encode(file_get_contents(public_path('images/SINGUEO EVAGELINE.png'))), 15, 512) ?>;
   var parSigIssuedBase64 = PAR_DEFAULT_ISSUED_SIGNATURE;
   var parSigApprovedBase64 = PAR_DEFAULT_APPROVED_SIGNATURE;
 
@@ -1105,7 +1114,7 @@
       // A personnel record becomes eligible for its first PAR as soon as the
       // administrator approves the firearm inspection. Existing PARs stay in Management.
       var hasExistingPar = !!(ov.parNumber || p.parNumber);
-      var inspectionApproved = p.inspectionStatus === 'approved' || p.icsStatus === 'ready';
+      var inspectionApproved = p.parEligible === true;
       var awaitingRenewalPar = inspectionApproved && !hasExistingPar && ov.parStatus !== 'issued';
       var derivedStatus = awaitingRenewalPar ? 'ready' : (hasExistingPar ? 'issued' : 'ineligible');
       var seededNumber = ov.parNumber || p.parNumber || null;
@@ -1262,6 +1271,7 @@
     var sort = document.getElementById('parSort').value;
 
     var list = parAll.filter(function (p) {
+      if (p.parStatus !== 'ready') return false;
       if (statusF && p.parStatus !== statusF) return false;
       if (!statusF && p.parStatus === 'issued') return false; // "All" still excludes already-issued (that's Management's job)
       if (unitF && p.unit !== unitF) return false;
@@ -1438,7 +1448,7 @@
         + '<td class="py-3 px-3 text-center">'
           + '<div class="par-kebab-wrap" onclick="event.stopPropagation();">'
             + `<button class="par-kebab-btn" onclick="parToggleKebab(event, ${JSON.stringify(r.itemNumber)})"><svg width="15" height="15" fill="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></svg></button>`
-            + `<div class="par-kebab-menu" id="par-kebab-${r.itemNumber}">`
+            + `<div class="par-kebab-menu" popover="manual" id="par-kebab-${r.itemNumber}">`
               + `<div class="par-kebab-item" onclick="parViewReceipt(${JSON.stringify(r.itemNumber)})"><svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>View Receipt</div>`
               + `<div class="par-kebab-item" onclick="parOpenProcess(${JSON.stringify(r.itemNumber)}, 'update')"><svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4z"/></svg>Update PAR</div>`
               + `<div class="par-kebab-item" onclick="parOpenReplace(${JSON.stringify(r.itemNumber)})"><svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M1 4v6h6M23 20v-6h-6"/><path d="M20.49 9A9 9 0 005.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 013.51 15"/></svg>Replace PAR</div>`
@@ -1572,11 +1582,35 @@
 
   window.parToggleKebab = function (ev, itemNumber) {
     ev.stopPropagation();
-    document.querySelectorAll('.par-kebab-menu').forEach(function (m) { if (m.id !== 'par-kebab-' + itemNumber) m.classList.remove('open'); });
     var menu = document.getElementById('par-kebab-' + itemNumber);
-    if (menu) menu.classList.toggle('open');
+    var wasOpen = menu && menu.classList.contains('open');
+    parCloseKebabMenus();
+    if (!menu || wasOpen) return;
+    menu.classList.add('open');
+    // The browser's top layer keeps the menu outside the table's scroll clipping.
+    menu.showPopover();
+    var anchor = ev.currentTarget.getBoundingClientRect();
+    var bounds = menu.getBoundingClientRect();
+    var left = Math.max(8, Math.min(anchor.right - bounds.width, window.innerWidth - bounds.width - 8));
+    var top = anchor.bottom + 6;
+    if (top + bounds.height > window.innerHeight - 8) top = anchor.top - bounds.height - 6;
+    menu.style.left = left + 'px';
+    menu.style.top = Math.max(8, top) + 'px';
   };
-  document.addEventListener('click', function () { document.querySelectorAll('.par-kebab-menu').forEach(function (m) { m.classList.remove('open'); }); });
+  function parCloseKebabMenus() {
+    document.querySelectorAll('.par-kebab-menu.open').forEach(function (menu) {
+      menu.hidePopover();
+      menu.classList.remove('open');
+    });
+  }
+  document.addEventListener('click', function (ev) {
+    if (ev.target.closest('.par-kebab-item') || !ev.target.closest('.par-kebab-wrap')) parCloseKebabMenus();
+  });
+  document.addEventListener('keydown', function (ev) { if (ev.key === 'Escape') parCloseKebabMenus(); });
+  document.addEventListener('scroll', function (ev) {
+    if (!(ev.target instanceof Element) || !ev.target.closest('.par-kebab-menu')) parCloseKebabMenus();
+  }, true);
+  window.addEventListener('resize', parCloseKebabMenus);
 
   // ── VIEW EXISTING PAR AS THE ACTUAL RECEIPT ─────────────────────
   // The previous "View PAR" action opened the editable/read-only processing

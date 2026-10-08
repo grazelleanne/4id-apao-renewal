@@ -57,8 +57,8 @@ final class InspectionService
                 $row['inspectionStatus'] = 'unsubmitted';
                 continue;
             }
-            if (($row['approvedStatus'] ?? '') === 'expired' && ($icsStatus !== 'under' || $status === 'approved')) {
-                $row['inspectionStatus'] = 'expired';
+            if (in_array($row['approvedStatus'] ?? '', ['within', 'expired'], true) && ($icsStatus !== 'under' || $status === 'approved')) {
+                $row['inspectionStatus'] = $row['approvedStatus'];
             } elseif ($status === 'pending' && $icsStatus === 'under') {
                 $pending++;
                 $row['inspectionStatus'] = 'pending';
@@ -80,7 +80,7 @@ final class InspectionService
             }
         }
         unset($row);
-        $rows = array_values(array_filter($rows, static fn (array $row): bool => !in_array($row['inspectionStatus'], ['renewed', 'expired', 'notified', 'unsubmitted'], true)));
+        $rows = array_values(array_filter($rows, static fn (array $row): bool => !in_array($row['inspectionStatus'], ['renewed', 'within', 'expired', 'notified', 'unsubmitted'], true)));
         json_response(['success' => true, 'data' => $rows, 'pending' => $pending, 'under' => $under, 'approved' => $approved]);
     }
 
@@ -125,8 +125,8 @@ final class InspectionService
             }
 
             $currentStatus = strtolower(trim((string) ($personnel['ics_status'] ?? 'inspection')));
-            $expired = renewal_status_for_personnel($personnel) === 'expired';
-            if ($currentStatus === 'ready' && !$expired) {
+            $renewalDue = in_array(renewal_status_for_personnel($personnel), ['within', 'expired'], true);
+            if ($currentStatus === 'ready' && !$renewalDue) {
                 \Illuminate\Support\Facades\DB::rollBack();
                 json_response(['success' => false, 'message' => 'This inspection has already been approved.'], 409);
             }
@@ -256,7 +256,20 @@ final class InspectionService
             }
             return $value;
         }
-        if (!str_starts_with($value, '/')) {
+        if (preg_match('#^https?://#i', $value)) {
+            $url = parse_url($value);
+            $origin = parse_url(request()->getSchemeAndHttpHost());
+            if (!$url || isset($url['user']) || isset($url['pass'])
+                || strtolower($url['host'] ?? '') !== strtolower($origin['host'] ?? '')
+                || ($url['port'] ?? (($url['scheme'] ?? '') === 'https' ? 443 : 80))
+                    !== ($origin['port'] ?? (($origin['scheme'] ?? '') === 'https' ? 443 : 80))) {
+                throw new InvalidArgumentException('A signature image must belong to this application.');
+            }
+            $value = $url['path'] ?? '';
+        }
+        $value = rawurldecode($value);
+        if (!preg_match('#^/images/[A-Za-z0-9_ .-]+\.(?:png|jpe?g|webp)$#i', $value)
+            || !is_file(public_path(ltrim($value, '/')))) {
             throw new InvalidArgumentException('A signature image path is invalid.');
         }
         return substr($value, 0, 1000);

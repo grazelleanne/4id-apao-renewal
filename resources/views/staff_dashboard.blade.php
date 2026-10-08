@@ -2431,18 +2431,21 @@
       feedback.style.color = '#94a3b8'; feedback.textContent = 'Sending email, please wait...';
       try {
         const res  = await fetch(NOTIFY_URL(currentNotifyId), { method:'POST', headers:{'Content-Type':'application/json','Accept':'application/json','X-CSRF-TOKEN':CSRF}, body:JSON.stringify({message}) });
-        const json = await res.json();
-        if (json.success) {
+        const json = await res.json().catch(() => ({success:false,error:
+          res.status === 419 ? 'Your session expired. Refresh the page and try again.' :
+          res.status >= 500 ? 'The server could not complete the request. Please check the server logs.' :
+          'The server returned an unexpected response. Refresh the page and try again.'}));
+        if (res.ok && json.success) {
           feedback.style.color = '#33b481'; feedback.textContent = '✓ Email sent successfully!';
           this.innerHTML = '✓ Sent!'; this.style.background = '#276749';
           setTimeout(() => closeNotifyModal(), 1800);
         } else {
-          feedback.style.color = '#fc8181'; feedback.textContent = '✗ ' + (json.error || 'Failed to send email.');
+          feedback.style.color = '#fc8181'; feedback.textContent = '✗ ' + (json.error || json.message || 'Failed to send email.');
           this.disabled = false;
           this.innerHTML = `<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="display:inline;vertical-align:middle;margin-right:4px;"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>Send Email`;
         }
       } catch (e) {
-        feedback.style.color = '#fc8181'; feedback.textContent = '✗ Network error.';
+        feedback.style.color = '#fc8181'; feedback.textContent = '✗ Could not reach the server. Check your connection and try again.';
         this.disabled = false;
         this.innerHTML = `<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="display:inline;vertical-align:middle;margin-right:4px;"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>Send Email`;
       }
@@ -3174,6 +3177,7 @@
 
       function getIcsStatus(p) {
         if (p.approvedStatus === 'expired' && p.icsStatus !== 'under') return 'expired';
+        if (p.approvedStatus === 'within' && p.icsStatus !== 'under') return 'inspection';
         return p.icsStatus || 'inspection';
       }
 

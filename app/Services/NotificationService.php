@@ -3,6 +3,7 @@ declare(strict_types=1);
 namespace App\Services;
 
 use DateTimeImmutable;
+use DateTimeInterface;
 use InvalidArgumentException;
 use RuntimeException;
 use PDO;

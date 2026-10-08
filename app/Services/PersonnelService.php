@@ -86,6 +86,10 @@ final class PersonnelService
         $statement->execute($itemNumber === null ? [] : ['item' => $itemNumber]);
         return array_map(static function (array $p): array {
             $renewalStatus = renewal_status_for_personnel($p);
+            $icsStatus = $p['ics_status'] ?? 'inspection';
+            if (in_array($renewalStatus, ['within', 'expired'], true) && $icsStatus !== 'under') {
+                $icsStatus = $renewalStatus === 'expired' ? 'expired' : 'inspection';
+            }
             return [
                 'id' => (int) $p['id'], 'itemNumber' => (int) $p['item_number'],
                 'dateOfValidity' => $p['date_of_validity'], 'lastName' => $p['last_name'] ?? '',
@@ -100,7 +104,9 @@ final class PersonnelService
                 'pistolType' => trim((string) ($p['pistol_type'] ?? '')) ?: trim((string) ($p['pistol_nomenclature'] ?? '')), 'parNumber' => $p['par_number'] ?? '',
                 'qtyAmmo' => (int) ($p['qty_ammo'] ?? 0), 'unit' => $p['unit'] ?? '',
                 'approvedStatus' => $renewalStatus, 'status' => $p['status'] ?? 'active',
-                'icsStatus' => $renewalStatus === 'expired' && ($p['ics_status'] ?? '') !== 'under' ? 'expired' : ($p['ics_status'] ?? 'inspection'), 'dateApproved' => $p['date_approved'],
+                'icsStatus' => $icsStatus, 'dateApproved' => $p['date_approved'],
+                'parEligible' => strtolower(trim((string) ($p['inspection_status'] ?? ''))) === 'approved'
+                    && $icsStatus === 'ready' && !in_array($renewalStatus, ['within', 'expired'], true),
                 'photo' => $p['has_photo'] ? '/personnel/' . (int) $p['item_number'] . '/image/photo' : null,
                 'signature' => $p['has_signature'] ? '/personnel/' . (int) $p['item_number'] . '/image/signature' : null,
                 'inspectionStatus' => $p['inspection_status'] ?? null,

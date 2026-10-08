@@ -97,17 +97,42 @@ final class LaravelMigrationTest extends TestCase
     public function test_par_writes_are_persistent_and_replacement_preserves_history(): void
     {
         $this->signIn('staff');
-        DB::table('personnel')->insert(['item_number'=>900002,'first_name'=>'PAR','last_name'=>'Test',
+        $personnelId=DB::table('personnel')->insertGetId(['item_number'=>900002,'first_name'=>'PAR','last_name'=>'Test',
             'ics_status'=>'ready','pistol_nomenclature'=>'Glock 17','qty_ammo'=>30,'created_at'=>now(),'updated_at'=>now()]);
+        DB::table('inspections')->insert(['personnel_id'=>$personnelId,'item_number'=>900002,'status'=>'approved',
+            'created_at'=>now(),'updated_at'=>now()]);
         $data=['mode'=>'issue','parNumber'=>'PAR-TEST-900002','dateIssued'=>now()->format('Y-m-d'),
-            'issuedBy'=>'Issuer','approvedBy'=>'Approver'];
+            'issuedBy'=>'Issuer','approvedBy'=>'Approver',
+            'issuedBySignature'=>'http://localhost/images/ROSEMARIE%20VILBAR.png',
+            'approvedBySignature'=>'http://localhost/images/SINGUEO%20EVAGELINE.png'];
         $this->postJson('/staff/par/900002/save',$data)->assertOk()->assertJsonPath('success',true);
         $this->getJson('/staff/par-data')->assertOk()->assertJsonPath('state.900002.parNumber','PAR-TEST-900002');
+        $this->assertStringStartsWith('data:image/png;base64,',DB::table('property_acknowledgement_receipts')
+            ->where('par_number',$data['parNumber'])->value('issued_by_signature'));
         $this->postJson('/staff/par/900002/save',$data)->assertStatus(409);
         $data['mode']='replace'; $data['parNumber']='PAR-TEST-900002-R';
         $this->postJson('/staff/par/900002/save',$data)->assertOk();
         $this->assertDatabaseHas('property_acknowledgement_receipts',['par_number'=>'PAR-TEST-900002','status'=>'Replaced']);
         $this->getJson('/staff/par-data')->assertJsonPath('state.900002.wasReplaced',true);
+    }
+
+    public function test_par_issuance_requires_latest_inspection_approval(): void
+    {
+        $this->signIn('staff');
+        $id=DB::table('personnel')->insertGetId(['item_number'=>920001,'first_name'=>'New','last_name'=>'PAR Test',
+            'approved_status'=>'new','ics_status'=>'ready','created_at'=>now(),'updated_at'=>now()]);
+        $input=['mode'=>'issue','parNumber'=>'PAR-UNAPPROVED-TEST','dateIssued'=>now()->format('Y-m-d'),
+            'issuedBy'=>'Issuer','approvedBy'=>'Approver'];
+        $rows=$this->getJson('/staff/dashboard-data')->assertOk()->json('personnel');
+        $this->assertFalse(collect($rows)->firstWhere('itemNumber',920001)['parEligible']);
+        $this->postJson('/staff/par/920001/save',$input)->assertStatus(409);
+        $inspection=DB::table('inspections')->insertGetId(['personnel_id'=>$id,'item_number'=>920001,'status'=>'pending',
+            'created_at'=>now(),'updated_at'=>now()]);
+        $this->postJson('/staff/par/920001/save',$input)->assertStatus(409);
+        DB::table('inspections')->where('id',$inspection)->update(['status'=>'approved']);
+        $rows=$this->getJson('/staff/dashboard-data')->assertOk()->json('personnel');
+        $this->assertTrue(collect($rows)->firstWhere('itemNumber',920001)['parEligible']);
+        $this->postJson('/staff/par/920001/save',$input)->assertOk();
     }
 
     public function test_password_recovery_verifies_code_and_prevents_replay(): void
@@ -139,7 +164,12 @@ final class LaravelMigrationTest extends TestCase
         $this->assertDatabaseHas('personnel',['id'=>$personnel,'approved_status'=>'pending','ics_status'=>'under']);
         $this->assertSame(1,DB::table('notifications')->where('personnel_id',$personnel)->where('type','inspection_submitted')->count());
         $this->signIn('admin');
-        $this->postJson('/admin/inspection/save',['itemNumber'=>900003,'status'=>'approved'])->assertOk();
+        $this->postJson('/admin/inspection/save',['itemNumber'=>900003,'status'=>'approved',
+            'inspectedBySig'=>'http://localhost/images/maglasang.png',
+            'witnessedBySig'=>'http://localhost/images/anino.png',
+            'approvedBySig'=>'http://localhost/images/enriola.png',
+            'notedBySig'=>'http://localhost/images/mariano.png'])->assertOk();
+        $this->assertDatabaseHas('inspections',['personnel_id'=>$personnel,'inspected_by_sig'=>'/images/maglasang.png']);
         $expected=(now()->year+2).'-01-23';
         $this->assertDatabaseHas('inspections',['personnel_id'=>$personnel,'status'=>'approved','next_renewal_date'=>$expected]);
         $this->get('/admin/inspection/900003/print')->assertOk()->assertSee('NEXT RENEWAL DATE')
@@ -161,5 +191,33 @@ final class LaravelMigrationTest extends TestCase
         $input['otp_code']=$match[1];
         $this->postJson('/admin/users',$input)->assertCreated()->assertJsonPath('success',true);
         $this->assertDatabaseHas('users',['email'=>$email,'role'=>'staff','must_change_password'=>1]);
+    }
+
+    public function test_due_personnel_leave_ready_queue_and_can_start_a_new_inspection(): void
+    {
+        $this->signIn('staff');
+        foreach ([30,60,61,-1] as $offset) {
+            $item=910000+$offset;
+            $id=DB::table('personnel')->insertGetId(['item_number'=>$item,'first_name'=>'Renewal',
+                'last_name'=>'Boundary Test','approved_status'=>'renewed','ics_status'=>'ready',
+                'date_of_validity'=>now()->addDays($offset)->format('Y-m-d'),'created_at'=>now(),'updated_at'=>now()]);
+            DB::table('inspections')->insert(['personnel_id'=>$id,'item_number'=>$item,'status'=>'approved',
+                'created_at'=>now(),'updated_at'=>now()]);
+        }
+        $rows=$this->getJson('/staff/dashboard-data')->assertOk()->json('personnel');
+        $statuses=array_column($rows,'icsStatus','itemNumber');
+        $this->assertSame('inspection',$statuses[910030]);
+        $this->assertSame('inspection',$statuses[910060]);
+        $this->assertSame('expired',$statuses[909999]);
+        $this->assertSame('ready',$statuses[910061]);
+        $this->signIn('admin');
+        $this->getJson('/admin/inspection-data')->assertOk()->assertJsonPath('approved',1);
+        $this->signIn('staff');
+        foreach ([910030,909999] as $item) {
+            $this->postJson('/staff/ics/'.$item.'/send-inspection')->assertOk()->assertJsonPath('alreadySent',false);
+            $this->assertDatabaseHas('inspections',['item_number'=>$item,'status'=>'pending']);
+        }
+        $this->signIn('admin');
+        $this->getJson('/admin/inspection-data')->assertOk()->assertJsonPath('pending',2);
     }
 }

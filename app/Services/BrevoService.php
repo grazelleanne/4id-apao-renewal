@@ -14,7 +14,9 @@ final class BrevoService
         $payload=['sender'=>['name'=>env_value('BREVO_SENDER_NAME','APAO Renewal System'),'email'=>$sender],
             'to'=>[['name'=>$recipientName,'email'=>$recipientEmail]],'subject'=>$subject,'htmlContent'=>$html,'tags'=>['apao-renewal']];
         if (filter_var($reply=env_value('BREVO_REPLY_TO_EMAIL'),FILTER_VALIDATE_EMAIL)) $payload['replyTo']=['email'=>$reply];
-        $response=Http::withHeaders(['api-key'=>$key])->acceptJson()->connectTimeout(5)->timeout(20)->post('https://api.brevo.com/v3/smtp/email',$payload);
+        $response=Http::withOptions(['verify'=>config('apao.brevo_ca_bundle') ?: true])
+            ->withHeaders(['api-key'=>$key])->acceptJson()->connectTimeout(5)->timeout(20)
+            ->post('https://api.brevo.com/v3/smtp/email',$payload);
         if (!$response->successful()) {
             Log::warning('Brevo rejected the email request.',['status'=>$response->status()]);
             throw new RuntimeException('Brevo rejected the email request.');

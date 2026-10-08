@@ -1,5 +1,5 @@
 <?php
-return ['environment'=>[
+return ['brevo_ca_bundle'=>env('BREVO_CA_BUNDLE',base_path('resources/certs/cacert.pem')),'environment'=>[
     'APP_SESSION_LIFETIME'=>env('APP_SESSION_LIFETIME','7200'),
     'BREVO_API_KEY'=>env('BREVO_API_KEY',''),
     'BREVO_SENDER_EMAIL'=>env('BREVO_SENDER_EMAIL',''),
