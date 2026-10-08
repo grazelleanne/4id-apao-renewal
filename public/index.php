@@ -1128,6 +1128,11 @@ function inspection_data(): never
         $row['dateRegistered'] = $row['inspectionDateRegistered'] ?? null;
         $status = strtolower(trim((string) ($row['inspectionStatus'] ?? '')));
         $icsStatus = strtolower(trim((string) ($row['icsStatus'] ?? '')));
+        // A legacy ICS-ready flag is not proof that the latest inspection passed.
+        if ($icsStatus === 'ready' && $status !== 'approved') {
+            $row['inspectionStatus'] = 'unsubmitted';
+            continue;
+        }
         // Staff must submit a new registration before it enters the admin queue.
         if (in_array($icsStatus, ['', 'inspection'], true) && !in_array($status, ['under', 'approved'], true)) {
             $row['inspectionStatus'] = 'unsubmitted';
@@ -1138,7 +1143,7 @@ function inspection_data(): never
         } elseif ($status === 'pending' && $icsStatus === 'under') {
             $pending++;
             $row['inspectionStatus'] = 'pending';
-        } elseif ($status === 'approved' || $icsStatus === 'ready') {
+        } elseif ($status === 'approved') {
             if (isset($notifiedItems[$row['itemNumber']])) {
                 $row['inspectionStatus'] = 'notified';
                 continue;
@@ -1503,7 +1508,7 @@ function inspection_notify_staff(array $user): never
     }
     $statusQuery = db()->prepare('SELECT status FROM inspections WHERE item_number=:item ORDER BY id DESC LIMIT 1');
     $statusQuery->execute(['item' => $itemNumber]);
-    if ($statusQuery->fetchColumn() !== 'approved') {
+    if (strtolower(trim((string) $statusQuery->fetchColumn())) !== 'approved') {
         json_response(['success' => false, 'error' => 'Complete and approve the inspection before notifying staff.'], 409);
     }
     $name = trim($personnel['firstName'] . ' ' . $personnel['middleName'] . ' ' . $personnel['lastName']);

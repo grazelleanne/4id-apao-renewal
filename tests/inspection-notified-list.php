@@ -25,6 +25,8 @@ $personnel = [
     ['itemNumber' => 4, 'inspectionStatus' => 'under', 'icsStatus' => 'under', 'approvedStatus' => 'new'],
     ['itemNumber' => 5, 'inspectionStatus' => 'pending', 'icsStatus' => 'inspection', 'approvedStatus' => 'new'],
     ['itemNumber' => 6, 'inspectionStatus' => null, 'icsStatus' => 'inspection', 'approvedStatus' => 'new'],
+    ['itemNumber' => 7, 'inspectionStatus' => 'pending', 'icsStatus' => 'ready', 'approvedStatus' => 'renewed'],
+    ['itemNumber' => 8, 'inspectionStatus' => null, 'icsStatus' => 'ready', 'approvedStatus' => 'renewed'],
 ];
 foreach ([[1], []] as $notified) {
     try { inspection_data(); } catch (ListResponse $response) {
