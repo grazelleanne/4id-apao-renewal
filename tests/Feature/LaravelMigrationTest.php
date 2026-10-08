@@ -142,7 +142,8 @@ final class LaravelMigrationTest extends TestCase
         $this->postJson('/admin/inspection/save',['itemNumber'=>900003,'status'=>'approved'])->assertOk();
         $expected=(now()->year+2).'-01-23';
         $this->assertDatabaseHas('inspections',['personnel_id'=>$personnel,'status'=>'approved','next_renewal_date'=>$expected]);
-        $this->get('/admin/inspection/900003/print')->assertOk()->assertSee('NEXT RENEWAL DATE');
+        $this->get('/admin/inspection/900003/print')->assertOk()->assertSee('NEXT RENEWAL DATE')
+            ->assertSee('Test, Inspection')->assertSee('23 January '.(now()->year+2));
     }
 
     public function test_account_creation_sends_otp_to_new_user_and_requires_new_password(): void

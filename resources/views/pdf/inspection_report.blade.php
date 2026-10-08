@@ -1,8 +1,14 @@
 <?php
 declare(strict_types=1);
 
-$p = isset($p) && is_array($p) ? $p : [];
-$inspection = isset($inspection) && is_array($inspection) ? $inspection : [];
+$reportData = static function (mixed $value): array {
+    if ($value instanceof \Illuminate\Contracts\Support\Arrayable) {
+        return $value->toArray();
+    }
+    return is_array($value) ? $value : (is_object($value) ? get_object_vars($value) : []);
+};
+$p = $reportData($p ?? null);
+$inspection = $reportData($inspection ?? null);
 $escape = static fn (mixed $value): string => htmlspecialchars(
     (string) $value,
     ENT_QUOTES | ENT_SUBSTITUTE,
