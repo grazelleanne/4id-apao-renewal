@@ -420,7 +420,7 @@
     </div>
 
     <!-- Status Confirmation Modal -->
-    <div id="statusConfirmModal" style="display:none;" class="modal-bg">
+    <div id="statusConfirmModal" style="display:none;" class="modal-bg" role="dialog" aria-modal="true" aria-labelledby="statusConfirmTitle">
       <form id="statusConfirmForm" class="modal-content" style="width:440px;">
         <button type="button" class="modal-close" id="closeStatusModalBtn">&times;</button>
         <h3 id="statusConfirmTitle" class="text-lg font-bold mb-2">Confirm Account Status</h3>
@@ -429,7 +429,7 @@
           <label for="statusAdminPassword" class="block mb-1 text-sm font-semibold">Your Admin Password</label>
           <input id="statusAdminPassword" type="password" required autocomplete="current-password" placeholder="Enter administrator password" />
         </div>
-        <div class="security-note">This action is checked again on the server. You cannot deactivate your own account or remove the last active administrator.</div>
+        <div class="security-note">You cannot deactivate your own account or the last active administrator.</div>
         <div id="statusConfirmError" role="alert" style="color:#ef4444;margin-top:10px" hidden></div>
         <div class="modal-actions">
           <button id="statusConfirmBtn" type="submit" class="warning-btn">Confirm</button>

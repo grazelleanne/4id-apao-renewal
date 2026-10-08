@@ -18,6 +18,34 @@
   .app-dashboard main { min-width:0; height:100dvh; min-height:0; box-sizing:border-box; padding-top:0!important; overflow-y:auto!important; scrollbar-gutter:stable; }
   .app-dashboard #sidebar { box-sizing:border-box; overflow-y:auto!important; overflow-x:hidden!important; }
   body.app-dashboard.mobile-nav-open main { overflow-y:hidden!important; }
+  .app-dashboard :is(.modal-bg,.modal-overlay) {
+    z-index:2000!important; inset:0!important; width:100%!important; height:100dvh!important;
+    box-sizing:border-box; padding:20px; background:rgba(15,23,42,.58)!important;
+    overflow-y:auto; overscroll-behavior:contain;
+  }
+  .app-dashboard #statusConfirmForm {
+    width:440px!important; min-width:0!important; max-width:100%!important;
+    box-sizing:border-box; padding:28px!important; border-radius:16px!important;
+    background:var(--ui-panel)!important; color:var(--ui-text)!important;
+    border:1px solid var(--ui-border)!important; gap:12px;
+    box-shadow:0 24px 64px rgba(15,23,42,.24);
+  }
+  .app-dashboard #statusConfirmForm .modal-close {
+    top:12px; right:12px; width:32px; height:32px; font-size:26px;
+    color:var(--ui-muted); border-radius:8px;
+  }
+  .app-dashboard #statusConfirmTitle { padding-right:24px; margin:0; font-size:20px; }
+  .app-dashboard #statusConfirmMessage { margin:0 0 4px; line-height:1.5; }
+  .app-dashboard #statusConfirmForm input { box-sizing:border-box; min-height:44px; border-radius:9px!important; }
+  .app-dashboard #statusConfirmForm .security-note {
+    background:var(--ui-panel-soft)!important; color:var(--ui-muted)!important;
+    border:1px solid var(--ui-border)!important; border-radius:10px; padding:12px; line-height:1.5;
+  }
+  .app-dashboard #statusConfirmForm .modal-actions { margin-top:8px; gap:10px; }
+  .app-dashboard #statusConfirmForm .modal-actions button { min-height:42px; border-radius:9px; font-size:14px; font-weight:600; }
+  .app-dashboard #statusConfirmForm .cancel-btn {
+    background:var(--ui-panel-soft)!important; color:var(--ui-text)!important; border:1px solid var(--ui-border);
+  }
   .app-dashboard main.app-main { background:var(--ui-page)!important; }
   body.app-dashboard.light-mode main.app-main { --ui-page:#f1f5fa; }
   .app-dashboard main > header {
