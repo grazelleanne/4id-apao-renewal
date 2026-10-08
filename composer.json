@@ -1,0 +1,81 @@
+{
+    "$schema":  "https://getcomposer.org/schema.json",
+    "name":  "apao/renewal-system",
+    "type":  "project",
+    "description":  "APAO personnel, firearm inspection and renewal management built with Laravel.",
+    "keywords":  [
+                     "laravel",
+                     "framework"
+                 ],
+    "license":  "MIT",
+    "require":  {
+                    "php":  "^8.3",
+                    "laravel/framework":  "^13.0"
+                },
+    "require-dev":  {
+                        "fakerphp/faker":  "^1.23",
+                        "mockery/mockery":  "^1.6",
+                        "nunomaduro/collision":  "^8.6",
+                        "phpunit/phpunit":  "^12.5.12"
+                    },
+    "autoload":  {
+                     "psr-4":  {
+                                   "App\\":  "app/",
+                                   "Database\\Factories\\":  "database/factories/",
+                                   "Database\\Seeders\\":  "database/seeders/"
+                               },
+                     "files":  [
+                                   "app/Support/functions.php"
+                               ]
+                 },
+    "autoload-dev":  {
+                         "psr-4":  {
+                                       "Tests\\":  "tests/"
+                                   }
+                     },
+    "scripts":  {
+                    "setup":  [
+                                  "composer install",
+                                  "@php artisan key:generate",
+                                  "@php artisan migrate"
+                              ],
+                    "dev":  [
+                                "@php artisan serve"
+                            ],
+                    "test":  [
+                                 "@php artisan config:clear --ansi",
+                                 "@php artisan test"
+                             ],
+                    "post-autoload-dump":  [
+                                               "Illuminate\\Foundation\\ComposerScripts::postAutoloadDump",
+                                               "@php artisan package:discover --ansi"
+                                           ],
+                    "post-update-cmd":  [
+                                            "@php artisan vendor:publish --tag=laravel-assets --ansi --force"
+                                        ],
+                    "pre-package-uninstall":  [
+                                                  "Illuminate\\Foundation\\ComposerScripts::prePackageUninstall"
+                                              ]
+                },
+    "extra":  {
+                  "laravel":  {
+                                  "dont-discover":  [
+
+                                                    ]
+                              }
+              },
+    "config":  {
+                   "optimize-autoloader":  true,
+                   "preferred-install":  "dist",
+                   "sort-packages":  true,
+                   "allow-plugins":  {
+                                         "pestphp/pest-plugin":  true,
+                                         "php-http/discovery":  true
+                                     },
+                   "platform":  {
+                                    "php":  "8.4.0"
+                                }
+               },
+    "minimum-stability":  "stable",
+    "prefer-stable":  true
+}

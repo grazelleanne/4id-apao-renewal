@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-require dirname(__DIR__) . '/src/bootstrap.php';
+require __DIR__ . '/laravel-bootstrap.php';
 
 if (PHP_SAPI !== 'cli' || $argc !== 3) {
     fwrite(STDERR, "Usage: php bin/reset-staff.php <current-email> <new-email>\n");

@@ -1,3 +1,10 @@
 .env
+/vendor/
+/.laravel-scaffold/
+/bootstrap/cache/*
+!/bootstrap/cache/.gitignore
+/database/*.sqlite*
+.phpunit.result.cache
+/.phpunit.cache/
 /storage/*
 !/storage/.gitkeep

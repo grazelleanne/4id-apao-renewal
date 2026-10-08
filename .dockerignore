@@ -1,4 +1,7 @@
 .git
 .env
+vendor
+.laravel-scaffold
+tests
 storage/*
 !storage/.gitkeep

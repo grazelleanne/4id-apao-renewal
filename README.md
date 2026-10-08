@@ -1,109 +1,59 @@
-# APAO Renewal System — Vanilla PHP
+# APAO Renewal System — Laravel
 
-This standalone PHP project does not require Laravel or Composer. It includes
-the original system UI (login, staff dashboard/PAR workspace, and all admin
-screens), an empty MySQL database schema, secure login, personnel CSV import,
-and personnel, inspection, and PAR PDF downloads. It does not include the
-existing system's personnel data or credentials.
+The application now runs on Laravel 13 with native routing, controllers, middleware, sessions, CSRF protection, Blade views and Eloquent models. Existing personnel and inspection business rules are retained in application services.
+
+The migration is on the separate migration/laravel branch. The deployed main branch has not been changed.
 
 ## Requirements
 
-- PHP 8.2+ with `pdo_mysql`
-- MySQL 8+
-- Configure your web server document root as `public/`
+- PHP 8.4 or newer with fileinfo, mbstring and pdo_mysql
+- Composer 2
+- MySQL 8
+- Web server document root: public/
 
 ## Setup
 
-1. Import `database/schema.sql` into MySQL as an administrator. It creates the
-   empty `apao_vanilla` database.
-2. Create a least-privilege MySQL account for that database.
-3. Copy `.env.example` to `.env`, then set the database credentials.
-4. Make `storage/` writable by PHP and keep it outside the public web root.
-5. Create the first administrator in an interactive terminal:
+Preserve an existing .env and database. For a fresh installation, copy .env.example and configure the database credentials.
 
-   ```powershell
-   php bin/create-admin.php admin@example.com "System Administrator"
-   ```
+    composer install
+    php artisan key:generate
+    php artisan migrate
+    php artisan serve --host=127.0.0.1 --port=8082
 
-   Use a unique password with at least 12 characters, upper- and lowercase
-   letters, a number, and a symbol.
-6. Run locally from this folder:
+Generate APP_KEY once and preserve it. Existing accounts and password hashes remain compatible. Do not commit .env.
 
-   ```powershell
-   php -S 127.0.0.1:8080 -t public public/router.php
-   ```
+Create a new administrator if needed:
 
-Use HTTPS in production. Set up your mail transport before relying on password
-reset email.
+    php artisan apao:create-admin admin@example.com "Administrator Name"
 
-## Brevo transactional email
+New administrator accounts must choose a new password on first sign-in. Existing command-line creation, reset and import tools in bin/ now bootstrap Laravel.
 
-Login requires a correct password and security-question answer. Five failed
-attempts lock that email/IP combination for three minutes. Login does not require
-an email verification code or a working email inbox.
-New passwords require at least eight characters, including uppercase, lowercase,
-a number, and a symbol. Brevo remains the transport for personnel notifications.
+## Project structure
 
-Create and verify a sender in Brevo, then add these environment variables to
-the Render web service:
+- app/Http/Controllers: request handlers
+- app/Http/Middleware: session, security and role access
+- app/Models: database models
+- app/Services: personnel, inspection, notification and account business rules
+- resources/views: active Blade templates
+- routes/web.php: application routes
+- database/migrations: existing schema adoption and fresh installation
+- public: web entry point, scripts, styles and images
+- tests/Feature: Laravel integration tests
 
-```text
-BREVO_API_KEY=xkeysib-your-api-key
-BREVO_SENDER_EMAIL=verified-sender@example.com
-BREVO_SENDER_NAME=APAO Renewal System
-BREVO_REPLY_TO_EMAIL=optional-reply-address@example.com
-```
+The old src/ and views/ directories remain as migration references and are not loaded by the Laravel web application. Old standalone tests target the previous vanilla runtime; use the Laravel feature suite for this branch.
 
-Personnel notification emails are sent with Brevo's transactional email API.
-The recipient address is always loaded from the personnel registration record;
-the browser cannot override it. Never commit the API key to `.env` or Git.
+## Verification
 
-## Importing personnel
+    php artisan route:list
+    php artisan view:cache
+    php vendor/phpunit/phpunit/phpunit tests/Feature/LaravelMigrationTest.php
 
-For a personnel-only CSV, use `php bin/import-personnel.php file.csv`. The CSV
-must have `item_number`, `first_name`, and `last_name` columns. Other accepted
-columns are listed in the importer. The import is transactional and rolls back
-on invalid rows or duplicate identifiers. Keep source data and backups
-protected.
+Tests require a separate local apao_laravel_test MySQL database. They refuse to run against another database and roll back their test records.
 
-To migrate related records, carefully export and review selected tables from
-the existing database, then import data in foreign-key order. Exclude session,
-cache, queue, and outstanding password-reset data. Back up and verify data
-before migration. The included schema is an empty import target, not an
-automatic migration or a complete Laravel feature port.
+## Render
 
-## Included safeguards
+The Dockerfile installs Laravel dependencies and PHP extensions. Configure APP_KEY, APP_URL, APP_ENV=production, APP_DEBUG=false, database credentials, DB_SSL_CA, and the existing verified Brevo sender settings.
 
-Prepared PDO statements, CSRF tokens, HTTP-only/SameSite session cookies,
-session ID rotation and inactivity expiry, server-side active-account and role
-checks, one-use login CAPTCHA, throttling, hashed OTPs, password complexity,
-audit events, output escaping, security headers, and private/no-store responses.
+Back up the database before php artisan migrate --force. File sessions/cache are configured for one application instance. Shared session/cache storage is needed for multiple instances.
 
-## Checks
-
-```powershell
-Get-ChildItem tests -Filter '*.php' | Where-Object { $_.Name -ne 'report-ui-fixture.php' } | ForEach-Object { php $_.FullName; if ($LASTEXITCODE -ne 0) { throw "Failed: $($_.Name)" } }
-node tests/admin-report-ui.cjs
-```
-
-## UI templates
-
-All templates are framework-free PHP files under `views/`. The application
-does not use Laravel, Blade, Composer, or a template compilation step.
-
-Implemented server workflows include personnel creation/edit/archive/restore,
-inspection approval and staff notifications, profile updates, account creation,
-account activation/deactivation, and administrator password resets. Login uses
-password and CAPTCHA; password changes and account creation require email OTP.
-New accounts and administrator-reset passwords require a personal password
-before dashboard access. OTP delivery requires a working Brevo configuration.
-
-Known incomplete workflows: the Forgot Password page calls recovery endpoints
-that are not implemented; PAR issuance/replacement changes are currently saved
-in browser localStorage rather than persisted through a server API. Scheduled
-jobs and some original branded/signature PDF features are also not fully ported.
-Do not describe these as completed or verified database-backed features.
-
-The automated checks use mocks for most database and mail operations. Passing
-checks do not replace testing against MySQL, live Brevo delivery, or browser
-camera permissions on the deployed site.
+See docs/LARAVEL-MIGRATION.md for migration scope, checks and deployment limitations.

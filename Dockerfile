@@ -1,8 +1,10 @@
 FROM php:8.4-apache
 
+COPY --from=composer:2 /usr/bin/composer /usr/local/bin/composer
+
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends libcurl4-openssl-dev \
-    && docker-php-ext-install curl pdo_mysql \
+    && apt-get install -y --no-install-recommends libcurl4-openssl-dev libonig-dev unzip \
+    && docker-php-ext-install curl pdo_mysql mbstring bcmath \
     && rm -rf /var/lib/apt/lists/* \
     && a2enmod rewrite
 
@@ -16,8 +18,10 @@ ENV APP_ENV=production
 RUN printf 'expose_php=Off\ndisplay_errors=Off\nlog_errors=On\npost_max_size=8M\nupload_max_filesize=2M\n' > /usr/local/etc/php/conf.d/security.ini
 COPY . .
 
-RUN mkdir -p storage/limits \
-    && chown -R www-data:www-data storage \
+RUN composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader --no-scripts
+
+RUN mkdir -p storage/limits storage/framework/cache/data storage/framework/sessions storage/framework/views storage/logs bootstrap/cache \
+    && chown -R www-data:www-data storage bootstrap/cache \
     && secret_group="$(getent group 1000 | cut -d: -f1)" \
     && if [ -z "$secret_group" ]; then groupadd --gid 1000 rendersecrets; secret_group=rendersecrets; fi \
     && usermod --append --groups "$secret_group" www-data
