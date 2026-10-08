@@ -10,6 +10,7 @@ Work is isolated on `migration/laravel`. Application migration is implemented; v
 - Migrations adopt existing tables without deleting personnel or user records.
 - Existing personnel, inspection, notifications, archive, report and account screens are migrated.
 - Docker installs Composer dependencies and required PHP extensions.
+- Obsolete vanilla `src/`, duplicate `views/`, standalone router and legacy tests are removed; their history remains in Git.
 - PAR issuance, updates and replacement history now persist in MySQL.
 - Approved password recovery uses hashed OTPs, expiration, rate limits, session binding and one-time reset.
 

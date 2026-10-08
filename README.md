@@ -40,7 +40,7 @@ New administrator accounts must choose a new password on first sign-in. Existing
 - public: web entry point, scripts, styles and images
 - tests/Feature: Laravel integration tests
 
-The old src/ and views/ directories remain as migration references and are not loaded by the Laravel web application. Old standalone tests target the previous vanilla runtime; use the Laravel feature suite for this branch.
+Open this repository folder directly in your IDE. Active templates are in `resources/views/`; controllers are in `app/Http/Controllers/`. Obsolete vanilla sources, duplicate templates and standalone tests have been removed. Git history preserves the previous implementation.
 
 ## Verification
 
