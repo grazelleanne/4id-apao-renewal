@@ -2,7 +2,7 @@
 
 The application now runs on Laravel 13 with native routing, controllers, middleware, sessions, CSRF protection, Blade views and Eloquent models. Existing personnel and inspection business rules are retained in application services.
 
-The migration is on the separate migration/laravel branch. The deployed main branch has not been changed.
+The updated Laravel application and system revisions are included on main. See [deployment instructions](docs/DEPLOYMENT.md) for database migration, data transfer and automated scheduling.
 
 ## Requirements
 
