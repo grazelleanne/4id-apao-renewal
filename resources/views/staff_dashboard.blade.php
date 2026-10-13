@@ -133,6 +133,8 @@
       .register-modal-close:hover{color:#e5eaf2;}
       .reg-input{width:100%;background:#111827;color:#e5eaf2;border:1px solid #2e3748;border-radius:7px;padding:0.5rem 0.7rem;font-size:0.85rem;outline:none;box-sizing:border-box;transition:border-color 0.18s;font-family:inherit;}
       .reg-input:focus{border-color:#3ec6ff;}
+      .reg-input:is(.rp-duplicate, .rp-invalid), .reg-input:is(.rp-duplicate, .rp-invalid):focus, body.light-mode .reg-input:is(.rp-duplicate, .rp-invalid), body.light-mode .reg-input:is(.rp-duplicate, .rp-invalid):focus { border-color:#ef4444!important; box-shadow:0 0 0 2px rgba(239,68,68,.18)!important; }
+
       #rp_issuedBy_add,#rp_parIssuedBy_add{position:absolute;top:100%;right:0;width:100%;z-index:80;padding:14px;box-sizing:border-box;background:var(--ui-panel,#242424);border:1px solid var(--ui-border,#363f4c);border-radius:9px;box-shadow:0 10px 28px rgba(0,0,0,.2);}
       #rp_issuedBy_add .reg-btn,#rp_parIssuedBy_add .reg-btn{padding:7px 12px;border-radius:6px;border:1px solid var(--ui-border,#363f4c);background:var(--ui-panel-soft,#303030);color:var(--ui-text,#e5eaf2);font:inherit;font-size:.8rem;cursor:pointer;}
       #rp_issuedBy_add .reg-btn-next,#rp_parIssuedBy_add .reg-btn-next{background:var(--ui-brand,#55cc8d);color:#10221a;border-color:transparent;}
@@ -639,6 +641,8 @@
     <link rel="stylesheet" href="/css/typography.css">
   <link rel="stylesheet" href="/css/dashboard-theme.css?v=<?php echo substr(hash_file('sha256', public_path('css/dashboard-theme.css')), 0, 12); ?>">
   <script src="/js/dashboard-lists.js?v=<?php echo substr(hash_file('sha256', public_path('js/dashboard-lists.js')), 0, 12); ?>" defer></script>
+  <link rel="stylesheet" href="{{ asset('css/workspace-sidebar.css') }}">
+<script src="{{ asset('js/compact-pagination.js') }}"></script>
 </head>
   <body class="app-dashboard light-mode min-h-screen font-inter main-bg bg-[#1a2025]">
   <?php
@@ -654,9 +658,9 @@
       <div class="sb-top">
         <div class="sb-logo">
           <img src="<?php echo e(asset('images/logo.png')); ?>" alt="Logo" onerror="this.src=''">
-          <span class="sb-logo-text">Staff</span>
+          <span class="sb-logo-text">4ID APAO Firearms<small>STAFF WORKSPACE</small></span>
         </div>
-        <button class="sb-toggle" id="sidebarToggleBtn" title="Toggle sidebar">
+        <button class="sb-toggle" id="sidebarToggleBtn" type="button" aria-label="Toggle sidebar" aria-controls="sidebar" title="Toggle sidebar">
           <svg id="sb-icon-menu" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M4 6h16M4 12h16M4 18h16"/></svg>
           <svg id="sb-icon-close" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="display:none"><path stroke-linecap="round" d="M6 18L18 6M6 6l12 12"/></svg>
         </button>
@@ -694,8 +698,9 @@
           <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 8v13H3V8"/><path d="M23 3H1v5h22V3z"/><path d="M10 12h4"/></svg>
           <span class="nav-label">Archive Data</span>
         </button>
+        <a href="/staff/email-history" class="nav-item"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 6 9 7 9-7"/></svg><span class="nav-label">Email History</span></a>
       </nav>
-      <div class="sb-bottom">
+      <div class="sb-bottom"><div class="workspace-office">10th Field Property Accountability Office</div>
         <button class="theme-btn" id="themeToggle" title="Toggle theme">
           <svg id="icon-sun" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
           <svg id="icon-moon" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="display:none"><path d="M21 12.79A9 9 0 1111.21 3a7 7 0 009.79 9.79z"/></svg>
@@ -1088,7 +1093,7 @@
   <div id="page-renewal" class="page-section">
     <div class="mb-5">
       <h2 class="font-semibold text-base force-light-text tracking-tight">Renewal Overview</h2>
-      <p class="text-xs text-[#64748b] mt-0.5">Track ICS renewal status. Notify personnel whose license is within the renewal period or already expired.</p>
+      <p class="text-xs text-[#64748b] mt-0.5">Track ICS renewal status. Email reminders are sent automatically at 30, 15, 7 and 0 days before expiration.</p>
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
@@ -1127,10 +1132,6 @@
     <div class="bg-[#23272f] rounded-lg shadow shadow-black/10 p-5">
       <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
         <h2 class="font-semibold text-base force-light-text tracking-tight">Renewal List</h2>
-        <button id="renewalNotifyAllBtn" onclick="renewalNotifyAll()" disabled style="display:none;align-items:center;gap:6px;background:#241b07;color:#f4b63f;border:1px solid #b77913;border-radius:7px;padding:7px 14px;font-size:0.78rem;font-weight:700;cursor:pointer;">
-          <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="display:inline;vertical-align:middle;margin-right:2px;"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
-          Notify Selected (<span id="renewalSelectedCount">0</span>)
-        </button>
       </div>
 
       <div class="flex flex-wrap gap-2 mb-4">
@@ -1166,7 +1167,7 @@
         <table class="w-full text-xs text-left force-light-text" style="border-collapse:collapse;">
           <thead>
             <tr class="border-b border-[#252b32] text-[#b0bac7]">
-              <th class="py-2 px-2 font-semibold" style="width:34px;"><input id="renewalSelectAll" type="checkbox" aria-label="Select all filtered personnel" style="accent-color:#33b481;"></th>
+              <th class="py-2 px-2 font-semibold" style="width:34px;"></th>
               <th class="py-2 px-2 font-semibold">No.</th>
               <th class="py-2 px-2 font-semibold">Name</th>
               <th class="py-2 px-2 font-semibold">Rank</th>
@@ -1200,7 +1201,7 @@
 
       <p id="renewalFootnote" class="text-xs text-[#64748b] mt-4" style="display:none;">
         <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="display:inline;vertical-align:middle;margin-right:4px;"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4m0-4h.01"/></svg>
-        Notify personnel who are <span style="color:#fc8181;font-weight:700;">Expired</span> or <span style="color:#f6e05e;font-weight:700;">Within Renewal Period</span> to ensure timely renewal of their ICS.
+        Renewal email reminders are sent automatically through Brevo at 30, 15, 7 and 0 days before expiration.
       </p>
     </div>
   </div>
@@ -1516,12 +1517,12 @@
                   <div><label class="reg-label">First Name <span style="color:#ef4444;">*</span></label><input type="text" id="rp_firstName" class="reg-input" placeholder="Enter first name"></div>
                   <div><label class="reg-label">Middle Name</label><input type="text" id="rp_middleName" class="reg-input" placeholder="Enter middle name"></div>
                   <div><label class="reg-label">Rank <span style="color:#ef4444;">*</span></label><select id="rp_rank" class="reg-input"><option value="">Select rank</option><option>PVT</option><option>PFC</option><option>CPL</option><option>SGT</option><option>SSG</option><option>SFC</option><option>MSG</option><option>1SG</option><option>SGM</option><option>2LT</option><option>1LT</option><option>CPT</option><option>MAJ</option><option>LTC</option><option>COL</option><option>BGen</option><option>Cpl (OS) PA</option><option>Sgt (OS) PA</option></select></div>
-                  <div><label class="reg-label">AFP Serial Number <span style="color:#ef4444;">*</span></label><input type="text" id="rp_afpSerial" class="reg-input" placeholder="Enter AFP serial number"></div>
+                  <div><label class="reg-label">AFP Serial Number <span style="color:#ef4444;">*</span></label><input type="text" id="rp_afpSerial" class="reg-input" placeholder="AFP123456" maxlength="9" pattern="AFP[0-9]{6}" aria-describedby="rp_afpSerialNotice"><p id="rp_afpSerialNotice" role="status" hidden style="color:#ef4444;font-size:.75rem;margin:5px 0 0;">This AFP serial number is already used.</p></div>
                   <div><label class="reg-label">Unit / Organization <span style="color:#ef4444;">*</span></label><select id="rp_unit" class="reg-input"><option value="">Select unit / organization</option><option>8IB, 4ID, PA</option><option>9IB, 4ID, PA</option><option>10IB, 4ID, PA</option><option>62IB, 4ID, PA</option><option>901Bde, 9ID, PA</option><option>4ID, PA</option><option>APAO, PA</option><option>10FPAO, APAO, PA</option><option>Other</option></select></div>
                   <div><label class="reg-label">AFOS/MOS</label><input type="text" id="rp_afosMos" class="reg-input" placeholder="e.g. 11A"></div>
                   <div><label class="reg-label">Branch</label><input type="text" id="rp_branch" class="reg-input" placeholder="e.g. Infantry"></div>
                   <div><label class="reg-label">Date of Birth <span style="color:#ef4444;">*</span></label><input type="date" id="rp_dob" class="reg-input" max="<?php echo e(now()->toDateString()); ?>"></div>
-                  <div><label class="reg-label">Email Address <span style="color:#ef4444;">*</span></label><input type="email" id="rp_email" class="reg-input" placeholder="Enter email address"></div>
+                  <div><label class="reg-label">Email Address <span style="color:#ef4444;">*</span></label><input type="email" id="rp_email" class="reg-input" placeholder="Enter email address" aria-describedby="rp_emailNotice"><p id="rp_emailNotice" role="status" hidden style="color:#ef4444;font-size:.75rem;margin:5px 0 0;">This email address is already used.</p></div>
                   <div><label class="reg-label">Contact Number</label><input type="text" id="rp_contact" class="reg-input" inputmode="numeric" pattern="[0-9]*" maxlength="20" placeholder="Numbers only" oninput="this.value=this.value.replace(/\D/g,'')"></div>
                   <div><label class="reg-label">Civil Status</label><select id="rp_civil" class="reg-input"><option value="">Select civil status</option><option>Single</option><option>Married</option><option>Widowed</option><option>Separated</option></select></div>
                   <div><label class="reg-label">Gender</label><select id="rp_gender" class="reg-input"><option value="">Select gender</option><option>Male</option><option>Female</option></select></div>
@@ -1541,7 +1542,6 @@
                 <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;">
                   <div><label class="reg-label">Nomenclature of Pistol <span style="color:#ef4444;">*</span></label><select id="rp_pistolNomenclature" class="reg-input"><option value="">Select nomenclature</option><option>Pistol 9mm, Glock 17</option><option>Pistol Cal .45</option><option>Pistol 9mm</option><option>Glock 17</option></select></div>
                   <div><label class="reg-label">Pistol Type <span style="color:#ef4444;">*</span></label><input id="rp_pistolType" class="reg-input" value="Pistol" readonly></div>
-                  <div><label class="reg-label">Pistol Serial Number <span style="color:#ef4444;">*</span></label><input type="text" id="rp_pistolSerial" class="reg-input" placeholder="Enter pistol serial number"></div>
                   <div><label class="reg-label">Quantity of Ammo Issued <span style="color:#ef4444;">*</span></label><input type="number" id="rp_ammo" class="reg-input" placeholder="Enter quantity" min="0" step="1" oninput="if (this.value !== '' && Number(this.value) < 0) this.value = 0;"></div>
                   <div><label class="reg-label">Date Issued</label><input type="date" id="rp_dateIssued" class="reg-input" value="<?php echo e(now()->toDateString()); ?>" max="<?php echo e(now()->toDateString()); ?>"></div>
                   <div><label class="reg-label">Issued By <span style="color:#ef4444;">*</span></label><select id="rp_issuedBy" class="reg-input" onchange="rpIssuerChanged(this)"><option value="">Select issuing officer</option><option>MS ROSEMARIE O VILBAR</option><option>MS EVANGELINE M SINGUEO, Ph.D.</option><option value="__add_name__">Add name...</option></select><div id="rp_issuedBy_add" style="display:none;margin-top:8px"><label class="reg-label" for="rp_issuedBy_name">New issuing officer name</label><input id="rp_issuedBy_name" class="reg-input" maxlength="255" placeholder="Enter complete name"><div style="display:flex;gap:8px;margin-top:8px"><button type="button" class="reg-btn reg-btn-next" onclick="rpAddIssuer('rp_issuedBy')">Add name</button><button type="button" class="reg-btn reg-btn-prev" onclick="rpCancelIssuer('rp_issuedBy')">Cancel</button></div><small id="rp_issuedBy_error" role="alert" style="color:#ef4444"></small></div></div>
@@ -1676,7 +1676,8 @@
         <div class="reg-section">
           <div class="reg-section-title">Service Information</div>
           <div class="reg-field-grid">
-            <div><label class="reg-label">AFP Serial # <span style="color:#ef4444;">*</span></label><input name="afpSerialNumber" type="text" class="reg-input" placeholder="AFP023947" required /></div>
+            <div><label class="reg-label">ATP Serial # <span style="color:#ef4444;">*</span></label><input name="atpSerialNumber" type="text" class="reg-input" required maxlength="100" pattern="[A-Za-z0-9][A-Za-z0-9/-]{2,99}" /></div>
+            <div><label class="reg-label">AFP Serial # <span style="color:#ef4444;">*</span></label><input name="afpSerialNumber" type="text" class="reg-input" placeholder="AFP023947" maxlength="9" pattern="AFP[0-9]{6}" required /></div>
             <div><label class="reg-label">AFOS/MOS</label><input name="afosMos" type="text" class="reg-input" placeholder="11A" /></div>
             <div><label class="reg-label">Branch</label><input name="branch" type="text" class="reg-input" placeholder="Infantry" /></div>
             <div><label class="reg-label">Unit <span style="color:#ef4444;">*</span></label><input name="unit" type="text" class="reg-input" placeholder="8IB, 4ID, PA" required /></div>
@@ -1688,7 +1689,7 @@
           <div class="reg-field-grid">
             <div><label class="reg-label">Nomenclature of Pistol <span style="color:#ef4444;">*</span></label><input name="pistolNomenclature" type="text" class="reg-input" placeholder="9mm Glock17" required /></div>
             <div><label class="reg-label">Pistol Type <span style="color:#ef4444;">*</span></label><input name="pistolType" class="reg-input" value="Pistol" readonly required></div>
-            <div><label class="reg-label">Pistol Serial # <span style="color:#ef4444;">*</span></label><input name="pistolSerialNumber" type="text" class="reg-input" placeholder="GK-12345" required /></div>
+
             <div><label class="reg-label">Qty Ammo (rds)</label><input name="qtyAmmo" type="number" min="0" class="reg-input" placeholder="68" /></div>
           </div>
         </div>
@@ -1731,41 +1732,6 @@
     </div>
   </div>
 
-
-  <div id="notifyModalOverlay" class="notify-modal-overlay" style="display:none;">
-    <div class="notify-modal-box">
-      <button class="notify-modal-close" id="notifyModalClose">&times;</button>
-      <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1.25rem;">
-        <div style="width:38px;height:38px;background:#2d0a0a;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-          <svg width="18" height="18" fill="none" stroke="#fc8181" stroke-width="2" viewBox="0 0 24 24"><path d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
-        </div>
-        <div>
-          <h3 style="color:#e5eaf2;font-size:0.95rem;font-weight:700;margin:0;">Send Notification Email</h3>
-          <p id="notifyModalSubtitle" style="color:#64748b;font-size:0.75rem;margin:0;margin-top:2px;">Notify personnel about license status</p>
-        </div>
-      </div>
-      <div style="background:#111827;border-radius:8px;padding:0.75rem 1rem;margin-bottom:1rem;border-left:3px solid #fc8181;">
-        <p style="color:#94a3b8;font-size:0.75rem;margin:0;">Sending to: <strong id="notifyPersonnelName" style="color:#fc8181;">—</strong></p>
-        <p style="color:#64748b;font-size:0.72rem;margin:0;margin-top:3px;" id="notifyStatusLine">Status: —</p>
-      </div>
-      <div style="margin-bottom:0.85rem;">
-        <label class="notify-label">Registered Personnel Email</label>
-        <input id="notifyEmailInput" class="notify-input" type="email" placeholder="No registered email" readonly aria-readonly="true" title="This email comes from the personnel registration record and cannot be edited here." />
-      </div>
-      <div style="margin-bottom:1rem;">
-        <label class="notify-label">Message <span style="color:#ef4444;">*</span></label>
-        <textarea id="notifyMessageInput" class="notify-input" rows="5" style="resize:vertical;"></textarea>
-      </div>
-      <div id="notifyFeedback" style="font-size:0.78rem;min-height:1.2rem;margin-bottom:0.75rem;"></div>
-      <div style="display:flex;justify-content:flex-end;gap:0.6rem;">
-        <button class="notify-cancel-btn" id="notifyModalCancel">Cancel</button>
-        <button class="notify-send-btn" id="notifyModalSend">
-          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="display:inline;vertical-align:middle;margin-right:4px;"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
-          Send Email
-        </button>
-      </div>
-    </div>
-  </div>
 
   <div id="systemModalOverlay" class="system-modal-overlay" style="display:none;">
     <div class="system-modal-box" role="dialog" aria-modal="true" aria-labelledby="systemModalTitle">
@@ -1821,7 +1787,6 @@
 
     const CSRF       = document.querySelector('meta[name="csrf-token"]').content;
     const STORE_URL  = "<?php echo e(route('staff.personnel.store')); ?>";
-    const NOTIFY_URL = (id) => `/staff/personnel/${id}/notify`;
 
     // ── THEME ──────────────────────────────────────────────────────────────
     const iconSun  = document.getElementById('icon-sun');
@@ -1883,11 +1848,16 @@
       if (["personnel", "ics", "renewal"].includes(page)) loadDashboard();
     }
     document.addEventListener('rp-navigate', function(e) { navigateTo(e.detail); });
-    document.querySelectorAll(".nav-link, .nav-item").forEach(btn => {
+    document.querySelectorAll(".nav-link[data-page], .nav-item[data-page]").forEach(btn => {
       btn.addEventListener("click", function (e) { e.preventDefault(); navigateTo(this.dataset.page); });
     });
     document.querySelectorAll(".quick-nav").forEach(btn => {
       btn.addEventListener("click", function () { navigateTo(this.dataset.page); });
+    });
+
+    window.addEventListener('load', function() {
+      var page = new URLSearchParams(window.location.search).get('page');
+      if (['dashboard','registration','personnel','ics','par','renewal','report','archive'].includes(page)) navigateTo(page);
     });
 
     // ── NOTIFICATIONS ──────────────────────────────────────────────────────
@@ -2180,17 +2150,7 @@
     }
 
     function renderPagination(totalPages) {
-      const container = document.getElementById("pagination");
-      if (!container || totalPages <= 1) { if (container) container.innerHTML = ""; return; }
-      let html = "";
-      for (let i = 1; i <= totalPages; i++) {
-        const active = i === currentTablePage ? "bg-[#33b481] text-white" : "bg-[#1a2025] text-[#94a3b8] hover:bg-[#23272f]";
-        html += `<button class="px-2 py-1 rounded text-xs font-semibold transition-colors ${active}" data-p="${i}">${i}</button>`;
-      }
-      container.innerHTML = html;
-      container.querySelectorAll("button").forEach(btn => {
-        btn.addEventListener("click", function () { currentTablePage = parseInt(this.dataset.p); renderTable(); });
-      });
+      renderCompactPagination(document.getElementById('pagination'), currentTablePage, totalPages, function(page) {currentTablePage=page; renderTable();});
     }
 
     document.getElementById("sortSelect")?.addEventListener("change", e => { currentSort = e.target.value; renderTable(); });
@@ -2347,107 +2307,6 @@
         registerFeedback.textContent = '✗ Network error. Please try again.';
         submitBtn.disabled = false;
         submitBtn.innerHTML = `+ Register Personnel`;
-      }
-    });
-
-    // ── NOTIFY MODAL (FIXED — complete function, no ellipsis) ──────────────
-    let currentNotifyId = null;
-
-    function openNotifyModal(id, name, status) {
-      currentNotifyId = id;
-
-
-      // Set personnel name display
-      document.getElementById('notifyPersonnelName').textContent = name;
-      document.getElementById('notifyPersonnelName').style.color =   status === 'expired' ? '#fc8181' :
-    status === 'renewed' ? '#68d391' : '#fde68a';
-
-      document.getElementById('notifyStatusLine').textContent =  status === 'expired'  ? 'Status: ✕ Expired — Immediate renewal required' :
-    status === 'renewed'  ? 'Status: ✓ Renewed — License approved and active' :
-                            'Status: ⏱ Within Renewal Period — Renewal due soon';
-
-      // Always use the address saved during personnel registration.
-      const registeredPersonnel = personnel.find(function(p) { return p.itemNumber == id; });
-      const savedEmail = registeredPersonnel ? registeredPersonnel.email : '';
-      const cleanEmail = (savedEmail && savedEmail !== 'undefined' && savedEmail !== 'null') ? String(savedEmail).trim() : '';
-
-      const emailInput = document.getElementById('notifyEmailInput');
-      emailInput.value = cleanEmail;
-      emailInput.readOnly = true;
-      emailInput.title = 'Registered email address. Edit the personnel record to change it.';
-
-      // Reset feedback
-      document.getElementById('notifyFeedback').textContent = '';
-      document.getElementById('notifyFeedback').style.color = '';
-
-      // Set send button
-      const sendBtn = document.getElementById('notifyModalSend');
-      sendBtn.disabled = !cleanEmail;
-      sendBtn.className =   status === 'expired' ? 'notify-send-btn' :
-    status === 'renewed' ? 'notify-send-btn' : 'notify-within-btn';
-      sendBtn.style.background = status === 'renewed' ? '#276749' : '';
-      sendBtn.innerHTML = `<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="display:inline;vertical-align:middle;margin-right:4px;"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>Send Email`;
-
-      // Default message
-    document.getElementById('notifyMessageInput').value =
-    status === 'expired'
-      ? `Dear ${name},\n\nThis is to inform you that your pistol license has already EXPIRED. Please coordinate immediately with the Property Accountability Office to process your renewal at the earliest possible time.\n\nFailure to renew may result in administrative action.\n\nRegards,\nAPAO Renewal System`
-      : status === 'renewed'
-      ? `Dear ${name},\n\nWe are pleased to inform you that your pistol license has been successfully RENEWED and approved by the Administrator. Your license is now active.\n\nPlease keep this as your official notification of renewal.\n\nRegards,\nAPAO Renewal System`
-      : `Dear ${name},\n\nThis is a reminder that your pistol license is within the renewal period and will expire soon. Please process your renewal before the expiration date.\n\nPlease coordinate with the Property Accountability Office at the soonest possible time.\n\nRegards,\nAPAO Renewal System`;
-
-      // Show modal
-      document.getElementById('notifyModalOverlay').style.display = 'flex';
-
-      // Show warning if no email
-      if (!cleanEmail) {
-        setTimeout(() => {
-          document.getElementById('notifyFeedback').style.color = '#f6e05e';
-          document.getElementById('notifyFeedback').textContent = '⚠ No registered email found. Update the personnel record before sending.';
-        }, 100);
-      }
-    }
-
-    window.openNotifyModal = openNotifyModal;
-
-    function closeNotifyModal() {
-      document.getElementById('notifyModalOverlay').style.display = 'none';
-      currentNotifyId = null;
-    }
-
-    document.getElementById('notifyModalClose').addEventListener('click', closeNotifyModal);
-    document.getElementById('notifyModalCancel').addEventListener('click', closeNotifyModal);
-    document.getElementById('notifyModalOverlay').addEventListener('click', function(e) { if (e.target === this) closeNotifyModal(); });
-
-    document.getElementById('notifyModalSend').addEventListener('click', async function () {
-      const notifyPersonnel = personnel.find(function(p) { return p.itemNumber == currentNotifyId; });
-      const email    = notifyPersonnel && notifyPersonnel.email ? String(notifyPersonnel.email).trim() : '';
-      const message  = document.getElementById('notifyMessageInput').value.trim();
-      const feedback = document.getElementById('notifyFeedback');
-      if (!email)   { feedback.style.color = '#fc8181'; feedback.textContent = '⚠ Please enter the personnel email address.'; return; }
-      if (!message) { feedback.style.color = '#fc8181'; feedback.textContent = '⚠ Please enter a message.'; return; }
-      this.disabled = true;
-      this.innerHTML = `Sending...`;
-      feedback.style.color = '#94a3b8'; feedback.textContent = 'Sending email, please wait...';
-      try {
-        const res  = await fetch(NOTIFY_URL(currentNotifyId), { method:'POST', headers:{'Content-Type':'application/json','Accept':'application/json','X-CSRF-TOKEN':CSRF}, body:JSON.stringify({message}) });
-        const json = await res.json().catch(() => ({success:false,error:
-          res.status === 419 ? 'Your session expired. Refresh the page and try again.' :
-          res.status >= 500 ? 'The server could not complete the request. Please check the server logs.' :
-          'The server returned an unexpected response. Refresh the page and try again.'}));
-        if (res.ok && json.success) {
-          feedback.style.color = '#33b481'; feedback.textContent = '✓ Email sent successfully!';
-          this.innerHTML = '✓ Sent!'; this.style.background = '#276749';
-          setTimeout(() => closeNotifyModal(), 1800);
-        } else {
-          feedback.style.color = '#fc8181'; feedback.textContent = '✗ ' + (json.error || json.message || 'Failed to send email.');
-          this.disabled = false;
-          this.innerHTML = `<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="display:inline;vertical-align:middle;margin-right:4px;"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>Send Email`;
-        }
-      } catch (e) {
-        feedback.style.color = '#fc8181'; feedback.textContent = '✗ Could not reach the server. Check your connection and try again.';
-        this.disabled = false;
-        this.innerHTML = `<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="display:inline;vertical-align:middle;margin-right:4px;"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>Send Email`;
       }
     });
 
@@ -2945,15 +2804,7 @@
       }
 
       function renewalActionCell(r, status) {
-        if (status === 'renewed') {
-          return '<button onclick="renewalOpenDetails(' + JSON.stringify(r.itemNumber) + ')" '
-            + 'class="renewal-action-renewed" style="background:transparent;color:#33b481;border:1px solid #1a5c3a;border-radius:6px;padding:5px 12px;font-size:0.72rem;font-weight:700;cursor:pointer;">View Details</button>';
-        }
-        var color = status === 'expired'
-          ? 'background:#2d0a0a;color:#fc8181;border:1px solid #7f1d1d;'
-          : 'background:#241b07;color:#f4b63f;border:1px solid #92400e;';
-        return '<button onclick="renewalNotifyOne(' + JSON.stringify(r.itemNumber) + ')" '
-          + 'style="' + color + 'border-radius:6px;padding:5px 12px;font-size:0.72rem;font-weight:700;cursor:pointer;">✉ Notify</button>';
+        return '<button onclick="renewalOpenDetails(' + JSON.stringify(r.itemNumber) + ')" class="renewal-action-renewed" style="background:transparent;color:#33b481;border:1px solid #1a5c3a;border-radius:6px;padding:5px 12px;font-size:0.72rem;font-weight:700;cursor:pointer;">View Details</button>';
       }
 
       function renewalRenderTable() {
@@ -2996,7 +2847,7 @@
     var name = (r.lastName||'') + ', ' + (r.firstName||'') + (r.middleName ? ' ' + r.middleName : '');
 
     var badge = renewalDurationBadge(r);
-    var checkbox = renewalTab === 'renewed' ? '' : '<input type="checkbox" aria-label="Select personnel" onchange="renewalToggleSelection(' + JSON.stringify(r.itemNumber) + ', this.checked)" ' + (renewalSelected.has(String(r.itemNumber)) ? 'checked' : '') + ' style="accent-color:#33b481;">';
+    var checkbox = '';
 
     return '<tr class="border-b border-[#1a2025] hover:bg-[#1a2025] transition-colors">'
       + '<td class="py-2 px-2">' + checkbox + '</td>'
@@ -3016,15 +2867,7 @@
       }
 
       function renewalPagination(pages) {
-        var c = document.getElementById('renewalTblPages'); if (!c) return;
-        if (pages <= 1) { c.innerHTML = ''; return; }
-        var active = 'background:#33b481;color:#fff;border-color:#33b481;';
-        var inactive = 'background:#1a2025;color:#94a3b8;border-color:#363b48;';
-        var html = '';
-        for (var i = 1; i <= pages; i++) {
-          html += '<button onclick="renewalGoPage(' + i + ')" style="border-radius:5px;padding:4px 9px;font-size:0.7rem;font-weight:600;cursor:pointer;border:1px solid;' + (i === renewalPage ? active : inactive) + '">' + i + '</button>';
-        }
-        c.innerHTML = html;
+        renderCompactPagination(document.getElementById('renewalTblPages'), renewalPage, pages, function(page) {renewalPage=page; renewalRenderTable();});
       }
       window.renewalGoPage = function(n) { renewalPage = n; renewalRenderTable(); };
 
@@ -3045,6 +2888,11 @@
         if (!r) return;
         var name = ((r.rank||'') + ' ' + (r.lastName||'') + ', ' + (r.firstName||'') + ' ' + (r.middleName||'')).replace(/\s+/g,' ').trim();
         document.getElementById('pd_name').textContent = name;
+        var detailStatus = r.approvedStatus || 'pending';
+        var statusLabels = {renewed:'Renewed',within:'Within Renewal',expired:'Expired',new:'New',pending:'Pending'};
+        var statusBadge = document.getElementById('pd_statusBadge');
+        statusBadge.textContent = statusLabels[detailStatus] || 'Not recorded';
+        statusBadge.className = 'badge badge-' + (statusLabels[detailStatus] ? detailStatus : 'pending');
         document.getElementById('pd_rank').textContent = r.rank || '—';
         document.getElementById('pd_serial').textContent = r.afpSerialNumber || '—';
         document.getElementById('pd_unit').textContent = r.unit || '—';
@@ -3055,19 +2903,19 @@
         var dr = daysRemaining(r.dateOfValidity);
         var renewalRows = [
           ['Date Renewed', r.dateRenewed ? fmtDateShort(r.dateRenewed) : '—'],
-          ['Renewed By', r.renewedBy || 'Staff User'],
+          ['Renewed By', r.renewedBy || 'Not recorded'],
           ['Next Expiration Date', r.dateOfValidity ? fmtDateShort(r.dateOfValidity) : '—'],
           ['Days Remaining', dr !== null ? (dr >= 0 ? dr + ' days' : 'Overdue') : '—']
         ];
         document.getElementById('pd_renewalInfo').innerHTML = renewalRows.map(function(x){
-          return '<div style="display:flex;justify-content:space-between;padding:4px 0;"><span>' + x[0] + '</span><span style="color:#e5eaf2;font-weight:600;">' + x[1] + '</span></div>';
+          return '<div style="display:flex;justify-content:space-between;padding:4px 0;"><span>' + x[0] + '</span><span style="color:#e5eaf2;font-weight:600;">' + escapeNotificationText(String(x[1])) + '</span></div>';
         }).join('');
 
         var icsRows = [
-          ['Date Issued (Original)', r.icsDateIssued ? fmtDateShort(r.icsDateIssued) : '—'],
+          ['Date Issued (Original)', r.icsDateIssued ? fmtDateShort(r.icsDateIssued) : 'Not recorded'],
           ['Valid Until', r.dateOfValidity ? fmtDateShort(r.dateOfValidity) : '—'],
           ['ICS Number', r.icsNumber || ('ICS-' + String(r.itemNumber).padStart(4,'0'))],
-          ['Status', 'Active']
+          ['Status', ({renewed:'Renewed',within:'Within Renewal',expired:'Expired',new:'New',pending:'Pending'})[r.approvedStatus] || 'Not recorded']
         ];
         document.getElementById('pd_icsInfo').innerHTML = icsRows.map(function(x){
           return '<div style="display:flex;justify-content:space-between;padding:4px 0;"><span>' + x[0] + '</span><span style="color:#e5eaf2;font-weight:600;">' + x[1] + '</span></div>';
@@ -3079,62 +2927,6 @@
       document.getElementById('personnelDetailsClose')?.addEventListener('click', function(){ document.getElementById('personnelDetailsOverlay').style.display='none'; });
       document.getElementById('personnelDetailsCloseBtn')?.addEventListener('click', function(){ document.getElementById('personnelDetailsOverlay').style.display='none'; });
       document.getElementById('personnelDetailsOverlay')?.addEventListener('click', function(e){ if (e.target === this) this.style.display='none'; });
-
-      window.renewalNotifyOne = function(itemNum) {
-        var r = personnel.find(function(x){ return x.itemNumber == itemNum; });
-        if (!r) return;
-        var name = ((r.rank||'') + ' ' + (r.lastName||'') + ', ' + (r.firstName||'') + ' ' + (r.middleName||'')).replace(/\s+/g,' ').trim();
-        window.openNotifyModal(r.itemNumber, name, r.approvedStatus);
-      };
-
-      window.renewalNotifyAll = function() {
-        var status = renewalTab;
-        if (status !== 'within' && status !== 'expired') return;
-        var list = personnel.filter(function(p){ return (p.approvedStatus||'pending') === status && renewalSelected.has(String(p.itemNumber)); });
-        var withEmail = list.filter(function(p){ return p.email && p.email !== 'undefined' && p.email !== 'null'; });
-        var withoutEmail = list.length - withEmail.length;
-        if (!withEmail.length) {
-          showSystemModal('No email addresses', 'No personnel in this list have an email on record.', false);
-          return;
-        }
-        var confirmation = 'Send notification email to the ' + withEmail.length + ' selected personnel?' +
-          (withoutEmail ? ' ' + withoutEmail + ' record(s) will be skipped (no email).' : '');
-        showSystemModal('Confirm notification', confirmation, true).then(function(confirmed) {
-          if (!confirmed) return;
-
-        var btn = document.getElementById('renewalNotifyAllBtn');
-        var origHtml = btn.innerHTML;
-        btn.disabled = true; btn.innerHTML = 'Sending…';
-        var CSRF = document.querySelector('meta[name="csrf-token"]').content;
-        var sent = 0, failed = 0;
-
-        function defaultMessage(r) {
-          var name = ((r.rank||'') + ' ' + (r.lastName||'') + ', ' + (r.firstName||'') + ' ' + (r.middleName||'')).replace(/\s+/g,' ').trim();
-          return status === 'expired'
-            ? 'Dear ' + name + ',\n\nThis is to inform you that your pistol license has already EXPIRED. Please coordinate immediately with the Property Accountability Office to process your renewal at the earliest possible time.\n\nFailure to renew may result in administrative action.\n\nRegards,\nAPAO Renewal System'
-            : 'Dear ' + name + ',\n\nThis is a reminder that your pistol license is within the renewal period and will expire soon. Please process your renewal before the expiration date.\n\nPlease coordinate with the Property Accountability Office at the soonest possible time.\n\nRegards,\nAPAO Renewal System';
-        }
-
-        var chain = Promise.resolve();
-        withEmail.forEach(function(r) {
-          chain = chain.then(function() {
-            return fetch('/staff/personnel/' + r.itemNumber + '/notify', {
-              method: 'POST',
-              headers: { 'Content-Type':'application/json', 'X-CSRF-TOKEN':CSRF },
-              body: JSON.stringify({ message: defaultMessage(r) })
-            }).then(function(res){ return res.json(); }).then(function(json){ if (json.success) sent++; else failed++; })
-              .catch(function(){ failed++; });
-          });
-        });
-
-        chain.then(function() {
-          btn.disabled = false; btn.innerHTML = origHtml;
-          renewalSelected.clear();
-          renewalRenderTable();
-          showSystemModal('Notifications complete', 'Selected notifications: ' + sent + ' sent, ' + failed + ' failed' + (withoutEmail ? ', ' + withoutEmail + ' skipped (no email)' : '') + '.', false);
-        });
-        });
-      };
 
       window.renewalRenderAll = function() {
         if (!document.getElementById('renewaltab-renewed')) return;
@@ -3177,7 +2969,7 @@
 
       function getIcsStatus(p) {
         if (p.approvedStatus === 'expired' && p.icsStatus !== 'under') return 'expired';
-        if (p.approvedStatus === 'within' && p.icsStatus !== 'under') return 'inspection';
+        if (p.approvedStatus === 'within' && p.icsStatus !== 'under') return p.icsStatus === 'renewal' ? 'renewal' : 'inspection';
         return p.icsStatus || 'inspection';
       }
 
@@ -3280,16 +3072,7 @@
       }
 
       function icsPagination(pages) {
-        var c = document.getElementById('ics-tbl-pages'); if (!c) return;
-        if (pages <= 1) { c.innerHTML = ''; return; }
-        var bs = 'border-radius:5px;padding:4px 9px;font-size:0.7rem;font-weight:600;cursor:pointer;border:1px solid #363b48;';
-        var html = '';
-        if (icsPage > 1) html += '<button onclick="icsGoPage(' + (icsPage-1) + ')" style="' + bs + 'background:#1a2025;color:#94a3b8;">‹</button>';
-        for (var i = 1; i <= pages; i++) {
-          html += '<button onclick="icsGoPage(' + i + ')" style="' + bs + (i === icsPage ? 'background:#33b481;color:#fff;border-color:#33b481;' : 'background:#1a2025;color:#94a3b8;') + '">' + i + '</button>';
-        }
-        if (icsPage < pages) html += '<button onclick="icsGoPage(' + (icsPage+1) + ')" style="' + bs + 'background:#1a2025;color:#94a3b8;">›</button>';
-        c.innerHTML = html;
+        renderCompactPagination(document.getElementById('ics-tbl-pages'), icsPage, pages, function(page) {icsPage=page; icsRenderTable();});
       }
 
       window.icsGoPage = function(n) { icsPage = n; icsRenderTable(); };
@@ -3553,6 +3336,87 @@
       : document.getElementById('rp_citizenship').value;
   }
 
+  function rpMarkDuplicate(input, duplicate) {
+    input.classList.toggle('rp-duplicate', duplicate);
+    var notice = document.getElementById(input.id + 'Notice');
+    if (notice) notice.hidden = !duplicate;
+    input.removeAttribute('title');
+    if (duplicate) input.setAttribute('aria-invalid', 'true');
+    else { input.removeAttribute('aria-invalid'); input.style.borderColor = ''; }
+  }
+
+  function normalizeAfpSerial(value) {
+    var upper = value.toUpperCase();
+    if (upper === '' || /^A(F(P)?)?$/.test(upper)) return upper;
+    return 'AFP' + upper.replace(/[^0-9]/g, '').slice(0, 6);
+  }
+  document.querySelectorAll('#rp_afpSerial, input[name="afpSerialNumber"]').forEach(function(input) {
+    input.addEventListener('input', function() {
+      input.value = normalizeAfpSerial(input.value);
+    });
+  });
+
+  var rpDuplicateFields = {rp_afpSerial:'afpSerialNumber',rp_email:'email'};
+  var rpDuplicateTimers = {};
+  var rpDuplicateVersions = {};
+  async function rpCheckAvailability(id) {
+    var input = document.getElementById(id);
+    var value = input.value.trim();
+    var version = rpDuplicateVersions[id] = (rpDuplicateVersions[id] || 0) + 1;
+    if (!value || (id === 'rp_email' && !input.checkValidity())) { rpMarkDuplicate(input, false); return; }
+    try {
+      var response = await fetch(document.getElementById('rpAvailabilityUrl').value, {
+        method:'POST',
+        headers:{'Content-Type':'application/json','Accept':'application/json','X-CSRF-TOKEN':document.querySelector('meta[name="csrf-token"]').content},
+        body:JSON.stringify({[rpDuplicateFields[id]]:value})
+      });
+      var data = await response.json();
+      if (version !== rpDuplicateVersions[id] || input.value.trim() !== value) return;
+      if (response.ok || response.status === 409) rpMarkDuplicate(input, !!(data.errors && data.errors[rpDuplicateFields[id]]));
+    } catch (error) { /* Next and Submit still verify availability and report connection errors. */ }
+  }
+  Object.keys(rpDuplicateFields).concat(['rp_contact']).forEach(function(id) {
+    var input = document.getElementById(id);
+    input.addEventListener('input', function() {
+      rpMarkDuplicate(input, false);
+      if (rpDuplicateFields[id]) {
+        rpDuplicateVersions[id] = (rpDuplicateVersions[id] || 0) + 1;
+        clearTimeout(rpDuplicateTimers[id]);
+        rpDuplicateTimers[id] = setTimeout(function() { rpCheckAvailability(id); }, 450);
+      }
+    });
+    if (rpDuplicateFields[id]) input.addEventListener('blur', function() {
+      clearTimeout(rpDuplicateTimers[id]); rpCheckAvailability(id);
+    });
+  });
+
+  function rpMarkInvalid(input, invalid) {
+    if (!input) return;
+    input.classList.toggle('rp-invalid', invalid);
+    input.setAttribute('aria-invalid', String(invalid || input.classList.contains('rp-duplicate')));
+  }
+  function rpValidateRequired(fields) {
+    var first = null;
+    fields.forEach(function(field) {
+      var input = document.getElementById(field.id);
+      var invalid = !input || !input.value.trim() || !input.checkValidity();
+      rpMarkInvalid(input, invalid);
+      if (invalid && !first) first = field;
+    });
+    return first;
+  }
+  document.querySelectorAll('.reg-input[id^="rp_"]').forEach(function(input) {
+    function recheck() {
+      if (input.classList.contains('rp-invalid')) {
+        var valid = !!input.value.trim() && input.checkValidity();
+        if (input.id === 'rp_afpSerial') valid = /^AFP[0-9]{6}$/.test(input.value);
+        rpMarkInvalid(input, !valid);
+      }
+    }
+    input.addEventListener('input', recheck);
+    input.addEventListener('change', recheck);
+  });
+
   async function rpNext(step) {
     if (step === 1) {
       var fields = [
@@ -3568,20 +3432,25 @@
       if (document.getElementById('rp_citizenship').value === 'Other') {
         fields.push({id:'rp_otherCitizenship', label:'Citizenship'});
       }
-      for (var i=0; i<fields.length; i++) {
-        var el = document.getElementById(fields[i].id);
-        if (!el || !el.value.trim()) {
-          if (el) { el.focus(); el.style.borderColor='#e53e3e'; }
-          errEl.textContent = 'Please fill in: ' + fields[i].label;
-          errEl.style.display = 'block';
-          return;
-        }
-        if (el) el.style.borderColor = '';
+      var missing = rpValidateRequired(fields);
+      if (missing) {
+        document.getElementById(missing.id)?.focus();
+        errEl.textContent = 'Please complete or correct: ' + missing.label;
+        errEl.style.display = 'block';
+        return;
+      }
+      var afpInput = document.getElementById('rp_afpSerial');
+      if (!/^AFP[0-9]{6}$/.test(afpInput.value)) {
+        rpMarkInvalid(afpInput, true);
+        afpInput.focus();
+        errEl.textContent = 'AFP serial number must be AFP followed by exactly 6 digits.';
+        errEl.style.display = 'block';
+        return;
       }
       var dobInput = document.getElementById('rp_dob');
       if (dobInput.value > dobInput.max) {
         dobInput.focus();
-        dobInput.style.borderColor = '#e53e3e';
+        rpMarkInvalid(dobInput, true);
         errEl.textContent = 'Date of Birth cannot be in the future.';
         errEl.style.display = 'block';
         return;
@@ -3589,7 +3458,7 @@
       var emailInput = document.getElementById('rp_email');
       if (!emailInput.checkValidity()) {
         emailInput.focus();
-        emailInput.style.borderColor = '#e53e3e';
+        rpMarkInvalid(emailInput, true);
         errEl.textContent = 'Please enter a valid email address.';
         errEl.style.display = 'block';
         return;
@@ -3616,7 +3485,7 @@
         var availabilityData = await availabilityResponse.json();
 
         ['rp_afpSerial', 'rp_email', 'rp_contact'].forEach(function(id) {
-          document.getElementById(id).style.borderColor = '';
+          rpMarkDuplicate(document.getElementById(id), false);
         });
 
         if (!availabilityResponse.ok || !availabilityData.available) {
@@ -3628,11 +3497,12 @@
           var messages = [];
           Object.keys(availabilityData.errors || {}).forEach(function(field) {
             var input = document.getElementById(fieldMap[field]);
-            if (input) input.style.borderColor = '#e53e3e';
-            messages = messages.concat(availabilityData.errors[field]);
+            if (input) rpMarkDuplicate(input, true);
+            if (!['afpSerialNumber','email'].includes(field)) messages = messages.concat(availabilityData.errors[field]);
           });
-          errEl.textContent = messages.join(' ') || availabilityData.message || 'Unable to verify these details.';
-          errEl.style.display = 'block';
+          var hasFieldErrors = Object.keys(availabilityData.errors || {}).length > 0;
+          errEl.textContent = messages.join(' ') || (hasFieldErrors ? '' : availabilityData.message || 'Unable to verify these details.');
+          errEl.style.display = errEl.textContent ? 'block' : 'none';
           var firstInvalidField = Object.keys(availabilityData.errors || {})[0];
           if (firstInvalidField && fieldMap[firstInvalidField]) {
             document.getElementById(fieldMap[firstInvalidField]).focus();
@@ -3652,6 +3522,7 @@
       rpSetStep(2);
     } else if (step === 2) {
       var issueDateInput = document.getElementById('rp_dateIssued');
+      rpMarkInvalid(issueDateInput, !issueDateInput.checkValidity());
       if (!issueDateInput.checkValidity()) {
         issueDateInput.reportValidity();
         issueDateInput.focus();
@@ -3660,26 +3531,22 @@
       var fields2 = [
         {id:'rp_pistolNomenclature', label:'Nomenclature of Pistol'},
         {id:'rp_pistolType',         label:'Pistol Type'},
-        {id:'rp_pistolSerial',       label:'Pistol Serial Number'},
         {id:'rp_ammo',               label:'Quantity of Ammo'},
         {id:'rp_issuedBy',            label:'Issued By'}
       ];
       var errEl2 = document.getElementById('rp_err2');
-      for (var j=0; j<fields2.length; j++) {
-        var el2 = document.getElementById(fields2[j].id);
-        if (!el2 || !String(el2.value).trim()) {
-          if (el2) { el2.focus(); el2.style.borderColor='#e53e3e'; }
-          errEl2.textContent = 'Please fill in: ' + fields2[j].label;
-          errEl2.style.display = 'block';
-          return;
-        }
-        if (el2) el2.style.borderColor = '';
+      var missing2 = rpValidateRequired(fields2);
+      if (missing2) {
+        document.getElementById(missing2.id)?.focus();
+        errEl2.textContent = 'Please complete or correct: ' + missing2.label;
+        errEl2.style.display = 'block';
+        return;
       }
       var ammoInput = document.getElementById('rp_ammo');
       var ammoQuantity = Number(ammoInput.value);
       if (!Number.isInteger(ammoQuantity) || ammoQuantity < 0) {
         ammoInput.focus();
-        ammoInput.style.borderColor = '#e53e3e';
+        rpMarkInvalid(ammoInput, true);
         errEl2.textContent = 'Quantity of Ammo must be a whole number of 0 or more.';
         errEl2.style.display = 'block';
         return;
@@ -3697,17 +3564,18 @@
             'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
           },
           body: JSON.stringify({
-            pistolSerialNumber: document.getElementById('rp_pistolSerial').value
+            pistolSerialNumber: document.getElementById('rp_afpSerial').value
           })
         });
         var pistolData = await pistolResponse.json();
-        document.getElementById('rp_pistolSerial').style.borderColor = '';
+        rpMarkDuplicate(document.getElementById('rp_afpSerial'), false);
 
         if (!pistolResponse.ok || !pistolData.available) {
-          document.getElementById('rp_pistolSerial').style.borderColor = '#e53e3e';
-          errEl2.textContent = pistolData.errors?.pistolSerialNumber?.[0] || pistolData.message || 'Unable to verify the pistol serial number.';
-          errEl2.style.display = 'block';
-          document.getElementById('rp_pistolSerial').focus();
+          var duplicatePistol = !!pistolData.errors?.pistolSerialNumber;
+          rpMarkDuplicate(document.getElementById('rp_afpSerial'), duplicatePistol);
+          errEl2.textContent = duplicatePistol ? '' : pistolData.message || 'Unable to verify the pistol serial number.';
+          errEl2.style.display = duplicatePistol ? 'none' : 'block';
+          document.getElementById('rp_afpSerial').focus();
           return;
         }
       } catch (error) {
@@ -3746,7 +3614,7 @@
       var rf=[
         ['Nomenclature of Pistol',document.getElementById('rp_pistolNomenclature').value],
         ['Pistol Type',document.getElementById('rp_pistolType').value],
-        ['Pistol Serial #',document.getElementById('rp_pistolSerial').value],
+        ['Pistol Serial #',document.getElementById('rp_afpSerial').value],
         ['Qty Ammo',document.getElementById('rp_ammo').value],
         ['Date Issued',document.getElementById('rp_dateIssued').value],
         ['Issued By',document.getElementById('rp_issuedBy').value],
@@ -3810,7 +3678,7 @@
       contactNumber:      document.getElementById('rp_contact').value,
       pistolNomenclature: document.getElementById('rp_pistolNomenclature').value,
       pistolType:         document.getElementById('rp_pistolType').value,
-      pistolSerialNumber: document.getElementById('rp_pistolSerial').value,
+      pistolSerialNumber: document.getElementById('rp_afpSerial').value,
       issuedBy:           document.getElementById('rp_issuedBy').value,
       dateIssued:         document.getElementById('rp_dateIssued').value,
       qtyAmmo:            ammoQuantity,
@@ -3838,7 +3706,7 @@
             document.getElementById('rp_photoPreview').style.display = 'none';
             document.getElementById('rp_photo').value = '';
             document.getElementById('rp_photoSource').textContent = '';
-            ['rp_lastName','rp_firstName','rp_middleName','rp_afpSerial','rp_email','rp_contact','rp_pistolSerial','rp_ammo','rp_issuedBy','rp_armory','rp_remarks','rp_afosMos','rp_branch','rp_otherCitizenship'].forEach(function(id){var el=document.getElementById(id);if(el)el.value='';});
+            ['rp_lastName','rp_firstName','rp_middleName','rp_afpSerial','rp_email','rp_contact','rp_afpSerial','rp_ammo','rp_issuedBy','rp_armory','rp_remarks','rp_afosMos','rp_branch','rp_otherCitizenship'].forEach(function(id){var el=document.getElementById(id);if(el)el.value='';});
             ['rp_rank','rp_unit','rp_pistolNomenclature','rp_civil','rp_gender','rp_citizenship','rp_dob'].forEach(function(id){var el=document.getElementById(id);if(el)el.value='';});
             document.getElementById('rp_dateIssued').value = document.getElementById('rp_dateIssued').max;
             document.getElementById('rp_citizenship').value='Filipino';rpToggleOtherCitizenship();
@@ -3846,6 +3714,34 @@
             window._rpNavigate('dashboard');
           }, 2000);
         } else {
+          var duplicateErrorFields = Object.keys(data.errors || {}).filter(function(field) { return ['afpSerialNumber','email','pistolSerialNumber'].includes(field); });
+          if (duplicateErrorFields.length) {
+            var fieldInputs = {afpSerialNumber:'rp_afpSerial',email:'rp_email',pistolSerialNumber:'rp_afpSerial'};
+            duplicateErrorFields.forEach(function(field) { rpMarkDuplicate(document.getElementById(fieldInputs[field]), true); });
+            var firstField = duplicateErrorFields[0];
+            rpSetStep(1);
+            document.getElementById(fieldInputs[firstField]).focus();
+            btn.disabled = false; btn.textContent = 'Submit Registration';
+            var otherMessages = Object.entries(data.errors).filter(function(entry) { return !duplicateErrorFields.includes(entry[0]); }).flatMap(function(entry) { return entry[1]; });
+            var fieldError = document.getElementById('rp_err1');
+            fieldError.textContent = otherMessages.join(' ');
+            fieldError.style.display = otherMessages.length ? 'block' : 'none';
+            return;
+          }
+          var serverFieldMap = {lastName:'rp_lastName',firstName:'rp_firstName',rank:'rp_rank',unit:'rp_unit',dateOfBirth:'rp_dob',atpSerialNumber:'rp_atpSerial',contactNumber:'rp_contact',pistolNomenclature:'rp_pistolNomenclature',pistolType:'rp_pistolType',qtyAmmo:'rp_ammo',issuedBy:'rp_issuedBy',dateIssued:'rp_dateIssued'};
+          var invalidFields = Object.keys(data.errors || {}).filter(function(field) { return document.getElementById(serverFieldMap[field]); });
+          invalidFields.forEach(function(field) { rpMarkInvalid(document.getElementById(serverFieldMap[field]), true); });
+          if (invalidFields.length) {
+            var target = serverFieldMap[invalidFields[0]];
+            var errorStep = ['rp_pistolNomenclature','rp_pistolType','rp_ammo','rp_issuedBy','rp_dateIssued'].includes(target) ? 2 : 1;
+            rpSetStep(errorStep);
+            document.getElementById(target).focus();
+            var stepError = document.getElementById('rp_err' + errorStep);
+            stepError.textContent = Object.values(data.errors).flat().join(' ');
+            stepError.style.display = 'block';
+            btn.disabled = false; btn.textContent = 'Submit Registration';
+            return;
+          }
           var validationMessage = data.errors ? Object.values(data.errors).flat()[0] : null;
           throw new Error(validationMessage || data.message || data.error || 'Submission failed.');
         }

@@ -1111,11 +1111,11 @@
     return list.map(function (p) {
       var ov = getOverride(p.itemNumber);
 
-      // A personnel record becomes eligible for its first PAR as soon as the
-      // administrator approves the firearm inspection. Existing PARs stay in Management.
+      // Renewed personnel without an existing PAR are ready for issuance.
+      // Existing PARs stay in Management.
       var hasExistingPar = !!(ov.parNumber || p.parNumber);
-      var inspectionApproved = p.parEligible === true;
-      var awaitingRenewalPar = inspectionApproved && !hasExistingPar && ov.parStatus !== 'issued';
+      var renewalCompleted = p.parEligible === true;
+      var awaitingRenewalPar = renewalCompleted && !hasExistingPar && ov.parStatus !== 'issued';
       var derivedStatus = awaitingRenewalPar ? 'ready' : (hasExistingPar ? 'issued' : 'ineligible');
       var seededNumber = ov.parNumber || p.parNumber || null;
       var seededDate = ov.dateIssued || p.dateIssued || null;
@@ -1340,30 +1340,7 @@
   }
 
   function parPagination(containerId, pages, current, onGo) {
-    var c = document.getElementById(containerId);
-    if (!c) return;
-    if (pages <= 1) { c.innerHTML = ''; return; }
-    var bs = 'border-radius:6px;padding:5px 10px;font-size:.72rem;font-weight:700;cursor:pointer;border:1px solid #363b48;';
-    var dotStyle = 'padding:5px 4px;font-size:.72rem;color:#4b5563;';
-
-    // Build a compact page list: first, last, current-1..current+1, with … gaps.
-    var nums = [];
-    var range = { start: Math.max(1, current - 1), end: Math.min(pages, current + 1) };
-    nums.push(1);
-    if (range.start > 2) nums.push('…');
-    for (var i = range.start; i <= range.end; i++) if (i !== 1 && i !== pages) nums.push(i);
-    if (range.end < pages - 1) nums.push('…');
-    if (pages > 1) nums.push(pages);
-
-    var html = '<button data-p="' + Math.max(1, current - 1) + '" style="' + bs + 'background:#1a2025;color:#94a3b8;">‹</button>';
-    nums.forEach(function (n) {
-      if (n === '…') { html += '<span style="' + dotStyle + '">…</span>'; return; }
-      html += '<button data-p="' + n + '" style="' + bs + (n === current ? 'background:#1a2025;color:#e5eaf2;border-color:#3ec6ff;' : 'background:#1a2025;color:#94a3b8;') + '">' + n + '</button>';
-    });
-    html += '<button data-p="' + Math.min(pages, current + 1) + '" style="' + bs + 'background:#1a2025;color:#94a3b8;">›</button>';
-
-    c.innerHTML = html;
-    c.querySelectorAll('button').forEach(function (b) { b.addEventListener('click', function () { onGo(parseInt(this.dataset.p)); }); });
+    renderCompactPagination(document.getElementById(containerId), current, pages, onGo);
   }
 
   ['parSearch'].forEach(function (id) { document.getElementById(id)?.addEventListener('input', function () { parPage = 1; parRenderIssuanceTable(); }); });

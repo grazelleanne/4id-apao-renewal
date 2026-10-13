@@ -270,6 +270,8 @@ body.light-mode .btn-save-under{background:#ede9fe;color:#6d28d9;border-color:#c
   <link rel="stylesheet" href="/css/dashboard-theme.css?v=<?php echo substr(hash_file('sha256', public_path('css/dashboard-theme.css')), 0, 12); ?>">
   <script src="/js/dashboard-lists.js?v=<?php echo substr(hash_file('sha256', public_path('js/dashboard-lists.js')), 0, 12); ?>" defer></script>
 <script src="/js/ui-dialog.js" defer></script>
+  <link rel="stylesheet" href="{{ asset('css/workspace-sidebar.css') }}">
+<script src="{{ asset('js/compact-pagination.js') }}"></script>
 </head>
 <body class="app-dashboard light-mode min-h-screen font-inter app-body">
 <div class="flex min-h-screen">
@@ -278,9 +280,9 @@ body.light-mode .btn-save-under{background:#ede9fe;color:#6d28d9;border-color:#c
   <div class="sb-top">
     <div class="sb-logo">
       <img src="<?php echo e(asset('images/logo.png')); ?>" alt="Logo" onerror="this.src=''">
-      <span class="sb-logo-text">4ID APAO Firearms</span>
+      <span class="sb-logo-text">4ID APAO Firearms<small>ADMIN WORKSPACE</small></span>
     </div>
-    <button class="sb-toggle" id="sidebarToggleBtn" title="Toggle sidebar">
+    <button class="sb-toggle" id="sidebarToggleBtn" type="button" aria-label="Toggle sidebar" aria-controls="sidebar" title="Toggle sidebar">
       <svg id="sb-icon-menu" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M4 6h16M4 12h16M4 18h16"/></svg>
       <svg id="sb-icon-close" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="display:none"><path stroke-linecap="round" d="M6 18L18 6M6 6l12 12"/></svg>
     </button>
@@ -314,8 +316,9 @@ body.light-mode .btn-save-under{background:#ede9fe;color:#6d28d9;border-color:#c
       <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 12h6M9 16h4"/><circle cx="17" cy="17" r="4"/><path d="M19.5 19.5L21 21"/></svg>
       <span class="nav-label">Audit Log</span>
     </a>
-  </nav>
-  <div class="sb-bottom">
+  @include('partials.record_sidebar_links')
+    </nav>
+  <div class="sb-bottom"><div class="workspace-office">10th Field Property Accountability Office</div>
     <button class="theme-btn" id="themeToggle" title="Toggle theme">
       <svg id="icon-sun" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
       <svg id="icon-moon" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="display:none"><path d="M21 12.79A9 9 0 1111.21 3a7 7 0 009.79 9.79z"/></svg>
@@ -589,44 +592,6 @@ body.light-mode .btn-save-under{background:#ede9fe;color:#6d28d9;border-color:#c
     </div>
   </div>
 
-  <!-- Notify Staff Modal -->
-  <div id="notifyModal" class="modal-overlay">
-    <div class="modal-box-lg">
-      <div class="flex items-center gap-3 mb-5">
-        <div class="w-9 h-9 rounded-full bg-[#0d2e1a] flex items-center justify-center flex-shrink-0">
-          <svg fill="none" stroke="#34d399" stroke-width="2" viewBox="0 0 24 24" width="18" height="18"><path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
-        </div>
-        <div>
-         <h3 class="font-bold text-[#e5eaf2] force-light-text">Notify Staff for ICS Renewal</h3>
-          <p class="text-xs text-[#64748b]" id="notifyPersonnelName">—</p>
-        </div>
-      </div>
-
-      <div class="bg-[#13151a] rounded-lg border border-[#2a2f3a] p-4 mb-4">
-        <div class="text-xs font-semibold text-[#64748b] uppercase mb-2 tracking-wide force-light-text">ICS Details</div>
-        <div class="grid grid-cols-2 gap-3 text-sm">
-         <div><span class="text-[#64748b] text-xs block">AFP Serial #</span><span class="font-mono font-semibold force-light-text" id="notifySerial">—</span></div>
-        <div><span class="text-[#64748b] text-xs block">Pistol Type</span><span class="font-semibold force-light-text" id="notifyPistol">—</span></div>
-        </div>
-      </div>
-
-      <div class="mb-4">
-        <label class="text-xs text-[#64748b] font-semibold block mb-1 force-light-text">Notification Message</label>
-        <textarea id="notifyMessage" rows="4" class="fi" style="resize:vertical;" placeholder="Type your message to the staff..."></textarea>
-      </div>
-
-      <div id="notifyError" class="hidden text-red-400 text-xs mb-3 p-2 rounded bg-red-400/10 border border-red-400/20"></div>
-      <div id="notifySuccess" class="hidden text-green-400 text-xs mb-3 p-2 rounded bg-green-400/10 border border-green-400/20"></div>
-
-      <div class="flex gap-3">
-        <button id="sendRenewalNotifyBtn" onclick="sendNotify()" class="btn-renew flex-1 text-center">
-          Send for Renewal
-        </button>
-        <button onclick="closeNotifyModal()" class="btn-print flex-1 justify-center">Cancel</button>
-      </div>
-    </div>
-  </div>
-
   <script>
     const CSRF = document.querySelector('meta[name="csrf-token"]').content;
 
@@ -698,7 +663,6 @@ body.light-mode .btn-save-under{background:#ede9fe;color:#6d28d9;border-color:#c
 
     let allPersonnel = [], currentPage = 1, currentItemNumber = null, activeTab = 'pending';
     let currentInspectionStatus = 'under';
-    let notifyItem = null;
     const PER_PAGE = 10;
     let sigData = {
       insp:{name:'',rank:'',pos:'',img:''},
@@ -741,12 +705,7 @@ body.light-mode .btn-save-under{background:#ede9fe;color:#6d28d9;border-color:#c
       if (activeTab === 'pending') {
         return `<button onclick="openInspect(${p.itemNumber}, this)" class="btn-inspect">Inspect</button>`;
       }
-      if (activeTab === 'renewal') {
-        return `<button type="button" onclick="openNotifyModal(${JSON.stringify(p).replace(/"/g,'&quot;')})" class="btn-notify" aria-label="Notify staff about renewal">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.4-1.4A2 2 0 0 1 18 14.2V11a6 6 0 1 0-12 0v3.2c0 .5-.2 1-.6 1.4L4 17h5m6 0a3 3 0 0 1-6 0h6Z"/></svg>
-          <span>Notify Staff</span>
-        </button>`;
-      }
+      if (activeTab === 'renewal') return '<span class="text-xs">Staff notified automatically</span>';
       if (activeTab === 'under') {
         return `<button onclick="openInspect(${p.itemNumber}, this)" class="btn-continue">Continue Inspection</button>`;
       }
@@ -910,19 +869,7 @@ body.light-mode .btn-save-under{background:#ede9fe;color:#6d28d9;border-color:#c
       document.getElementById('pagInfo').textContent =
         `Showing ${total ? start+1 : 0} to ${Math.min(start+PER_PAGE,total)} of ${total} entries`;
 
-      const pd = document.getElementById('pagBtns');
-      pd.innerHTML = '';
-      if (pages > 1) {
-        [['‹',()=>{if(currentPage>1){currentPage--;renderTable();}}],
-         ...Array.from({length:pages},(_,i)=>[i+1,()=>{currentPage=i+1;renderTable();}]),
-         ['›',()=>{if(currentPage<pages){currentPage++;renderTable();}}]
-        ].forEach(([lbl,fn])=>{
-          const b=document.createElement('button');
-          b.className='pg-btn'+(lbl===currentPage?' active':'');
-          b.textContent=lbl; b.onclick=fn;
-          pd.appendChild(b);
-        });
-      }
+      renderCompactPagination(document.getElementById('pagBtns'), currentPage, pages, function(page) {currentPage=page; renderTable();});
     }
 
 
@@ -1235,54 +1182,6 @@ body.light-mode .btn-save-under{background:#ede9fe;color:#6d28d9;border-color:#c
       }
     }
 
-    // ── Notify Staff Modal ──
-    async function openNotifyModal(p) {
-      if (document.getElementById('sendRenewalNotifyBtn').disabled) return;
-      notifyItem = p;
-      document.getElementById('notifyPersonnelName').textContent =
-        `${p.lastName} ${p.rank}, ${p.firstName}${p.middleName?' '+p.middleName.charAt(0)+'.':''}`;
-      document.getElementById('notifySerial').textContent = p.afpSerialNumber || '—';
-      document.getElementById('notifyPistol').textContent = p.pistolType || '—';
-      document.getElementById('notifyMessage').value =
-        `Please process the ICS renewal for ${p.lastName} ${p.rank}, ${p.firstName} (AFP Serial: ${p.afpSerialNumber||'N/A'}). Firearm has been cleared for renewal.`;
-      document.getElementById('notifyError').classList.add('hidden');
-      document.getElementById('notifySuccess').classList.add('hidden');
-      await sendNotify();
-    }
-    function closeNotifyModal() {
-      document.getElementById('notifyModal').classList.remove('open');
-      notifyItem = null;
-    }
-    async function sendNotify() {
-      const button = document.getElementById('sendRenewalNotifyBtn');
-      if (button.disabled) return;
-      const errEl = document.getElementById('notifyError');
-      const sucEl = document.getElementById('notifySuccess');
-      errEl.classList.add('hidden'); sucEl.classList.add('hidden');
-      const msg = document.getElementById('notifyMessage').value.trim();
-      if (!msg) { errEl.textContent='Please enter a message.'; errEl.classList.remove('hidden'); return; }
-      button.disabled = true;
-      try {
-        const res  = await fetch('/admin/inspection/notify-staff', {
-          method:'POST',
-          headers:{'Content-Type':'application/json','X-CSRF-TOKEN':CSRF},
-          body:JSON.stringify({ itemNumber: notifyItem?.itemNumber, message: msg })
-        });
-        const data = await res.json();
-        if (data.success) {
-          closeNotifyModal();
-          await loadData();
-          await showUiDialog({title:'Staff Notified',message:'Staff have been notified. This personnel has been removed from Ready for Renewal.'});
-        } else {
-          errEl.textContent = data.error || 'Failed to send renewal.'; errEl.classList.remove('hidden');
-          await showUiDialog({title:'Unable to notify staff',message:errEl.textContent});
-        }
-      } catch(e) {
-        errEl.textContent='Network error. Please try again.'; errEl.classList.remove('hidden');
-        await showUiDialog({title:'Unable to notify staff',message:errEl.textContent});
-      } finally { button.disabled = false; }
-    }
-    document.getElementById('notifyModal').addEventListener('click',function(e){if(e.target===this)closeNotifyModal();});
 
     // ── Edit signatory ──
     function openEditSig(key) {

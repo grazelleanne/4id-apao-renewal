@@ -25,7 +25,7 @@ Route::middleware('account:super_admin,admin,staff')->group(function(){
     Route::get('/par',[ParController::class,'index']);
     Route::get('/par/{item}/pdf',[ParController::class,'print'])->whereNumber('item')->name('staff.par.pdf');
 });
-Route::prefix('admin')->name('admin.')->middleware('account:super_admin,admin')->group(function(){
+Route::prefix('admin')->name('admin.')->middleware(['account:super_admin,admin',\App\Http\Middleware\RecordWriteLock::class])->group(function(){
     Route::get('/dashboard',[DashboardController::class,'admin'])->name('dashboard');
     foreach (['personnel','inspection','reports','archive','users','audit'] as $module) {
         Route::get('/'.$module,[DashboardController::class,'admin'])->defaults('module',$module)->name($module);
@@ -51,9 +51,8 @@ Route::prefix('admin')->name('admin.')->middleware('account:super_admin,admin')-
     Route::get('/inspection/{item}/detail',[InspectionController::class,'detail'])->whereNumber('item');
     Route::get('/inspection/{item}/print',[InspectionController::class,'print'])->whereNumber('item');
     Route::post('/inspection/save',[InspectionController::class,'save']);
-    Route::post('/inspection/notify-staff',[InspectionController::class,'notify']);
 });
-Route::prefix('staff')->name('staff.')->middleware('account:staff,super_admin,admin')->group(function(){
+Route::prefix('staff')->name('staff.')->middleware(['account:staff,super_admin,admin',\App\Http\Middleware\RecordWriteLock::class])->group(function(){
     Route::get('/par-data',[ParController::class,'data'])->name('par.data');
     Route::post('/par/{item}/reprint',[ParController::class,'reprint'])->whereNumber('item')->name('par.reprint');
     Route::post('/par/{item}/save',[ParController::class,'save'])->whereNumber('item')->name('par.save');
@@ -62,10 +61,23 @@ Route::prefix('staff')->name('staff.')->middleware('account:staff,super_admin,ad
     Route::match(['get','post'],'/first-password',[AuthController::class,'firstPassword'])->name('first-password');
     Route::post('/personnel',[PersonnelController::class,'store'])->name('personnel.store');
     Route::post('/personnel/availability',[PersonnelController::class,'availability'])->name('personnel.availability');
-    Route::post('/personnel/{item}/notify',[PersonnelController::class,'notify'])->whereNumber('item');
     Route::post('/ics/{item}/send-inspection',[InspectionController::class,'submit'])->whereNumber('item');
     Route::get('/notifications',[NotificationController::class,'index'])->name('notifications');
     Route::post('/notifications/read',[NotificationController::class,'read'])->name('notifications.read');
     Route::put('/profile',[ProfileController::class,'update'])->name('profile.update');
     Route::put('/profile/password',[ProfileController::class,'password'])->name('profile.password');
 });
+
+Route::prefix('admin')->middleware(['account:super_admin,admin',\App\Http\Middleware\RecordWriteLock::class])->group(function(){
+ Route::get('/records/{module}',[\App\Http\Controllers\RecordManagementController::class,'index'])->whereIn('module',['firearms','ammunition','personnel']);
+ Route::post('/records/{module}',[\App\Http\Controllers\RecordManagementController::class,'store'])->whereIn('module',['firearms','ammunition']);
+ Route::put('/records/{module}/{id}',[\App\Http\Controllers\RecordManagementController::class,'update'])->whereIn('module',['firearms','ammunition'])->whereNumber('id');
+ Route::delete('/records/{module}/{id}',[\App\Http\Controllers\RecordManagementController::class,'destroy'])->whereIn('module',['firearms','ammunition'])->whereNumber('id');
+ Route::post('/reports/export-audit',[\App\Http\Controllers\RecordManagementController::class,'exportAudit']);
+ Route::get('/imports',[\App\Http\Controllers\RecordManagementController::class,'imports']);
+ Route::get('/imports/template/{module}',[\App\Http\Controllers\RecordManagementController::class,'template'])->whereIn('module',['personnel','firearms','ammunition']);
+ Route::post('/imports',[\App\Http\Controllers\RecordManagementController::class,'import']);
+ Route::get('/notification-history',[\App\Http\Controllers\RecordManagementController::class,'notificationHistory']);
+});
+
+Route::get('/staff/email-history',[\App\Http\Controllers\RecordManagementController::class,'notificationHistory'])->middleware('account:staff,super_admin,admin')->name('staff.email-history');

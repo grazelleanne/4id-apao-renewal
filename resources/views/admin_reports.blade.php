@@ -184,6 +184,10 @@
   <link rel="stylesheet" href="/css/typography.css">
   <link rel="stylesheet" href="/css/dashboard-theme.css?v=<?php echo substr(hash_file('sha256', public_path('css/dashboard-theme.css')), 0, 12); ?>">
   <script src="/js/dashboard-lists.js?v=<?php echo substr(hash_file('sha256', public_path('js/dashboard-lists.js')), 0, 12); ?>" defer></script>
+<style>
+.report-import-panel{background:#fff;border:1px solid #dce6df;border-radius:12px;padding:20px;margin-bottom:24px;color:#33473b}.report-import-panel summary{cursor:pointer;font-size:17px;font-weight:700;color:#34734e}.report-import-panel p{font-size:13px;margin:14px 0;color:#65746a}.report-import-panel a{color:#34734e;text-decoration:underline}.report-import-panel .fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:18px;margin:18px 0}.report-import-panel label{display:block;font-size:12px;font-weight:600;margin-bottom:7px}.report-import-panel input,.report-import-panel select{width:100%;padding:10px;border:1px solid #d0dfd5;border-radius:7px;background:#f8faf9;color:#263a35}.report-import-panel button{background:#34734e;color:white;border-radius:7px;padding:10px 16px;font-weight:600}.report-import-panel h2{font-size:18px;font-weight:700;margin:22px 0 12px}.report-import-panel .scroll{overflow-x:auto}.report-import-panel table{width:100%;font-size:12px;border-collapse:collapse}.report-import-panel td,.report-import-panel th{padding:12px;text-align:left;border-bottom:1px solid #e0e8e3}.report-import-panel th{background:#f3f7f4}.report-import-panel .empty-state{text-align:center;padding:25px;color:#849389}.report-import-panel pre{white-space:pre-wrap;overflow-wrap:anywhere}.report-import-panel nav svg{width:18px;height:18px}
+</style>  <link rel="stylesheet" href="{{ asset('css/workspace-sidebar.css') }}">
+<script src="{{ asset('js/compact-pagination.js') }}"></script>
 </head>
 <body class="app-dashboard light-mode min-h-screen font-inter main-bg bg-[#1a2025]">
 <div class="flex min-h-screen">
@@ -194,9 +198,9 @@
     <div class="sb-top">
       <div class="sb-logo">
         <img src="<?php echo e(asset('images/logo.png')); ?>" alt="Logo" onerror="this.src=''">
-        <span class="sb-logo-text">Admin</span>
+        <span class="sb-logo-text">4ID APAO Firearms<small>ADMIN WORKSPACE</small></span>
       </div>
-      <button class="sb-toggle" id="sidebarToggleBtn" title="Toggle sidebar">
+      <button class="sb-toggle" id="sidebarToggleBtn" type="button" aria-label="Toggle sidebar" aria-controls="sidebar" title="Toggle sidebar">
         <svg id="sb-icon-menu" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M4 6h16M4 12h16M4 18h16"/></svg>
         <svg id="sb-icon-close" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="display:none"><path stroke-linecap="round" d="M6 18L18 6M6 6l12 12"/></svg>
       </button>
@@ -230,8 +234,9 @@
   <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 12h6M9 16h4"/><circle cx="17" cy="17" r="4"/><path d="M19.5 19.5L21 21"/></svg>
   <span class="nav-label">Audit Log</span>
 </a>
+    @include('partials.record_sidebar_links')
     </nav>
-    <div class="sb-bottom">
+    <div class="sb-bottom"><div class="workspace-office">10th Field Property Accountability Office</div>
       <button class="theme-btn" id="themeToggle" title="Toggle theme">
         <svg id="icon-sun" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
         <svg id="icon-moon" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="display:none"><path d="M21 12.79A9 9 0 1111.21 3a7 7 0 009.79 9.79z"/></svg>
@@ -266,6 +271,11 @@
       </div>
     </header>
 
+    <section id="data-import" class="report-import-panel">
+      <details @if(session('summary') || $errors->any()) open @endif><summary>Import Records</summary>
+      @include('partials.report_imports')
+      </details>
+    </section>
     <!-- REPORT CENTER -->
     <div class="report-center-tabs">
       <button type="button" id="showRenewalReportBtn" class="report-type-btn active">
@@ -884,7 +894,8 @@ document.addEventListener("DOMContentLoaded", function () {
     renderPersonnelTable(filtered);
   });
 
-  document.getElementById("downloadReportBtn").onclick = function () { const rows = document.querySelectorAll("#personnelTableBody tr"); if (!rows.length || (rows.length === 1 && rows[0].querySelector("td[colspan]"))) { alert("No data. Click Preview first."); return; } const headers = ["Item #","Date of Validity","Status","Last Name","First Name","Middle Name","AFP Serial #","Date of Birth","Nomenclature of Pistol","Pistol Serial #","Qty Ammo"]; let tableRows = ""; rows.forEach(row => { const cells = row.querySelectorAll("td"); if (!cells.length) return; let r = ""; cells.forEach(cell => { r += `<td style="border:1px solid #ccc;padding:5px 8px;font-size:11px;">${cell.innerText.trim()}</td>`; }); tableRows += `<tr>${r}</tr>`; }); const today = new Date().toLocaleDateString(); const win = window.open("","_blank"); win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>APAO Report</title><style>body{font-family:Arial;margin:30px;}h2{text-align:center;}table{width:100%;border-collapse:collapse;}th{background:#1a3a2a;color:#fff;padding:6px;font-size:11px;border:1px solid #ccc;text-align:left;}</style>
+  function escapeHtml(value) { return String(value).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+  document.getElementById("downloadReportBtn").onclick = function () { const rows = document.querySelectorAll("#personnelTableBody tr"); if (!rows.length || (rows.length === 1 && rows[0].querySelector("td[colspan]"))) { alert("No data. Click Preview first."); return; } const headers = ["Item #","Date of Validity","Status","Last Name","First Name","Middle Name","AFP Serial #","Date of Birth","Nomenclature of Pistol","Pistol Serial #","Qty Ammo"]; let tableRows = ""; rows.forEach(row => { const cells = row.querySelectorAll("td"); if (!cells.length) return; let r = ""; cells.forEach(cell => { r += `<td style="border:1px solid #ccc;padding:5px 8px;font-size:11px;">${escapeHtml(cell.innerText.trim())}</td>`; }); tableRows += `<tr>${r}</tr>`; }); const today = new Date().toLocaleDateString(); const win = window.open("","_blank"); win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>APAO Report</title><style>body{font-family:Arial;margin:30px;}h2{text-align:center;}table{width:100%;border-collapse:collapse;}th{background:#1a3a2a;color:#fff;padding:6px;font-size:11px;border:1px solid #ccc;text-align:left;}</style>
 </head><body><h2>ARMY PROPERTY ACCOUNTABILITY OFFICE</h2><h2>Personnel Renewal Report</h2><p style="text-align:center;font-size:12px;color:#555;">Generated: ${today}</p><table><thead><tr>${headers.map(h=>"<th>"+h+"</th>").join("")}</tr></thead><tbody>${tableRows}</tbody></table></body></html>`); win.document.close(); setTimeout(()=>{win.focus();win.print();},400); };
   document.getElementById("exportExcelBtn").onclick = function () {
     const tableRows = document.querySelectorAll("#personnelTableBody tr");
@@ -1231,3 +1242,12 @@ document.addEventListener("DOMContentLoaded", function () {
 </script>
 </body>
 </html>
+
+<script>
+ document.addEventListener('click', async function(event) {
+  const button=event.target.closest('#downloadReportBtn,#exportExcelBtn,#exportRpcspBtn');
+  if (!button) return;
+  const report={downloadReportBtn:'renewal_pdf',exportExcelBtn:'renewal_excel',exportRpcspBtn:'rpcsp_excel'}[button.id];
+  try { await fetch('/admin/reports/export-audit',{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json','X-CSRF-TOKEN':@json(csrf_token())},body:JSON.stringify({report})}); } catch(error) { console.error('Report audit request failed.'); }
+ },true);
+</script>

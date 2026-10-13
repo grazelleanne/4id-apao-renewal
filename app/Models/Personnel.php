@@ -8,6 +8,9 @@ class Personnel extends Model
     protected $guarded=[];
     protected $hidden=['photo','signature'];
     protected function casts(): array { return ['date_of_birth'=>'date','date_of_validity'=>'date','date_approved'=>'date','is_archived'=>'boolean','qty_ammo'=>'integer']; }
+    public function firearms(): HasMany { return $this->hasMany(Firearm::class); }
+    public function ammunition(): HasMany { return $this->hasMany(Ammunition::class); }
+    public function notificationLogs(): HasMany { return $this->hasMany(NotificationLog::class); }
     public function inspections(): HasMany { return $this->hasMany(Inspection::class); }
     public function receipts(): HasMany { return $this->hasMany(PropertyAcknowledgementReceipt::class); }
     public function renewals(): HasMany { return $this->hasMany(RenewalTransaction::class); }

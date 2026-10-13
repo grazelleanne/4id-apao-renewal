@@ -22,6 +22,9 @@ class User extends Authenticatable
      *
      * @return array<string, string>
      */
+    public function auditLogs() { return $this->hasMany(AuditLog::class); }
+    public function notificationLogs() { return $this->hasMany(NotificationLog::class); }
+    public function importLogs() { return $this->hasMany(DataImportLog::class); }
     protected function casts(): array
     {
         return [

@@ -1,0 +1,4 @@
+<div class="fields">@foreach($headers as $field)<div><label>{{ ucwords(str_replace('_',' ',$field)) }}</label>
+@if($field==='personnel_id')<select name="personnel_id" required><option value="">Select personnel</option>@foreach($people as $person)<option value="{{ $person->id }}" @selected(($record?->personnel_id ?? old('personnel_id'))==$person->id)>#{{ $person->id }} — {{ $person->first_name }} {{ $person->last_name }} (Item {{ $person->item_number }})</option>@endforeach</select>
+@else<input name="{{ $field }}" type="{{ str_contains($field,'date')?'date':($field==='quantity'?'number':'text') }}" value="{{ $record?->getRawOriginal($field) ?? old($field) }}" @if(!in_array($field,['expiration_date'])) required @endif @if($field==='quantity') min="0" max="1000000" @else maxlength="{{ $field==='nomenclature'?255:100 }}" @endif>@endif
+</div>@endforeach</div>

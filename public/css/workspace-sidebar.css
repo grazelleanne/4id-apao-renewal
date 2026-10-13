@@ -1,0 +1,33 @@
+/* Shared sidebar appearance for all authenticated workspaces. */
+body #sidebar,body.light-mode #sidebar{width:248px;flex-shrink:0;background:#fff!important;border-right:1px solid #e2e8e5!important;padding:0!important;color:#637a6b;overflow-y:auto;overflow-x:hidden}
+body #sidebar .sb-top{min-height:90px;margin:0;padding:24px 18px;border-bottom:1px solid #edf1ee;gap:8px}
+body #sidebar .sb-logo{display:flex;align-items:center;gap:11px;min-width:0}
+body #sidebar .sb-logo img{width:42px;height:42px;object-fit:contain;flex-shrink:0}
+body #sidebar .sb-logo-text,body.light-mode #sidebar .sb-logo-text{color:#284b3b!important;font-size:14px;font-weight:750;line-height:1.5}
+body #sidebar .sb-logo-text small{display:block;font-size:9px;font-weight:600;letter-spacing:1.5px;color:#84958b;margin-top:3px}
+body #sidebar .sb-toggle{color:#637a6b;width:22px;min-width:22px;background:transparent}
+body #sidebar .sb-nav{padding:18px 12px;display:flex;flex-direction:column;gap:5px;flex:1;overflow-y:auto}
+body #sidebar .nav-item,body.light-mode #sidebar .nav-item{display:flex;align-items:center;gap:12px;min-height:46px;padding:11px 13px;border:0;border-radius:8px;color:#637a6b!important;background:transparent!important;font-size:14px;font-weight:550;box-shadow:none;text-decoration:none}
+body #sidebar .nav-item svg{width:19px;height:19px;flex-shrink:0;stroke-width:1.7}
+body #sidebar .nav-item:hover,body.light-mode #sidebar .nav-item:hover{background:#f1f7f3!important;color:#247149!important}
+body #sidebar .nav-item.active,body.light-mode #sidebar .nav-item.active{background:#e6f2e9!important;color:#247149!important;box-shadow:inset 3px 0 #3c9862}
+body #sidebar .sb-bottom,body.light-mode #sidebar .sb-bottom{margin-top:auto;padding:18px 22px;border-top:1px solid #edf1ee!important;color:#85958c}
+body #sidebar .workspace-office{font-size:11px;line-height:1.6;margin-bottom:12px;color:#85958c}
+body #sidebar .theme-btn{background:#f1f7f3!important;color:#637a6b!important}
+body #sidebar.sidebar-collapsed{width:64px}
+body #sidebar.sidebar-collapsed .sb-top{padding:22px 8px}
+body #sidebar.sidebar-collapsed .sb-nav{padding:18px 8px}
+body #sidebar.sidebar-collapsed .nav-item{justify-content:center;padding:11px 0;gap:0}
+body #sidebar.sidebar-collapsed .workspace-office{display:none}
+body #sidebar.sidebar-collapsed .sb-bottom{padding:18px 8px}
+@media(max-width:1000px){body #sidebar:not(.sidebar-collapsed){width:210px}body #sidebar .sb-top{padding:20px 12px}body #sidebar .sb-logo-text{font-size:12px}}
+
+/* Keep the toggle icon at its intended size in either sidebar state. */
+body #sidebar .sb-toggle,body.light-mode #sidebar .sb-toggle{width:32px;min-width:32px;height:32px;padding:0;display:flex;align-items:center;justify-content:center;border-radius:8px;color:#637a6b!important;background:#f1f7f3!important}
+body #sidebar .sb-toggle svg{width:20px;height:20px;min-width:20px;flex-shrink:0}
+body #sidebar .sb-toggle:hover,body.light-mode #sidebar .sb-toggle:hover{background:#e6f2e9!important;color:#247149!important}
+body #sidebar .sb-toggle:focus-visible{outline:2px solid #3c9862;outline-offset:3px}
+body #sidebar.sidebar-collapsed .sb-toggle{top:50%;left:50%;transform:translate(-50%,-50%)}
+body #sidebar.sidebar-collapsed .sb-logo{visibility:hidden}
+
+.compact-pagination{display:flex;align-items:center;gap:10px;flex-wrap:nowrap}.compact-pagination .compact-page-arrow{display:flex;align-items:center;justify-content:center;width:32px;height:32px;padding:0!important;border:1px solid #d7e2da!important;border-radius:7px;background:#fff!important;color:#34785b!important;cursor:pointer}.compact-page-arrow svg{flex-shrink:0}.compact-pagination .compact-page-arrow:disabled{opacity:.4;cursor:default}.compact-page-status{font-size:12px;color:#637a6b;white-space:nowrap}.compact-page-arrow:focus-visible{outline:2px solid #3c9862;outline-offset:2px}

@@ -394,13 +394,16 @@ final class InspectionService
 
             $personnelUpdate = $pdo->prepare(
                 'UPDATE personnel SET ics_status=:ics_status,date_approved=' . ($status === 'approved' ? 'CURDATE()' : 'NULL')
-                . ($status === 'approved' ? ',approved_status=\'renewed\',date_of_validity=:validity,last_renewed_at=NOW()' : '') . ',updated_at=NOW()
+                . ($status === 'approved' ? ',approved_status=\'renewed\',date_of_validity=:validity,last_renewed_at=NOW(),renewed_by=:renewed_by' : '') . ',updated_at=NOW()
                  WHERE item_number=:item'
             );
             $personnelValues = [
                 'ics_status' => $status === 'approved' ? 'ready' : 'under', 'item' => $itemNumber,
             ];
-            if ($status === 'approved') $personnelValues['validity'] = $newValidity;
+            if ($status === 'approved') {
+                $personnelValues['validity'] = $newValidity;
+                $personnelValues['renewed_by'] = $user['name'];
+            }
             $personnelUpdate->execute($personnelValues);
             if ($status === 'approved' && $personnel['dateOfValidity'] !== $newValidity) {
                 $pdo->prepare('INSERT INTO renewal_history
@@ -408,6 +411,14 @@ final class InspectionService
                     VALUES (:item,\'renewed\',:validity,:previous,:name,:remarks,NOW(),NOW())')
                     ->execute(['item' => $itemNumber, 'validity' => $newValidity,
                         'previous' => $personnel['dateOfValidity'], 'name' => $user['name'], 'remarks' => $values['remarks']]);
+            }
+            if ($status === 'approved' && strtolower((string)($personnel['inspectionStatus'] ?? '')) !== 'approved') {
+                $name = trim(implode(' ', array_filter([$personnel['firstName'], $personnel['middleName'], $personnel['lastName']])));
+                $pdo->prepare('INSERT INTO notifications (type,title,message,personnel_name,personnel_id,read_by_admin,read_by_staff,created_at,updated_at) VALUES (\'renewal_ready\',\'Personnel renewal completed\',:message,:name,:id,1,0,NOW(),NOW())')->execute([
+                    'message' => $name . ' has completed renewal and is ready for PAR processing.',
+                    'name' => $name, 'id' => $personnel['id'],
+                ]);
+                audit($user, 'staff_notified_for_renewal', (string)$itemNumber);
             }
             audit($user, $status === 'approved' ? 'inspection_approved' : 'inspection_saved', (string) $itemNumber);
             \Illuminate\Support\Facades\DB::commit();

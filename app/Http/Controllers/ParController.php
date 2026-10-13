@@ -62,11 +62,9 @@ final class ParController extends ActionController
             $previous=Receipt::where('personnel_id',$p->id)->latest('id')->lockForUpdate()->first();
             if ($data['mode']==='issue' && $previous) abort(409,'A PAR already exists. Refresh and use Update.');
             if ($data['mode']!=='issue' && !$previous) abort(409,'Issue a PAR before updating or replacing it.');
-            $latestInspection=DB::table('inspections')->where('personnel_id',$p->id)->orderByDesc('id')->lockForUpdate()->first();
-            if ($data['mode']==='issue' && (strtolower((string)($latestInspection->status ?? ''))!=='approved'
-                || strtolower((string)$p->ics_status)!=='ready'
-                || in_array(renewal_status_for_personnel($p->toArray()),['within','expired'],true))) {
-                abort(409,'A current inspection approval is required before PAR issuance.');
+            $personnelRow = \App\Services\PersonnelService::personnel_rows(false, $item)[0] ?? null;
+            if ($data['mode']==='issue' && !($personnelRow['parEligible'] ?? false)) {
+                abort(409,'Personnel must complete renewal before PAR issuance.');
             }
             $duplicate=Receipt::where('par_number',$data['parNumber']);
             if ($data['mode']==='update') $duplicate->where('id','!=',$previous->id);

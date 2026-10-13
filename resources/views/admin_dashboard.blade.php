@@ -151,6 +151,8 @@
   <link rel="stylesheet" href="/css/typography.css">
   <link rel="stylesheet" href="/css/dashboard-theme.css?v=<?php echo substr(hash_file('sha256', public_path('css/dashboard-theme.css')), 0, 12); ?>">
   <script src="/js/dashboard-lists.js?v=<?php echo substr(hash_file('sha256', public_path('js/dashboard-lists.js')), 0, 12); ?>" defer></script>
+  <link rel="stylesheet" href="{{ asset('css/workspace-sidebar.css') }}">
+<script src="{{ asset('js/compact-pagination.js') }}"></script>
 </head>
 <body class="app-dashboard light-mode min-h-screen font-inter main-bg bg-[#1a2025]">
 <div class="flex min-h-screen">
@@ -161,9 +163,9 @@
     <div class="sb-top">
       <div class="sb-logo">
         <img src="<?php echo e(asset('images/logo.png')); ?>" alt="Logo" onerror="this.src=''">
-        <span class="sb-logo-text">4ID APAO Firearms</span>
+        <span class="sb-logo-text">4ID APAO Firearms<small>ADMIN WORKSPACE</small></span>
       </div>
-      <button class="sb-toggle" id="sidebarToggleBtn" title="Toggle sidebar">
+      <button class="sb-toggle" id="sidebarToggleBtn" type="button" aria-label="Toggle sidebar" aria-controls="sidebar" title="Toggle sidebar">
         <svg id="sb-icon-menu" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M4 6h16M4 12h16M4 18h16"/></svg>
         <svg id="sb-icon-close" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="display:none"><path stroke-linecap="round" d="M6 18L18 6M6 6l12 12"/></svg>
       </button>
@@ -197,8 +199,9 @@
         <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 12h6M9 16h4"/><circle cx="17" cy="17" r="4"/><path d="M19.5 19.5L21 21"/></svg>
         <span class="nav-label">Audit Log</span>
       </a>
+    @include('partials.record_sidebar_links')
     </nav>
-    <div class="sb-bottom">
+    <div class="sb-bottom"><div class="workspace-office">10th Field Property Accountability Office</div>
       <button class="theme-btn" id="themeToggle" title="Toggle theme">
         <svg id="icon-sun" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
         <svg id="icon-moon" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="display:none"><path d="M21 12.79A9 9 0 1111.21 3a7 7 0 009.79 9.79z"/></svg>

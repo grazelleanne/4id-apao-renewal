@@ -1,0 +1,6 @@
+@include('partials.records_layout_start',['title'=>'Automated Renewal Notifications'])
+<p>The system checks expiration dates daily and sends renewal reminders automatically, 30, 15 and 7 days before expiration, and on the expiration date.</p>
+@if(!$automationReady)<div class="error" role="status">Automatic email delivery is awaiting email provider setup. Reminders cannot be emailed until mail setup is complete.</div>@endif
+
+
+<div class="scroll"><table><thead><tr><th>Recipient</th><th>Subject</th><th>Expiration</th><th>Reminder</th><th>Date sent</th><th>Status</th><th>Message</th></tr></thead><tbody>@forelse($logs as $log)<tr><td>{{ $log->recipient }}</td><td>{{ $log->subject }}</td><td>{{ $log->expiration_date?->format('Y-m-d') ?? '—' }}</td><td>{{ $log->days_before === null ? 'Manual email' : ($log->days_before == 0 ? 'Automated: expiration day' : 'Automated: '.$log->days_before.' days before') }}</td><td>{{ $log->date_sent }}</td><td>{{ $log->status }}<br>{{ $log->error }}</td><td><details><summary>Details</summary><pre>{{ $log->message }}</pre></details></td></tr>@empty<tr><td class="empty-state" colspan="7">No notification emails recorded yet.</td></tr>@endforelse</tbody></table></div>{{ $logs->links() }}</main></body></html>

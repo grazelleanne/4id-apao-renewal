@@ -163,8 +163,11 @@
   <link rel="stylesheet" href="/css/typography.css">
   <link rel="stylesheet" href="/css/dashboard-theme.css?v=<?php echo substr(hash_file('sha256', public_path('css/dashboard-theme.css')), 0, 12); ?>">
   <script src="/js/dashboard-lists.js?v=<?php echo substr(hash_file('sha256', public_path('js/dashboard-lists.js')), 0, 12); ?>" defer></script>
+  <link rel="stylesheet" href="{{ asset('css/workspace-sidebar.css') }}">
+<script src="{{ asset('js/compact-pagination.js') }}"></script>
+  <link rel="stylesheet" href="{{ asset('css/audit-log.css') }}">
 </head>
-<body class="app-dashboard light-mode min-h-screen font-inter main-bg bg-[#1a2025]">
+<body class="app-dashboard audit-workspace light-mode min-h-screen font-inter main-bg bg-[#1a2025]">
 <div class="flex min-h-screen">
 
   <!-- SIDEBAR -->
@@ -173,9 +176,9 @@
     <div class="sb-top">
       <div class="sb-logo">
         <img src="<?php echo e(asset('images/logo.png')); ?>" alt="Logo" onerror="this.src=''">
-        <span class="sb-logo-text">Admin</span>
+        <span class="sb-logo-text">4ID APAO Firearms<small>ADMIN WORKSPACE</small></span>
       </div>
-      <button class="sb-toggle" id="sidebarToggleBtn" title="Toggle sidebar">
+      <button class="sb-toggle" id="sidebarToggleBtn" type="button" aria-label="Toggle sidebar" aria-controls="sidebar" title="Toggle sidebar">
         <svg id="sb-icon-menu" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M4 6h16M4 12h16M4 18h16"/></svg>
         <svg id="sb-icon-close" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="display:none"><path stroke-linecap="round" d="M6 18L18 6M6 6l12 12"/></svg>
       </button>
@@ -209,8 +212,9 @@
         <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 12h6M9 16h4"/><circle cx="17" cy="17" r="4"/><path d="M19.5 19.5L21 21"/></svg>
         <span class="nav-label">Audit Log</span>
       </a>
+    @include('partials.record_sidebar_links')
     </nav>
-    <div class="sb-bottom">
+    <div class="sb-bottom"><div class="workspace-office">10th Field Property Accountability Office</div>
       <button class="theme-btn" id="themeToggle" title="Toggle theme">
         <svg id="icon-sun" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
         <svg id="icon-moon" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="display:none"><path d="M21 12.79A9 9 0 1111.21 3a7 7 0 009.79 9.79z"/></svg>
@@ -225,7 +229,7 @@
     <header class="flex flex-wrap justify-between mb-8 items-center gap-4">
       <div>
         <h1 class="text-xl font-bold force-light-text tracking-tight">Audit Log</h1>
-        <p class="text-xs text-[#64748b] mt-0.5">Complete record of all system actions and user activity.</p>
+        <p class="text-xs text-[#64748b] mt-0.5">Review system activity, record changes, and account actions.</p>
       </div>
       <div class="flex flex-row-reverse items-center gap-4">
         <?php echo $__env->make('partials.account_dropdown', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
@@ -251,7 +255,7 @@
 
     <!-- FILTERS -->
     <div class="audit-panel p-5 mb-6">
-      <div class="flex flex-wrap gap-3 items-end mb-4">
+      <div class="audit-filter-toolbar mb-4">
         <div class="flex flex-col gap-1">
           <label class="text-xs text-[#94a3b8] font-semibold">Date From</label>
           <input id="filterDateFrom" type="date" class="filter-input px-3 py-2" />
@@ -262,10 +266,11 @@
         </div>
         <button id="applyFiltersBtn" class="bg-[#35b4df] text-[#10212e] font-700 rounded-lg px-4 py-2 text-xs font-bold hover:bg-[#249bc2] transition-colors self-end">Apply Filters</button>
         <button id="clearFiltersBtn" class="bg-transparent text-[#94a3b8] border border-[#3b4456] rounded-lg px-4 py-2 text-xs font-semibold hover:bg-[#23272f] transition-colors self-end">Clear</button>
-        <button id="exportCsvBtn" class="export-btn self-end ml-auto">⬇ Export Excel</button>
+        <button id="exportExcelBtn" class="export-btn self-end ml-auto"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3v12m-4-4 4 4 4-4M4 16v5h16v-5"/></svg> Export Excel</button>
+        <button id="exportAuditCsvBtn" class="export-btn self-end" disabled>Export CSV</button>
       </div>
 
-      <div class="flex flex-wrap gap-3 mb-4 items-end">
+      <div class="audit-filter-fields mb-4">
         <div class="flex flex-col gap-1">
           <label for="filterAction" class="text-xs font-semibold">Action</label>
           <select id="filterAction" class="filter-input px-3 py-2"><option value="">All Actions</option></select>
@@ -298,12 +303,12 @@
               <th class="py-2 px-3">Role</th>
               <th class="py-2 px-3">Action</th>
               <th class="py-2 px-3">Target</th>
-              <th class="py-2 px-3">IP Address</th>
+              <th class="py-2 px-3">Module</th><th class="py-2 px-3">IP Address</th>
               <th class="py-2 px-3">Details</th>
             </tr>
           </thead>
           <tbody id="auditTableBody">
-            <tr><td colspan="8" class="text-center py-10 text-[#64748b]">Loading audit logs...</td></tr>
+            <tr><td colspan="9" class="text-center py-10 text-[#64748b]">Loading audit logs...</td></tr>
           </tbody>
         </table>
       </div>
@@ -320,6 +325,7 @@
 <div id="detailsModal" style="display:none;"></div>
 
 <script src="<?php echo e(asset('js/rpcsp_excel.js')); ?>"></script>
+<script src="{{ asset('js/audit-csv.js') }}"></script>
 <script>
 const CSRF = document.querySelector('meta[name="csrf-token"]').content;
 const AUDIT_URL      = "<?php echo e(route('admin.audit.data')); ?>";
@@ -457,6 +463,12 @@ document.addEventListener("DOMContentLoaded", function () {
     user_updated:        'User Updated',
   };
 
+  function actionLabel(action) {
+    return ACTION_LABELS[action] || String(action || 'Unknown').split('_').map(word =>
+      /^(afp|atp|ics|par|ip)$/i.test(word) ? word.toUpperCase() : word.charAt(0).toUpperCase() + word.slice(1)
+    ).join(' ');
+  }
+
   function escapeHtml(value) {
     return String(value ?? '').replace(/[&<>'"]/g, character => ({
       '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#039;', '"': '&quot;',
@@ -468,8 +480,8 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   function actionBadge(action) {
-    const cls   = `ab-${safeActionClass(action)}`;
-    const label = ACTION_LABELS[action] || action;
+    const cls   = `ab-default ab-${safeActionClass(action)}`;
+    const label = actionLabel(action);
     return `<span class="action-badge ${cls}">${escapeHtml(label || 'Unknown')}</span>`;
   }
 
@@ -481,9 +493,8 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   function roleBadge(role) {
-    role = escapeHtml(role || '');
-    const map = { admin:'<span style="color:#3ec6ff;font-weight:700;">Admin</span>', staff:'<span style="color:#33b481;font-weight:700;">Staff</span>' };
-    return map[(role||'').toLowerCase()] || `<span style="color:#94a3b8;">${role||'—'}</span>`;
+    const labels = {admin: 'Admin', staff: 'Staff', super_admin: 'System Administrator', system: 'System'};
+    return `<span class="audit-role">${escapeHtml(labels[role] || actionLabel(role || 'Unknown'))}</span>`;
   }
 
   let auditRequestVersion = 0;
@@ -493,9 +504,10 @@ document.addEventListener("DOMContentLoaded", function () {
     allLogs = [];
     document.getElementById('summaryBadges').innerHTML = '';
     document.getElementById('auditCount').textContent = 'Loading filtered records...';
-    document.getElementById('exportCsvBtn').disabled = true;
+    document.getElementById('exportExcelBtn').disabled = true;
+    document.getElementById('exportAuditCsvBtn').disabled = true;
     const tbody = document.getElementById('auditTableBody');
-    tbody.innerHTML = `<tr><td colspan="8" class="text-center py-10 text-[#64748b]">Loading...</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="9" class="text-center py-10 text-[#64748b]">Loading...</td></tr>`;
 
     const params = new URLSearchParams();
     const from = document.getElementById('filterDateFrom').value;
@@ -515,7 +527,7 @@ document.addEventListener("DOMContentLoaded", function () {
       try {
         json = JSON.parse(rawText);
       } catch (parseErr) {
-        tbody.innerHTML = `<tr><td colspan="8" class="text-center py-10 text-red-400">
+        tbody.innerHTML = `<tr><td colspan="9" class="text-center py-10 text-red-400">
           Server returned non-JSON (status ${res.status}).<br>
           <span style="font-size:0.68rem;opacity:0.7;">${rawText.slice(0,200).replace(/</g,'&lt;')}</span>
         </td></tr>`;
@@ -523,7 +535,7 @@ document.addEventListener("DOMContentLoaded", function () {
       }
 
       if (!res.ok || json.success === false) {
-        tbody.innerHTML = `<tr><td colspan="8" class="text-center py-10 text-red-400">
+        tbody.innerHTML = `<tr><td colspan="9" class="text-center py-10 text-red-400">
           Request failed (status ${res.status}): ${escapeHtml(json.error || json.message || 'Unknown error')}
         </td></tr>`;
         return;
@@ -537,7 +549,7 @@ document.addEventListener("DOMContentLoaded", function () {
       const actionSelect = document.getElementById('filterAction');
       const selectedAction = actionSelect.value;
       allLogs.forEach(log => { if (log.action) knownActions.add(log.action); });
-      actionSelect.innerHTML = '<option value="">All Actions</option>' + Array.from(knownActions).sort().map(action => `<option value="${escapeHtml(action)}">${escapeHtml(ACTION_LABELS[action] || action.replace(/_/g, ' '))}</option>`).join('');
+      actionSelect.innerHTML = '<option value="">All Actions</option>' + Array.from(knownActions).sort().map(action => `<option value="${escapeHtml(action)}">${escapeHtml(actionLabel(action))}</option>`).join('');
       actionSelect.value = selectedAction;
 
       currentPage = 1;
@@ -546,23 +558,23 @@ document.addEventListener("DOMContentLoaded", function () {
 
     } catch(e) {
       if (requestVersion !== auditRequestVersion) return;
-      tbody.innerHTML = `<tr><td colspan="8" class="text-center py-10 text-red-400">
+      tbody.innerHTML = `<tr><td colspan="9" class="text-center py-10 text-red-400">
         Unable to load audit logs: ${escapeHtml(e.message)}
       </td></tr>`;
     } finally {
-      if (requestVersion === auditRequestVersion) document.getElementById('exportCsvBtn').disabled = !allLogs.length;
+      if (requestVersion === auditRequestVersion) {
+        document.getElementById('exportExcelBtn').disabled = !allLogs.length;
+        document.getElementById('exportAuditCsvBtn').disabled = !allLogs.length;
+      }
     }
   }
 
   function renderSummary() {
-    const counts = {};
-    allLogs.forEach(l => { counts[l.action] = (counts[l.action]||0) + 1; });
-    const container = document.getElementById('summaryBadges');
-    if (!Object.keys(counts).length) { container.innerHTML = ''; return; }
-    container.innerHTML = Object.entries(counts)
-      .sort((a,b) => b[1]-a[1])
-      .map(([action, count]) => `<span class="action-badge ab-${safeActionClass(action)}" style="font-size:0.7rem;">${escapeHtml(ACTION_LABELS[action] || action)}: ${count}</span>`)
-      .join('');
+    const actions = new Set(allLogs.map(log => log.action));
+    const users = new Set(allLogs.map(log => log.userName || 'System'));
+    document.getElementById('summaryBadges').innerHTML = allLogs.length ? [
+      ['Loaded records', allLogs.length], ['Action types', actions.size], ['Users / system actors', users.size]
+    ].map(([label, count]) => `<div class="audit-summary-item"><span>${label}</span><strong>${count.toLocaleString()}</strong></div>`).join('') : '';
   }
 
   function renderTable() {
@@ -576,7 +588,7 @@ document.addEventListener("DOMContentLoaded", function () {
       allLogs.length ? `Showing ${start+1}–${Math.min(start+ROWS_PER_PAGE, allLogs.length)} of ${allLogs.length} records` : 'No records found.';
 
     if (!pageData.length) {
-      tbody.innerHTML = `<tr><td colspan="8" class="text-center py-10 text-[#64748b]">No audit logs found.</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="9" class="text-center py-10 text-[#64748b]">No audit logs found.</td></tr>`;
       renderPagination(0); return;
     }
 
@@ -589,11 +601,11 @@ document.addEventListener("DOMContentLoaded", function () {
         <td class="py-2 px-3 force-light-text font-semibold">${escapeHtml(log.userName || '—')}</td>
         <td class="py-2 px-3">${roleBadge(log.userRole)}</td>
         <td class="py-2 px-3">${actionBadge(log.action)}</td>
-        <td class="py-2 px-3 force-light-text" style="max-width:160px;overflow:hidden;text-overflow:ellipsis;" title="${escapeHtml(log.target || '')}">${escapeHtml(log.target || '—')}</td>
-        <td class="py-2 px-3 force-light-text opacity-60" style="font-family:monospace;">${escapeHtml(log.ipAddress || '—')}</td>
+        <td class="audit-target py-2 px-3 force-light-text" title="${escapeHtml(log.target || '')}">${escapeHtml(log.target || '—')}</td>
+        <td class="py-2 px-3">${escapeHtml(log.module || 'system')}</td><td class="py-2 px-3 force-light-text opacity-60" style="font-family:monospace;">${escapeHtml(log.ipAddress || '—')}</td>
         <td class="py-2 px-3">
           ${hasDetails
-            ? `<button class="view-details-btn text-[#3ec6ff] text-xs font-semibold hover:underline" data-idx="${start+i}">View</button>`
+            ? `<button class="view-details-btn" data-idx="${start+i}" aria-label="View action details">Details</button>`
             : `<span class="text-[#3b4456] text-xs">—</span>`}
         </td>
       </tr>`;
@@ -609,47 +621,27 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   function renderPagination(totalPages) {
-    const container = document.getElementById('auditPagination');
-    if (totalPages <= 1) { container.innerHTML = ''; return; }
-    let html = '';
-    for (let i = 1; i <= totalPages; i++) {
-      const active = i === currentPage
-        ? 'background:#35b4df;color:#10212e;'
-        : 'background:#1a2025;color:#94a3b8;';
-      html += `<button data-p="${i}" style="${active}padding:4px 10px;border-radius:5px;font-size:0.72rem;font-weight:700;cursor:pointer;border:none;transition:opacity 0.15s;">${i}</button>`;
-    }
-    container.innerHTML = html;
-    container.querySelectorAll('button').forEach(btn => {
-      btn.addEventListener('click', function() { currentPage = parseInt(this.dataset.p); renderTable(); });
-    });
+    renderCompactPagination(document.getElementById('auditPagination'), currentPage, totalPages, function(page) {currentPage=page; renderTable();});
   }
 
   function showDetailsModal(log) {
-    log = {
-      ...log,
-      userName: escapeHtml(log.userName || ''),
-      userRole: escapeHtml(log.userRole || ''),
-      action: escapeHtml(log.action || ''),
-      target: escapeHtml(log.target || ''),
-      ipAddress: escapeHtml(log.ipAddress || ''),
-    };
     const modal   = document.getElementById('detailsModal');
     const details = log.details || {};
     const rows    = Object.entries(details).map(([k,v]) =>
-      `<div class="detail-row"><span class="detail-label">${escapeHtml(k)}</span><span class="detail-value">${escapeHtml(typeof v === 'object' ? JSON.stringify(v) : v)}</span></div>`
+      `<div class="detail-row"><span class="detail-label">${escapeHtml(actionLabel(k))}</span><span class="detail-value">${escapeHtml(typeof v === 'object' ? JSON.stringify(v, null, 2) : v)}</span></div>`
     ).join('');
 
     modal.innerHTML = `
       <div class="modal-bg">
-        <div class="modal-box">
-          <button class="modal-close-btn">&times;</button>
+        <div class="modal-box" role="dialog" aria-modal="true" aria-label="Audit action details">
+          <button class="modal-close-btn" aria-label="Close details">&times;</button>
           <h3 class="font-bold text-base mb-1 force-light-text">Action Details</h3>
-          <p class="text-xs text-[#64748b] mb-4">${ACTION_LABELS[log.action]||log.action} — ${formatDate(log.createdAt)}</p>
-          <div class="detail-row"><span class="detail-label">User</span><span class="detail-value">${log.userName||'—'}</span></div>
-          <div class="detail-row"><span class="detail-label">Role</span><span class="detail-value">${log.userRole||'—'}</span></div>
-          <div class="detail-row"><span class="detail-label">Action</span><span class="detail-value">${log.action||'—'}</span></div>
-          <div class="detail-row"><span class="detail-label">Target</span><span class="detail-value">${log.target||'—'}</span></div>
-          <div class="detail-row"><span class="detail-label">IP Address</span><span class="detail-value" style="font-family:monospace;">${log.ipAddress||'—'}</span></div>
+          <p class="text-xs text-[#64748b] mb-4">${escapeHtml(actionLabel(log.action))} — ${formatDate(log.createdAt)}</p>
+          <div class="detail-row"><span class="detail-label">User</span><span class="detail-value">${escapeHtml(log.userName||'—')}</span></div>
+          <div class="detail-row"><span class="detail-label">Role</span><span class="detail-value">${escapeHtml(log.userRole||'—')}</span></div>
+          <div class="detail-row"><span class="detail-label">Action</span><span class="detail-value">${escapeHtml(actionLabel(log.action))}</span></div>
+          <div class="detail-row"><span class="detail-label">Target</span><span class="detail-value">${escapeHtml(log.target||'—')}</span></div>
+          <div class="detail-row"><span class="detail-label">IP Address</span><span class="detail-value" style="font-family:monospace;">${escapeHtml(log.ipAddress||'—')}</span></div>
           ${rows ? `<div class="mt-3 mb-1 text-xs text-[#64748b] font-semibold uppercase tracking-wider">Extra Details</div>${rows}` : ''}
         </div>
       </div>`;
@@ -658,8 +650,15 @@ document.addEventListener("DOMContentLoaded", function () {
     modal.querySelector('.modal-bg').onclick = (e) => { if(e.target===modal.querySelector('.modal-bg')) modal.style.display='none'; };
   }
 
+  document.getElementById('exportAuditCsvBtn').addEventListener('click', function () {
+    if (!allLogs.length) return;
+    window.exportAuditLogCsv(allLogs, actionLabel);
+    fetch('/admin/reports/export-audit', {method:'POST', headers:{'Content-Type':'application/json','Accept':'application/json','X-CSRF-TOKEN':CSRF}, body:JSON.stringify({report:'audit_csv'})}).catch(() => console.error('Report audit request failed.'));
+  });
+
   // EXPORT EXCEL
-  document.getElementById('exportCsvBtn').addEventListener('click', function() {
+  document.getElementById('exportExcelBtn').addEventListener('click', function() {
+    fetch('/admin/reports/export-audit',{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json','X-CSRF-TOKEN':@json(csrf_token())},body:JSON.stringify({report:'audit_csv'})}).catch(()=>console.error('Report audit request failed.'));
     if (!allLogs.length) return;
     const from = appliedFilters.date_from || '';
     const to = appliedFilters.date_to || '';
@@ -673,7 +672,7 @@ document.addEventListener("DOMContentLoaded", function () {
     if (from && to) period = `${from} to ${to}`;
     else if (from) period = `From ${from}`;
     else if (to) period = `Up to ${to}`;
-    if (appliedFilters.action) period += ` | Action: ${ACTION_LABELS[appliedFilters.action] || appliedFilters.action}`;
+    if (appliedFilters.action) period += ` | Action: ${actionLabel(appliedFilters.action)}`;
     if (appliedFilters.role) period += ` | Role: ${appliedFilters.role}`;
     if (appliedFilters.search) period += ` | Search: ${appliedFilters.search}`;
 
@@ -690,7 +689,7 @@ document.addEventListener("DOMContentLoaded", function () {
         userName: log.userName || '',
         userRole: log.userRole || '',
         action: log.action || '',
-        actionLabel: ACTION_LABELS[log.action] || '',
+        actionLabel: actionLabel(log.action),
         target: log.target || '',
         ipAddress: log.ipAddress || '',
         details: log.details || '',

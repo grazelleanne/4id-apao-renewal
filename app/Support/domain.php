@@ -90,6 +90,10 @@ function birthday_renewal_validity(string $birthday, ?DateTimeImmutable $renewed
 function renewal_status_for_personnel(array $personnel, ?DateTimeImmutable $today = null): string
 {
     $today ??= new DateTimeImmutable('today');
+    $importedStatus = match (strtolower(trim((string) ($personnel['approved_status'] ?? '')))) {
+        'imported_active' => 'renewed', 'imported_within' => 'within', 'imported_expired' => 'expired', default => null,
+    };
+    if ($importedStatus !== null) return $importedStatus;
     if (strtolower(trim((string) ($personnel['approved_status'] ?? ''))) === 'new'
         && strtolower(trim((string) ($personnel['inspection_status'] ?? ''))) !== 'approved'
         && strtolower(trim((string) ($personnel['ics_status'] ?? ''))) !== 'ready') {
@@ -117,14 +121,18 @@ function renewal_status_for_personnel(array $personnel, ?DateTimeImmutable $toda
     return in_array($stored, ['renewed', 'within', 'expired', 'new', 'pending'], true) ? $stored : 'pending';
 }
 
-function audit(array $user, string $action, string $subject): void
+function audit(array $user, string $action, string $subject, array $old = [], array $new = []): void
 {
-    $query = db()->prepare('INSERT INTO audit_logs (user_id,user_name,user_role,action,subject,description,ip_address) VALUES (:id,:name,:role,:action,:subject,:description,:ip)');
-    $query->execute([
-        'id' => $user['id'] ?? null, 'name' => $user['name'] ?? 'System',
-        'role' => $user['role'] ?? 'system', 'action' => $action, 'subject' => $subject,
-        'description' => '{}', 'ip' => substr((string) ($_SERVER['REMOTE_ADDR'] ?? ''), 0, 45),
-    ]);
+    $module = match (true) {
+        str_contains($action, 'personnel') => 'personnel',
+        str_contains($action, 'inspection') => 'inspection',
+        str_contains($action, 'par') => 'par',
+        str_contains($action, 'login'), str_contains($action, 'logout') => 'authentication',
+        str_contains($action, 'user') => 'users',
+        str_contains($action, 'email') => 'notifications',
+        default => 'system',
+    };
+    \App\Services\RecordAudit::record($user, $action, $module, $subject, $old, $new);
 }
 
 function page(string $title, string $body): string

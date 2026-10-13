@@ -1,0 +1,37 @@
+/* Audit workspace: filters, activity table and action details. */
+.audit-workspace .audit-panel{box-shadow:0 2px 8px rgba(21,57,43,.05);border-radius:14px}
+.audit-filter-toolbar{display:grid;grid-template-columns:minmax(150px,190px) minmax(150px,190px) auto auto 1fr auto;gap:14px;align-items:end}
+.audit-filter-fields{display:grid;grid-template-columns:minmax(180px,1fr) minmax(150px,.7fr) minmax(240px,2fr);gap:14px}
+.audit-workspace .filter-input{width:100%;height:42px;border-radius:8px;font-size:13px}
+.audit-workspace label{line-height:1.5}
+.audit-workspace.light-mode label{color:#547062}
+.audit-workspace #applyFiltersBtn,.audit-workspace #clearFiltersBtn,.audit-workspace #exportExcelBtn{height:42px;display:inline-flex;align-items:center;justify-content:center;gap:8px;white-space:nowrap;padding:0 16px;font-size:12px;border-radius:8px}
+.audit-workspace #applyFiltersBtn{background:#15803d;color:#fff}
+.audit-workspace #applyFiltersBtn:hover{background:#166534}
+.audit-workspace.light-mode #clearFiltersBtn{color:#52665c;border-color:#d7e3dd}
+.audit-workspace #exportExcelBtn{justify-self:end;margin-left:0}
+.audit-workspace #exportExcelBtn:disabled{opacity:.45;cursor:not-allowed}
+.audit-workspace #summaryBadges{display:flex;gap:32px;padding-top:16px;border-top:1px solid #dce7e1;margin-top:20px}
+.audit-summary-item{display:flex;align-items:center;gap:12px;font-size:12px;color:#789083}
+.audit-summary-item strong{font-size:17px;color:#15803d;font-variant-numeric:tabular-nums}
+.audit-workspace table.audit-table{min-width:1150px}
+.audit-workspace table.audit-table th{padding:16px 14px;font-size:11px;letter-spacing:.04em}
+.audit-workspace table.audit-table td{padding:14px;line-height:1.5;vertical-align:middle}
+.audit-workspace table.audit-table td:nth-child(3){min-width:145px;white-space:normal}
+.audit-workspace table.audit-table td:nth-child(5){min-width:180px;max-width:250px;white-space:normal}
+.audit-workspace table.audit-table td.audit-target{min-width:190px;max-width:280px;white-space:normal;overflow-wrap:anywhere}
+.audit-workspace .action-badge{white-space:normal;font-size:11px;font-weight:600;padding:5px 10px;line-height:1.4;border-radius:6px}
+.audit-workspace.light-mode .ab-default{background:#edf4f0;color:#436453}
+.audit-role{font-size:11px;color:#779084}
+.audit-workspace .view-details-btn{border:1px solid #cfe2d7;color:#15803d;background:transparent;border-radius:7px;padding:6px 10px;font-size:11px;font-weight:600}
+.audit-workspace .view-details-btn:hover{background:#e8f5ed}
+.audit-workspace button:focus-visible,.audit-workspace input:focus-visible,.audit-workspace select:focus-visible{outline:2px solid #22a45a;outline-offset:3px}
+.audit-workspace .modal-box{width:min(640px,94vw)}
+.audit-workspace .detail-row{gap:20px;padding:12px 0;align-items:flex-start}
+.audit-workspace .detail-label{flex:0 0 130px}
+.audit-workspace .detail-value{min-width:0;white-space:pre-wrap;overflow-wrap:anywhere}
+@media(max-width:900px){.audit-filter-toolbar{grid-template-columns:1fr 1fr}.audit-workspace #exportExcelBtn{justify-self:start}.audit-filter-fields{grid-template-columns:1fr 1fr}.audit-filter-fields>div:last-child{grid-column:1/-1}}
+@media(max-width:540px){.audit-filter-fields{grid-template-columns:1fr}.audit-workspace #summaryBadges{gap:16px;flex-wrap:wrap}.audit-summary-item{gap:8px}.audit-workspace .detail-row{flex-direction:column;gap:5px}.audit-workspace .detail-label{flex-basis:auto}}
+
+.audit-workspace #exportAuditCsvBtn{height:42px;display:inline-flex;align-items:center;justify-content:center;padding:0 16px;border-radius:8px;font-size:12px;white-space:nowrap;margin:0}
+.audit-workspace #exportAuditCsvBtn:disabled{opacity:.45;cursor:not-allowed}

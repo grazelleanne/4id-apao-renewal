@@ -57,3 +57,7 @@ The Dockerfile installs Laravel dependencies and PHP extensions. Configure APP_K
 Back up the database before php artisan migrate --force. File sessions/cache are configured for one application instance. Shared session/cache storage is needed for multiple instances.
 
 See docs/LARAVEL-MIGRATION.md for migration scope, checks and deployment limitations.
+
+## Capstone 2 revisions
+
+Scheduled SMTP renewal reminders, notification history, richer audits, ATP validation, CSV/XLSX imports and additional firearm/ammunition CRUD are described in [docs/CAPSTONE-REVISIONS.md](docs/CAPSTONE-REVISIONS.md). Run migrations before using these features. The guide includes Gmail setup, scheduling, import conventions, testing results and the complete changed-file list.

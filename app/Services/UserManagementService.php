@@ -48,7 +48,7 @@ final class UserManagementService
                     'role' => $role, 'active' => $status === 'Active' ? 1 : 0,
                     'firstPassword' => 1,
                 ]);
-            audit($admin, 'user_created', $email);
+            audit($admin, 'user_created', $email, [], ['name'=>$name,'email'=>$email,'role'=>$role,'is_active'=>$status==='Active']);
             \Illuminate\Support\Facades\DB::commit();
         } catch (\Illuminate\Http\Exceptions\HttpResponseException $response) { throw $response; } catch (Throwable $error) {
             if (\Illuminate\Support\Facades\DB::transactionLevel() > 0) \Illuminate\Support\Facades\DB::rollBack();
@@ -147,7 +147,7 @@ final class UserManagementService
                 $values['password'] = password_hash($newPassword, PASSWORD_DEFAULT);
             }
             $pdo->prepare('UPDATE users SET name=:name,role=:role,is_active=:active,session_version=session_version+:increment,updated_at=NOW()' . $resetSql . ' WHERE id=:id')->execute($values);
-            audit($admin, $reset ? 'user_password_reset' : 'user_updated', $target['email']);
+            audit($admin, $reset ? 'user_password_reset' : 'user_updated', $target['email'], $target, ['name'=>$name,'role'=>$newRole,'is_active'=>$active,'password_reset'=>$reset]);
             \Illuminate\Support\Facades\DB::commit();
         } catch (\Illuminate\Http\Exceptions\HttpResponseException $response) { throw $response; } catch (Throwable $error) {
             if (\Illuminate\Support\Facades\DB::transactionLevel() > 0) \Illuminate\Support\Facades\DB::rollBack();

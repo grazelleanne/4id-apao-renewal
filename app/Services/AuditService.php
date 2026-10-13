@@ -55,8 +55,10 @@ final class AuditService
             'id' => (int) $row['id'], 'userName' => $row['user_name'] ?? 'System',
             'userRole' => $row['user_role'] ?? 'system', 'action' => $row['action'] ?? '',
             'target' => $row['target'] ?? $row['subject'] ?? '',
-            'details' => json_decode((string) ($row['description'] ?? '{}'), true) ?: [],
+            'details' => ['description'=>$row['description'] ?? '', 'module'=>$row['module'] ?? '', 'old_values'=>json_decode($row['old_values'] ?? 'null',true), 'new_values'=>json_decode($row['new_values'] ?? 'null',true)],
             'description' => $row['description'] ?? '',
+            'module' => $row['module'] ?? '', 'oldValues' => json_decode($row['old_values'] ?? 'null', true),
+            'newValues' => json_decode($row['new_values'] ?? 'null', true),
             'ipAddress' => $row['ip_address'] ?? '', 'createdAt' => $row['created_at'],
         ], $rows);
         json_response(['success' => true, 'data' => $logs, 'logs' => $logs, 'total' => count($logs)]);

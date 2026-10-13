@@ -65,9 +65,11 @@ final class PersonnelService
     {
         $statement = db()->prepare(
             'SELECT p.id,p.item_number,p.date_of_validity,p.last_name,p.first_name,p.middle_name,p.`rank`,
-                    p.afp_serial_number,p.afos_mos,p.branch,p.email,p.contact_number,p.issued_by,p.date_of_birth,
+                    p.atp_serial_number,p.afp_serial_number,p.afos_mos,p.branch,p.email,p.contact_number,p.issued_by,p.date_of_birth,
                     p.citizenship,p.civil_status,p.pistol_nomenclature,p.pistol_serial_number,p.pistol_type,
-                    p.par_number,p.qty_ammo,p.unit,p.approved_status,p.status,p.ics_status,p.date_approved,
+                    p.par_number,p.qty_ammo,p.unit,p.approved_status,p.status,p.ics_status,p.date_approved,p.last_renewed_at,p.renewed_by,p.date_issued,
+                    (SELECT par.issued_date FROM property_acknowledgement_receipts par WHERE par.personnel_id=p.id ORDER BY par.id ASC LIMIT 1) AS original_par_issued_date,
+                    (SELECT rh.inspected_by FROM renewal_history rh WHERE rh.item_number=p.item_number AND rh.action=\'renewed\' ORDER BY rh.id DESC LIMIT 1) AS renewal_actor,
                     p.updated_at,p.created_at,p.archived_at,
                     (OCTET_LENGTH(p.photo) > 0) AS has_photo,
                     (OCTET_LENGTH(p.signature) > 0) AS has_signature,
@@ -87,14 +89,20 @@ final class PersonnelService
         return array_map(static function (array $p): array {
             $renewalStatus = renewal_status_for_personnel($p);
             $icsStatus = $p['ics_status'] ?? 'inspection';
-            if (in_array($renewalStatus, ['within', 'expired'], true) && $icsStatus !== 'under') {
+            // Imported active allocations are not new inspection requests.
+            // Keep actual submissions and approvals in their existing workflow.
+            if (($p['approved_status'] ?? '') === 'imported_active' && $icsStatus === 'inspection') {
+                $icsStatus = 'active';
+            }
+            if (in_array($renewalStatus, ['within', 'expired'], true) && $icsStatus !== 'under'
+                && !($renewalStatus === 'within' && $icsStatus === 'renewal')) {
                 $icsStatus = $renewalStatus === 'expired' ? 'expired' : 'inspection';
             }
             return [
                 'id' => (int) $p['id'], 'itemNumber' => (int) $p['item_number'],
-                'dateOfValidity' => $p['date_of_validity'], 'lastName' => $p['last_name'] ?? '',
+                'dateOfValidity' => self::workflow_status($renewalStatus, $icsStatus) === 'new' ? null : $p['date_of_validity'], 'lastName' => $p['last_name'] ?? '',
                 'firstName' => $p['first_name'] ?? '', 'middleName' => $p['middle_name'] ?? '',
-                'rank' => $p['rank'] ?? '', 'afpSerialNumber' => $p['afp_serial_number'] ?? '',
+                'rank' => $p['rank'] ?? '', 'atpSerialNumber' => $p['atp_serial_number'], 'afpSerialNumber' => $p['afp_serial_number'] ?? '',
                 'afosMos' => $p['afos_mos'] ?? '', 'branch' => $p['branch'] ?? '',
                 'email' => $p['email'] ?? '', 'contactNumber' => $p['contact_number'] ?? '',
                 'issuedBy' => $p['issued_by'] ?? '', 'dateOfBirth' => $p['date_of_birth'],
@@ -103,10 +111,12 @@ final class PersonnelService
                 'pistolSerialNumber' => $p['pistol_serial_number'] ?? '',
                 'pistolType' => trim((string) ($p['pistol_type'] ?? '')) ?: trim((string) ($p['pistol_nomenclature'] ?? '')), 'parNumber' => $p['par_number'] ?? '',
                 'qtyAmmo' => (int) ($p['qty_ammo'] ?? 0), 'unit' => $p['unit'] ?? '',
-                'approvedStatus' => $renewalStatus, 'status' => $p['status'] ?? 'active',
+                'approvedStatus' => self::workflow_status($renewalStatus, $icsStatus), 'status' => $p['status'] ?? 'active',
                 'icsStatus' => $icsStatus, 'dateApproved' => $p['date_approved'],
-                'parEligible' => strtolower(trim((string) ($p['inspection_status'] ?? ''))) === 'approved'
-                    && $icsStatus === 'ready' && !in_array($renewalStatus, ['within', 'expired'], true),
+                'dateRenewed' => $p['last_renewed_at'] ?? null,
+                'renewedBy' => $p['renewed_by'] ?: ($p['renewal_actor'] ?? null),
+                'icsDateIssued' => $p['date_issued'] ?: ($p['original_par_issued_date'] ?? null),
+                'parEligible' => self::workflow_status($renewalStatus, $icsStatus) === 'renewed',
                 'photo' => $p['has_photo'] ? '/personnel/' . (int) $p['item_number'] . '/image/photo' : null,
                 'signature' => $p['has_signature'] ? '/personnel/' . (int) $p['item_number'] . '/image/signature' : null,
                 'inspectionStatus' => $p['inspection_status'] ?? null,
@@ -118,6 +128,15 @@ final class PersonnelService
                 'dateArchived' => $p['archived_at'] ?? null,
             ];
         }, $statement->fetchAll());
+    }
+
+    public static function workflow_status(string $renewalStatus, string $icsStatus): string
+    {
+        return match ($icsStatus) {
+            'inspection' => 'new',
+            'under' => 'pending',
+            default => $renewalStatus,
+        };
     }
 
     public static function personnel_data(): never
@@ -156,7 +175,7 @@ final class PersonnelService
         $pdo = db();
         \Illuminate\Support\Facades\DB::beginTransaction();
         try {
-            $query = $pdo->prepare('SELECT id,first_name,last_name FROM personnel WHERE item_number=:item AND archived_at IS NOT NULL FOR UPDATE');
+            $query = $pdo->prepare('SELECT * FROM personnel WHERE item_number=:item AND archived_at IS NOT NULL FOR UPDATE');
             $query->execute(['item' => $item]);
             $record = $query->fetch();
             if (!$record) {
@@ -179,7 +198,7 @@ final class PersonnelService
         $pdo = db();
         \Illuminate\Support\Facades\DB::beginTransaction();
         try {
-            $query = $pdo->prepare('SELECT id,first_name,last_name FROM personnel WHERE item_number=:item AND archived_at IS NULL FOR UPDATE');
+            $query = $pdo->prepare('SELECT * FROM personnel WHERE item_number=:item AND archived_at IS NULL FOR UPDATE');
             $query->execute(['item' => $itemNumber]);
             $record = $query->fetch();
             if (!$record) {
@@ -189,11 +208,16 @@ final class PersonnelService
             if ($archive) {
                 $pdo->prepare('UPDATE personnel SET archived_at=CURDATE(),is_archived=1,status=\'archived\',updated_at=NOW() WHERE id=:id')
                     ->execute(['id' => $record['id']]);
-                audit($user, 'personnel_archived', $record['first_name'] . ' ' . $record['last_name']);
+                audit($user, 'personnel_archived', $record['first_name'] . ' ' . $record['last_name'], $record, ['is_archived'=>true]);
             } else {
                 $input = request_data();
+                $input['pistolSerialNumber'] = $input['afpSerialNumber'] ?? $record['afp_serial_number'];
+                if (($input['approvedStatus'] ?? $record['approved_status']) === 'new') {
+                    $input['dateOfValidity'] = '';
+                }
                 $columns = ['rank' => 'rank', 'lastName' => 'last_name', 'firstName' => 'first_name',
                     'middleName' => 'middle_name', 'afpSerialNumber' => 'afp_serial_number', 'afosMos' => 'afos_mos',
+                    'email' => 'email', 'atpSerialNumber' => 'atp_serial_number',
                     'branch' => 'branch', 'unit' => 'unit', 'dateOfValidity' => 'date_of_validity',
                     'dateOfBirth' => 'date_of_birth', 'pistolNomenclature' => 'pistol_nomenclature',
                     'pistolSerialNumber' => 'pistol_serial_number', 'qtyAmmo' => 'qty_ammo', 'approvedStatus' => 'approved_status'];
@@ -202,7 +226,7 @@ final class PersonnelService
                 foreach ($columns as $key => $column) {
                     if (!array_key_exists($key, $input)) continue;
                     $value = \App\Services\PersonnelService::personnel_text($input, $key);
-                    if (in_array($key, ['firstName', 'lastName'], true) && $value === '') {
+                    if (in_array($key, ['firstName','lastName','rank','unit','dateOfBirth','email','afpSerialNumber','atpSerialNumber','pistolSerialNumber','pistolNomenclature'], true) && $value === '') {
                         throw new InvalidArgumentException('First name and last name are required.');
                     }
                     if (in_array($key, ['dateOfBirth', 'dateOfValidity'], true)) {
@@ -210,7 +234,19 @@ final class PersonnelService
                         if ($value !== '' && (!$date || $date->format('Y-m-d') !== $value || (int) $date->format('Y') < 1900)) {
                             throw new InvalidArgumentException('Enter a valid date, or leave it blank.');
                         }
+                        if ($key === 'dateOfBirth' && $date && $date > new DateTimeImmutable('today')) throw new InvalidArgumentException('Date of birth must not be in the future.');
                         $value = $value === '' ? null : $value;
+                     } elseif ($key === 'afpSerialNumber') {
+                        if (!preg_match('/^AFP[0-9]{6}$/', $value)) throw new InvalidArgumentException('AFP serial number must be AFP followed by exactly 6 digits.');
+                    } elseif ($key === 'email') {
+                        if (!filter_var($value, FILTER_VALIDATE_EMAIL)) throw new InvalidArgumentException('Enter a valid email address.');
+                        $value = strtolower($value);
+                    } elseif (in_array($key, ['atpSerialNumber','pistolSerialNumber'], true)) {
+                        if (!preg_match(RecordValidation::SERIAL_PATTERN, $value)) throw new InvalidArgumentException('Serial numbers must contain 3–100 letters, numbers, slashes or hyphens.');
+                        $field = $key === 'atpSerialNumber' ? 'atp_serial_number' : 'pistol_serial_number';
+                        if (\App\Models\Personnel::where($field,$value)->where('id','!=',$record['id'])->exists()
+                            || \App\Models\Firearm::where($key === 'atpSerialNumber' ? 'atp_serial_number' : 'serial_number',$value)->exists())
+                            throw new InvalidArgumentException($key === 'atpSerialNumber' ? 'This ATP Serial Number already exists.' : 'This firearm serial number already exists.');
                     } elseif ($key === 'qtyAmmo') {
                         $value = filter_var($input[$key], FILTER_VALIDATE_INT, ['options' => ['min_range' => 0, 'max_range' => 1000000]]);
                         if ($value === false) throw new InvalidArgumentException('Ammo quantity must be a nonnegative whole number.');
@@ -224,7 +260,9 @@ final class PersonnelService
                 }
                 if (!$sets) throw new InvalidArgumentException('No personnel changes supplied.');
                 $pdo->prepare('UPDATE personnel SET ' . implode(',', $sets) . ',updated_at=NOW() WHERE id=:id')->execute($values);
-                audit($user, 'personnel_updated', $record['first_name'] . ' ' . $record['last_name']);
+                $afterQuery = $pdo->prepare('SELECT * FROM personnel WHERE id=:id');
+                $afterQuery->execute(['id'=>$record['id']]);
+                audit($user, 'personnel_updated', $record['first_name'] . ' ' . $record['last_name'], $record, $afterQuery->fetch());
             }
             \Illuminate\Support\Facades\DB::commit();
         } catch (\Illuminate\Http\Exceptions\HttpResponseException $response) { throw $response; } catch (Throwable $error) {
@@ -241,6 +279,7 @@ final class PersonnelService
     public static function personnel_duplicate_errors(array $input): array
     {
         $checks = [
+            'atpSerialNumber' => ['column' => 'atp_serial_number', 'label' => 'ATP Serial Number'],
             'afpSerialNumber' => ['column' => 'afp_serial_number', 'label' => 'AFP serial number'],
             'email' => ['column' => 'email', 'label' => 'Email address'],
             'contactNumber' => ['column' => 'contact_number', 'label' => 'Contact number'],
@@ -267,7 +306,7 @@ final class PersonnelService
                     $existing['last_name'] ?? null,
                 ])));
                 $recordState = empty($existing['archived_at']) ? '' : ' (archived record)';
-                $errors[$field] = [sprintf(
+                $errors[$field] = $field === 'atpSerialNumber' ? ['This ATP Serial Number already exists.'] : [sprintf(
                     '%s already exists under %s (Item #%d)%s.',
                     $check['label'],
                     $ownerName !== '' ? $ownerName : 'another personnel record',
@@ -335,12 +374,12 @@ final class PersonnelService
         ]);
 
         try {
-            \App\Services\BrevoService::brevo_send_transactional_email($recipientEmail, $recipientName, $subject, $html);
+            PersonnelEmailService::send($personnel, $user, $recipientName, $subject, $message, $html);
         } catch (\Illuminate\Http\Exceptions\HttpResponseException $response) { throw $response; } catch (Throwable $error) {
-            error_log('[APAO Brevo] ' . $error->getMessage());
+            report($error);
             json_response([
                 'success' => false,
-                'error' => !function_exists('curl_init')
+                'error' => config('mail.default') !== 'smtp' && !function_exists('curl_init')
                     ? 'Email sending requires the PHP cURL extension. Enable cURL in php.ini and restart the PHP server.'
                     : 'The email could not be sent. Check the server mail configuration and PHP error log.',
             ], 502);
@@ -352,7 +391,7 @@ final class PersonnelService
 
     public static function personnel_text(array $input, string $key, int $maximum = 255): string
     {
-        $value = is_string($input[$key] ?? null) ? trim($input[$key]) : '';
+        $value = is_string($input[$key] ?? null) ? trim(strip_tags($input[$key])) : '';
         return function_exists('mb_substr') ? mb_substr($value, 0, $maximum) : substr($value, 0, $maximum);
     }
 
@@ -385,9 +424,10 @@ final class PersonnelService
     public static function personnel_store(array $user): never
     {
         $input = request_data();
+        $input['pistolSerialNumber'] = $input['afpSerialNumber'] ?? '';
         $required = [
             'lastName' => 'Last name', 'firstName' => 'First name', 'rank' => 'Rank',
-            'afpSerialNumber' => 'AFP serial number', 'unit' => 'Unit / organization',
+            'atpSerialNumber' => 'ATP serial number', 'afpSerialNumber' => 'AFP serial number', 'unit' => 'Unit / organization',
             'dateOfBirth' => 'Date of birth', 'email' => 'Email address',
             'pistolNomenclature' => 'Pistol nomenclature', 'pistolType' => 'Pistol type',
             'pistolSerialNumber' => 'Pistol serial number', 'issuedBy' => 'Issued by',
@@ -422,7 +462,15 @@ final class PersonnelService
         if ($ammo === false) {
             $errors['qtyAmmo'] = ['Quantity of ammunition must be a whole number of 0 or more.'];
         }
-        $errors = array_merge($errors, \App\Services\PersonnelService::personnel_duplicate_errors($input));
+        if (!preg_match('/^AFP[0-9]{6}$/', self::personnel_text($input, 'afpSerialNumber'))) {
+            $errors['afpSerialNumber'] = ['AFP serial number must be AFP followed by exactly 6 digits.'];
+        }
+        $atp = self::personnel_text($input, 'atpSerialNumber');
+        if (!preg_match(RecordValidation::SERIAL_PATTERN, $atp)) $errors['atpSerialNumber'] = ['ATP serial number must contain 3–100 letters, numbers, slashes or hyphens.'];
+        if (!preg_match(RecordValidation::SERIAL_PATTERN, self::personnel_text($input, 'pistolSerialNumber'))) $errors['pistolSerialNumber'] = ['Enter a valid firearm serial number.'];
+        if (\App\Models\Firearm::where('atp_serial_number', $atp)->exists()) $errors['atpSerialNumber'] = ['This ATP Serial Number already exists.'];
+        if (\App\Models\Firearm::where('serial_number', self::personnel_text($input, 'pistolSerialNumber'))->exists()) $errors['pistolSerialNumber'] = ['This firearm serial number already exists.'];
+        $errors = array_merge($errors, self::personnel_duplicate_errors($input));
         if ($errors !== []) {
             json_response(['success' => false, 'message' => 'Please correct the highlighted fields.', 'errors' => $errors], 422);
         }
@@ -444,16 +492,16 @@ final class PersonnelService
             $itemNumber = (int) $pdo->query('SELECT COALESCE(MAX(item_number), 0) + 1 FROM personnel')->fetchColumn();
             $insert = $pdo->prepare(
                 'INSERT INTO personnel
-                 (item_number,date_of_validity,last_name,first_name,middle_name,`rank`,afp_serial_number,afos_mos,branch,email,
-                  contact_number,issued_by,date_of_birth,citizenship,civil_status,pistol_nomenclature,pistol_serial_number,
+                 (atp_serial_number,item_number,date_of_validity,last_name,first_name,middle_name,`rank`,afp_serial_number,afos_mos,branch,email,
+                  contact_number,issued_by,date_issued,date_of_birth,citizenship,civil_status,pistol_nomenclature,pistol_serial_number,
                   pistol_type,qty_ammo,unit,approved_status,status,ics_status,is_archived,photo,signature,created_at,updated_at)
                  VALUES
-                 (:item,NULL,:last_name,:first_name,:middle_name,:rank,:afp_serial,:afos_mos,:branch,:email,
-                  :contact,:issued_by,:birth_date,:citizenship,:civil_status,:pistol_name,:pistol_serial,
+                 (:atp,:item,NULL,:last_name,:first_name,:middle_name,:rank,:afp_serial,:afos_mos,:branch,:email,
+                  :contact,:issued_by,:date_issued,:birth_date,:citizenship,:civil_status,:pistol_name,:pistol_serial,
                   :pistol_type,:ammo,:unit,\'new\',\'active\',\'inspection\',0,:photo,:signature,NOW(),NOW())'
             );
             $insert->execute([
-                'item' => $itemNumber,
+                'atp' => $atp, 'item' => $itemNumber,
                 'last_name' => \App\Services\PersonnelService::personnel_text($input, 'lastName'),
                 'first_name' => \App\Services\PersonnelService::personnel_text($input, 'firstName'),
                 'middle_name' => \App\Services\PersonnelService::personnel_text($input, 'middleName') ?: null,
@@ -464,6 +512,7 @@ final class PersonnelService
                 'email' => $email,
                 'contact' => $contact ?: null,
                 'issued_by' => \App\Services\PersonnelService::personnel_text($input, 'issuedBy'),
+                'date_issued' => $issueDate ?: null,
                 'birth_date' => $birthDate,
                 'citizenship' => \App\Services\PersonnelService::personnel_text($input, 'citizenship', 100) ?: 'Filipino',
                 'civil_status' => \App\Services\PersonnelService::personnel_text($input, 'civilStatus', 30) ?: null,
@@ -496,7 +545,7 @@ final class PersonnelService
             $notification->execute([
                 'message' => $name . ' was submitted for inspection.', 'name' => $name, 'id' => $personnelId,
             ]);
-            audit($user, 'personnel_registered', (string) $itemNumber);
+            audit($user, 'personnel_registered', (string) $itemNumber, [], ['id'=>$personnelId,'item_number'=>$itemNumber,'atp_serial_number'=>$atp]);
             \Illuminate\Support\Facades\DB::commit();
         } catch (\Illuminate\Http\Exceptions\HttpResponseException $response) { throw $response; } catch (Throwable $error) {
             if (\Illuminate\Support\Facades\DB::transactionLevel() > 0) {
