@@ -3,8 +3,8 @@ FROM php:8.4-apache
 COPY --from=composer:2 /usr/bin/composer /usr/local/bin/composer
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends libcurl4-openssl-dev libonig-dev unzip \
-    && docker-php-ext-install curl pdo_mysql mbstring bcmath \
+    && apt-get install -y --no-install-recommends libcurl4-openssl-dev libonig-dev libzip-dev unzip \
+    && docker-php-ext-install curl pdo_mysql mbstring bcmath zip \
     && rm -rf /var/lib/apt/lists/* \
     && a2enmod rewrite
 
@@ -15,7 +15,7 @@ RUN sed -ri 's!/var/www/html!/var/www/html/public!g' \
 
 WORKDIR /var/www/html
 ENV APP_ENV=production
-RUN printf 'expose_php=Off\ndisplay_errors=Off\nlog_errors=On\npost_max_size=8M\nupload_max_filesize=2M\n' > /usr/local/etc/php/conf.d/security.ini
+RUN printf 'expose_php=Off\ndisplay_errors=Off\nlog_errors=On\npost_max_size=8M\nupload_max_filesize=5M\n' > /usr/local/etc/php/conf.d/security.ini
 COPY . .
 
 RUN composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader --no-scripts
